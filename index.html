@@ -1179,7 +1179,11 @@ function vPicker(){const q=S.q.toLowerCase().trim();
 
 /* ══════════ RENDU ══════════ */
 function render(){
+ /* On mémorise le texte exact en cours de frappe. Sans cela, la valeur
+    recalculée est réinjectée à chaque caractère et un champ vidé se remplit
+    aussitôt d'un zéro, empêchant de tout effacer avant de saisir. */
  const a=document.activeElement,id=a&&a.id,ps=a&&a.selectionStart;
+ const raw=a&&a.tagName==="INPUT"&&a.type!=="date"?a.value:null;
  document.getElementById("app").innerHTML=
   S.tab==="progres"?vProgres():S.tab==="noter"?vNoter():S.tab==="profil"?vProfil():vHist();
  /* La barre d'onglets et les feuilles vivent hors de #app : un `position:fixed`
@@ -1191,7 +1195,9 @@ function render(){
      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TABICON[k]}</svg>
     <span>${l}</span></button>`).join("");
  document.getElementById("overlay").innerHTML=(S.picker?vPicker():"")+(S.done?vDone():"");
- if(id){const n=document.getElementById(id);if(n){n.focus();try{n.setSelectionRange(ps,ps)}catch(e){}}}}
+ if(id){const n=document.getElementById(id);if(n){
+   if(raw!=null&&n.value!==raw)n.value=raw;
+   n.focus();try{n.setSelectionRange(ps,ps)}catch(e){}}}}
 
 /* ══════════ ÉVÉNEMENTS ══════════ */
 /* On conserve les champs qui n'appartiennent pas à la série en cours
