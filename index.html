@@ -426,7 +426,7 @@ function load(){let raw=null;
  /* Réparation des profils écrits par une version antérieure défectueuse :
     sans âge ni poids valides, les barèmes ne veulent rien dire. */
  if(S.profile&&(!Number.isFinite(S.profile.age)||!Number.isFinite(S.profile.bw)))S.profile=null;
- applyTheme()}
+ seedProfil();applyTheme()}
 
 /* Le thème pilote l'attribut racine ; les variables CSS font le reste. */
 function applyTheme(){
@@ -1471,8 +1471,16 @@ document.addEventListener("input",ev=>{const t=ev.target;
   const en=entryOf();if(en){const m=mv(en.movementId);
    if(m.k==="barbell"||m.k==="cardio"||m.u==="reps"){save();render()}}}});
 
-function openProfil(){const p=S.profile||{sex:"f",age:30,bw:60,name:""};
- S.psex=p.sex;S.d.age=p.age;S.d.bw=p.bw;S.pname=p.name||"";S.tab="profil"}
+/* Recharge les champs du formulaire depuis le profil enregistré.
+   Appelée à l'ouverture, mais aussi quand le cloud livre un profil après coup :
+   sans cela l'écran garderait les valeurs par défaut affichées avant la synchro,
+   et « Enregistrer » écraserait le bon profil. */
+function seedProfil(){const p=S.profile||{sex:"f",age:30,bw:60,name:""};
+ S.psex=p.sex||"f";S.pname=p.name||"";
+ S.d.age=Number.isFinite(p.age)?p.age:30;
+ S.d.bw=Number.isFinite(p.bw)?p.bw:60}
+
+function openProfil(){seedProfil();S.tab="profil"}
 
 /* ══════════ SYNCHRONISATION ══════════
    Le stockage local reste la source de vérité immédiate : l'application
@@ -1502,7 +1510,7 @@ function applyRemote(d){
  const grew=merged.length!==(d.custom||[]).length;
  S.custom=merged;
  S.updatedAt=d.updatedAt||Date.now();
- if(S.profile)S.pname=S.profile.name||"";
+ seedProfil();
  try{localStorage.setItem(KEY,JSON.stringify(payload(true)))}catch(e){}
  /* Ce que le cloud ne connaissait pas lui est renvoyé. */
  if((!rp&&S.profile)||grew)pushSoon();}
@@ -1535,7 +1543,7 @@ if(window.matchMedia)window.matchMedia("(prefers-color-scheme:dark)")
  .addEventListener("change",()=>{if(S.theme==="auto")applyTheme()});
 
 load();
-if(S.profile){S.pname=S.profile.name||""}else{openProfil()}
+if(!S.profile)openProfil();
 render();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
