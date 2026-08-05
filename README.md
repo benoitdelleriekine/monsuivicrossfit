@@ -88,46 +88,31 @@ Si tu ne veux pas de compte, ne touche pas aux `REMPLACE-MOI` : l'application d�
 l'absence de configuration et masque toute la partie compte. Elle reste installable
 et fonctionne exactement comme la version fichier.
 
+
 ---
 
-## Sécurité et données personnelles
+## Connexion par code (application installée)
 
-### Ce qui a été vérifié
+Une web app installée sur l'écran d'accueil iOS vit dans un espace de stockage
+séparé de Safari. Le lien magique reçu par mail s'ouvre dans Safari : c'est donc
+Safari qui se connecte, pas l'application. L'app utilise pour cette raison un
+**code à 6 chiffres** saisi directement dans l'écran Compte.
 
-- **Aucun secret dans le code.** Seule la clé `anon` y figure, publique par conception.
-  La clé `service_role` contourne toutes les règles : elle ne doit jamais entrer ici.
-- **Isolation des données.** Les règles RLS restreignent lecture, écriture et suppression
-  à la ligne de l'utilisateur connecté. Une requête sans filtre ne renvoie que sa propre ligne.
-- **Content-Security-Policy** restrictive : seules les origines nécessaires sont autorisées
-  (Supabase, esm.sh, Google Fonts). L'inclusion du site dans une iframe est bloquée.
-- **Échappement systématique** des textes saisis (prénom, nom de metcon, mouvements
-  personnalisés, notes) avant insertion dans la page.
-- **Le service worker ne met jamais en cache les appels au cloud** : uniquement les
-  fichiers de l'application.
-- **La page n'est pas indexée** par les moteurs de recherche.
+**Configuration obligatoire dans Supabase** (sinon le mail ne contient pas le code) :
 
-### Données collectées
+1. **Authentication → Emails** (Email Templates), modèle **Magic Link**.
+2. Remplacer le corps par un texte contenant la variable `{{ .Token }}`, par exemple :
 
-Prénom, sexe, âge, poids de corps, séances d'entraînement, et l'adresse mail si un
-compte est créé. Rien d'autre : pas de traceur, pas de mesure d'audience, pas de publicité.
+```html
+<h2>Connexion à Mon Suivi CrossFit</h2>
+<p>Ton code de connexion :</p>
+<h1 style="letter-spacing:6px">{{ .Token }}</h1>
+<p>Il expire dans une heure. Si tu n'es pas à l'origine de cette demande, ignore ce message.</p>
+```
 
-L'onglet Profil affiche cette mention et propose un bouton **Tout effacer**, qui supprime
-les données locales et la ligne en base après double confirmation.
+3. Enregistrer. Le lien `{{ .ConfirmationURL }}` peut être retiré du modèle :
+   dans l'application installée, il induit en erreur.
 
-### Si tu diffuses l'application au-delà de tes proches
-
-Tu deviens responsable de traitement au sens du RGPD, avec les obligations qui vont avec :
-information des personnes, base légale (le consentement ici), droit d'accès, de rectification
-et d'effacement. L'export et le bouton d'effacement couvrent l'essentiel côté technique,
-mais une page mentionnant qui traite les données et comment te contacter devient nécessaire.
-
-Ta qualité de professionnel de santé appelle une vigilance supplémentaire : si l'outil était
-un jour utilisé auprès de patients, ces données deviendraient des données de santé, ce qui
-imposerait un hébergement certifié HDS. Supabase ne l'est pas. Tant que l'usage reste
-personnel ou sportif, hors relation de soin, la question ne se pose pas.
-
-### Suppression complète d'un compte
-
-Le bouton efface les données. La suppression du compte lui-même (l'entrée dans
-`auth.users`) se fait depuis le tableau de bord Supabase, section *Authentication → Users*.
-La contrainte `on delete cascade` supprime alors automatiquement les données associées.
+À savoir : Supabase limite l'envoi à un mail par minute et par adresse, et le
+service intégré est réservé au test. Avant de partager l'application, brancher
+un SMTP (Resend, Brevo…) dans **Authentication → SMTP Settings**.
