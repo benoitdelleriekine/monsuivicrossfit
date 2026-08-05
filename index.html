@@ -784,7 +784,7 @@ function parseScheme(str){
  return n.length>1?n:null}
 
 /* Les formats à tours répétés ; l'AMRAP et l'EMOM tirent leur structure du temps */
-const HASROUNDS=["fortime","intervalles","chipper"];
+const HASROUNDS=["fortime","intervals","chipper"];
 
 function mcStructure(mc){
  const sch=parseScheme(mc.scheme);
@@ -852,7 +852,7 @@ function resLabel(mc){const r=mc.res||{};
  if(r.mode==="reps")return`${r.reps||0} reps`;
  return r.done?"terminé":"non terminé"}
 
-function mcSummary(mc){const f=FMT[mc.format],st=mcStructure(mc);
+function mcSummary(mc){const f=FMT[mc.format]||FORMATS[0],st=mcStructure(mc);
  const parts=[f.l+(mc.cap?" "+mc.cap+"'":"")];
  if(HASROUNDS.includes(mc.format)&&(st.sch||st.n>1))parts.push(st.label);
  if(mc.items.length)parts.push(mc.items.map(i=>mv(i.movementId).n).join(", "));
@@ -867,7 +867,8 @@ function mcScore(mc){const r=mc.res||{};
  return null}
 
 function vMetcon(mc,idx){
-  const f=FMT[mc.format];
+  const f=FMT[mc.format]||FORMATS[0];
+  if(!FMT[mc.format])mc.format=FORMATS[0].k;
   let h=`<div class="head"><button class="chip" data-act="mcclose">‹ Retour</button>
    <h1 style="font-size:32px">${esc(mc.name||"Metcon")}</h1></div><div class="pane">
 
@@ -992,7 +993,7 @@ function vNoter(){
   const mcs=d.metcons||[];
   if(mcs.length){h+=`<div class="card">`+mcs.map((mc,i)=>`<div class="row">
    <button style="flex:1;min-width:0" data-act="mcopen" data-i="${i}">
-   <div style="font-weight:600;font-size:15px">${esc(mc.name||FMT[mc.format].l)}</div>
+   <div style="font-weight:600;font-size:15px">${esc(mc.name||(FMT[mc.format]||FORMATS[0]).l)}</div>
    <div style="font-size:12.5px;color:var(--mute);margin-top:3px">${mcSummary(mc)}</div></button>
    <button data-act="mcdel" data-i="${i}" aria-label="Retirer" style="color:var(--mute);font-size:22px;padding:0 4px">×</button></div>`).join("")+`</div>`}
   else h+=`<div style="font-size:13px;color:var(--mute);line-height:1.6;margin-bottom:12px">Le conditionnement du jour : AMRAP, For Time, EMOM… avec son format et ton score.</div>`;
@@ -1136,8 +1137,8 @@ function vHist(){const H=sorted();
      ${e.sets&&e.sets[0]&&e.sets[0].level!=null&&m.lad?`<span class="badge" style="margin-left:8px">${m.lad[e.sets[0].level]}</span>`:""}</div>
      <div style="font-size:13px;color:var(--mute);margin-top:4px">${(e.sets||[]).map(x=>setLabel(x,m)).join("   ·   ")}</div></div>`}).join("");
     (s.metcons||[]).forEach(mc=>{h+=`<div style="padding:11px 0;margin-top:6px;border-top:1px solid var(--line)">
-     <div style="font-weight:600;font-size:14.5px">${esc(mc.name||FMT[mc.format].l)}
-     <span class="badge" style="margin-left:8px">${FMT[mc.format].l}${mc.cap?" "+mc.cap+"'":""}</span>
+     <div style="font-weight:600;font-size:14.5px">${esc(mc.name||(FMT[mc.format]||FORMATS[0]).l)}
+     <span class="badge" style="margin-left:8px">${(FMT[mc.format]||FORMATS[0]).l}${mc.cap?" "+mc.cap+"'":""}</span>
      ${mc.rx?'<span class="badge" style="margin-left:5px">Rx</span>':""}</div>
      ${HASROUNDS.includes(mc.format)&&(parseScheme(mc.scheme)||mc.rounds>1)?`<div style="font-size:12.5px;color:var(--ink);font-weight:600;margin-top:5px">${mcStructure(mc).label} de :</div>`:""}
      ${mc.items.length?`<div style="font-size:13px;color:var(--mute);margin-top:5px;line-height:1.5">${mc.items.map(it=>itemLabel(it,mcStructure(mc))).join(" · ")}</div>`:""}
@@ -1201,6 +1202,13 @@ document.addEventListener("click",ev=>{
  const b=ev.target.closest("[data-act]");if(!b)return;
  if((b.dataset.act==="closepick"||b.dataset.act==="doneclbg")&&ev.target.closest("[data-stop]"))return;
  const a=b.dataset.act,v=b.dataset.v,en=entryOf();
+ /* Un rendu obsolète peut laisser un bouton dont le contexte n'existe plus
+    (séance abandonnée, metcon supprimé) : on l'ignore au lieu de planter. */
+ if(/^(date|feel|focus|rm|saveS|drop|pick|mcpick|mcadd|mcopen|mcdel)$/.test(a)&&!S.draft)return;
+ const MC=S.draft&&S.mc!=null?(S.draft.metcons||[])[S.mc]:null;
+ if(/^(mcname|mcfmt|mcres|mcdone|mcrx|mcitemdel|mcstruct|mclad)$/.test(a)&&!MC)return;
+ if(/^(push|pop|sadd|scycle)$/.test(a)&&!en)return;
+ if(a==="add"&&!S.draft)return;
  switch(a){
   case"tab":S.tab=v;S.focus=null;break;
   case"prog":S.prog=v;break;
@@ -1248,21 +1256,25 @@ document.addEventListener("click",ev=>{
   case"mcopen":S.mc=+b.dataset.i;break;
   case"mcclose":S.mc=null;break;
   case"mcdel":{if(confirm("Retirer ce metcon ?"))S.draft.metcons.splice(+b.dataset.i,1);break}
-  case"mcname":{const mc=S.draft.metcons[S.mc];mc.name=v;break}
-  case"mcfmt":{const mc=S.draft.metcons[S.mc],f=FMT[v];
+  case"mcname":{const mc=MC;mc.name=v;break}
+  case"mcfmt":{const mc=MC,f=FMT[v]||FORMATS[0];
     mc.format=v;mc.res.mode=f.res;if(!mc.cap)mc.cap=f.cap;
     if(!HASROUNDS.includes(v)){mc.scheme="";mc.rounds=1}break}
-  case"mcres":{S.draft.metcons[S.mc].res.mode=v;break}
-  case"mcdone":{S.draft.metcons[S.mc].res.done=v==="1";break}
-  case"mcrx":{S.draft.metcons[S.mc].rx=v==="1";break}
-  case"mcitemdel":{S.draft.metcons[S.mc].items.splice(+b.dataset.i,1);break}
-  case"mcstruct":{const mc=S.draft.metcons[S.mc];
+  case"mcres":{MC.res.mode=v;break}
+  case"mcdone":{MC.res.done=v==="1";break}
+  case"mcrx":{MC.rx=v==="1";break}
+  case"mcitemdel":{MC.items.splice(+b.dataset.i,1);break}
+  case"mcstruct":{const mc=MC;
     if(v==="scheme"){if(!parseScheme(mc.scheme))mc.scheme="21-15-9"}
     else{mc.scheme="";if(!mc.rounds)mc.rounds=1}break}
-  case"mclad":{const it=S.draft.metcons[S.mc].items[+b.dataset.i];it.lad=it.lad===false;break}
+  case"mclad":{const it=MC.items[+b.dataset.i];if(it)it.lad=it.lad===false;break}
   case"closepick":S.picker=false;break;
-  case"add":{if(S.pickFor==="metcon"){const mc=S.draft.metcons[S.mc];
-      mc.items.push({movementId:v,reps:null,weight:null,dist:null,cal:null});S.picker=false;S.q=""}
+  case"add":{
+    /* Si le metcon visé n'existe plus, le mouvement rejoint le travail spécifique
+       plutôt que de faire échouer l'ajout. */
+    if(S.pickFor==="metcon"&&MC){
+      MC.items.push({movementId:v,reps:null,weight:null,dist:null,cal:null});
+      S.picker=false;S.q=""}
     else addMove(v);break}
   case"create":{const id=createMove(S.q);if(id)addMove(id);break}
   case"createAsk":{const id=createMove(prompt("Nom du mouvement ?"));if(id)addMove(id);break}
@@ -1326,17 +1338,18 @@ document.addEventListener("input",ev=>{const t=ev.target;
  if(t.id==="q"){S.q=t.value;render();return}
  if(t.id==="pn"){S.pname=t.value;return}
  if(t.id==="mail"){S.email=t.value;return}
- if(t.id==="mcname"){S.draft.metcons[S.mc].name=t.value;save();return}
- if(t.id==="mccap"){S.draft.metcons[S.mc].cap=t.value===""?0:Math.max(0,parseInt(t.value)||0);save();return}
- if(t.id==="mcrounds"){S.draft.metcons[S.mc].rounds=Math.max(1,parseInt(t.value)||1);save();render();return}
- if(t.id==="mcscheme"){S.draft.metcons[S.mc].scheme=t.value;save();render();return}
- if(t.dataset.mi!=null){const it=S.draft.metcons[S.mc].items[+t.dataset.mi];if(!it)return;
+ const MC=S.draft&&S.mc!=null?(S.draft.metcons||[])[S.mc]:null;
+ if(t.id==="mcname"){if(MC)MC.name=t.value;save();return}
+ if(t.id==="mccap"){if(MC)MC.cap=t.value===""?0:Math.max(0,parseInt(t.value)||0);save();return}
+ if(t.id==="mcrounds"){if(MC)MC.rounds=Math.max(1,parseInt(t.value)||1);save();render();return}
+ if(t.id==="mcscheme"){if(MC)MC.scheme=t.value;save();render();return}
+ if(t.dataset.mi!=null){const it=MC&&MC.items[+t.dataset.mi];if(!it)return;
   const n=t.value===""?null:Math.max(0,parseFloat(t.value)||0);
   it[t.dataset.f]=n;
   if(t.dataset.f==="dist"&&n)it.cal=null;
   if(t.dataset.f==="cal"&&n)it.dist=null;
   save();render();return}
- if(t.dataset.mr){const r=S.draft.metcons[S.mc].res,n=t.value===""?0:Math.max(0,parseInt(t.value)||0);
+ if(t.dataset.mr){if(!MC)return;const r=MC.res,n=t.value===""?0:Math.max(0,parseInt(t.value)||0);
   if(t.dataset.mr==="min")r.secs=n*60+(r.secs%60);
   else if(t.dataset.mr==="sec")r.secs=Math.floor(r.secs/60)*60+n;
   else r[t.dataset.mr]=n;
@@ -1345,8 +1358,8 @@ document.addEventListener("input",ev=>{const t=ev.target;
   const st=en.sets[+t.dataset.set];if(!st)return;
   const n=t.value===""?0:Math.max(0,parseFloat(t.value)||0);
   st[t.dataset.f]=t.dataset.f==="reps"?Math.round(n):n;save();render();return}
- if(t.id==="dt"&&t.value){S.draft.date=t.value;save();render();return}
- if(t.id==="nt"){S.draft.note=t.value;save();return}
+ if(t.id==="dt"&&t.value){if(S.draft)S.draft.date=t.value;save();render();return}
+ if(t.id==="nt"){if(S.draft)S.draft.note=t.value;save();return}
  if(t.dataset.k){S.d[t.dataset.k]=t.value===""?0:Math.max(0,parseFloat(t.value)||0);
   const en=entryOf();if(en){const m=mv(en.movementId);
    if(m.k==="barbell"||m.k==="cardio"||m.u==="reps"){save();render()}}}});
