@@ -91,28 +91,41 @@ et fonctionne exactement comme la version fichier.
 
 ---
 
-## Connexion par code (application installée)
+---
 
-Une web app installée sur l'écran d'accueil iOS vit dans un espace de stockage
-séparé de Safari. Le lien magique reçu par mail s'ouvre dans Safari : c'est donc
-Safari qui se connecte, pas l'application. L'app utilise pour cette raison un
-**code à 6 chiffres** saisi directement dans l'écran Compte.
+## Connexion : mot de passe, sans e-mail
 
-**Configuration obligatoire dans Supabase** (sinon le mail ne contient pas le code) :
+L'application utilise une adresse mail et un mot de passe. Aucun e-mail n'est
+envoyé, pour deux raisons cumulées :
 
-1. **Authentication → Emails** (Email Templates), modèle **Magic Link**.
-2. Remplacer le corps par un texte contenant la variable `{{ .Token }}`, par exemple :
+- Une web app installée sur l'écran d'accueil iOS possède un stockage **séparé
+  de Safari**. Un lien de connexion reçu par mail s'ouvre dans Safari : c'est
+  Safari qui se connecte, pas l'application.
+- Depuis juin 2026, le service de mail intégré de Supabase est plafonné à
+  2 messages par heure pour l'ensemble du projet, **n'envoie qu'aux adresses de
+  l'équipe du projet**, et les modèles ne sont plus modifiables en offre gratuite.
 
-```html
-<h2>Connexion à Mon Suivi CrossFit</h2>
-<p>Ton code de connexion :</p>
-<h1 style="letter-spacing:6px">{{ .Token }}</h1>
-<p>Il expire dans une heure. Si tu n'es pas à l'origine de cette demande, ignore ce message.</p>
-```
+### Réglage obligatoire, une seule fois
 
-3. Enregistrer. Le lien `{{ .ConfirmationURL }}` peut être retiré du modèle :
-   dans l'application installée, il induit en erreur.
+**Authentication → Sign In / Providers → Email** : désactiver **Confirm email**,
+puis enregistrer.
 
-À savoir : Supabase limite l'envoi à un mail par minute et par adresse, et le
-service intégré est réservé au test. Avant de partager l'application, brancher
-un SMTP (Resend, Brevo…) dans **Authentication → SMTP Settings**.
+Sans ce réglage, la création de compte attend une confirmation par mail qui
+n'arrivera jamais. L'application le détecte et affiche un message rappelant ce
+réglage.
+
+### Créer les comptes
+
+Chacun crée le sien depuis l'écran Profil : « Créer un compte », adresse,
+mot de passe de 6 caractères minimum. Rien à faire côté Supabase.
+
+L'adresse n'est jamais vérifiée : elle sert uniquement d'identifiant. Une adresse
+inventée fonctionne, mais un mot de passe oublié devient alors irrécupérable —
+d'où l'intérêt d'une vraie adresse et de l'export régulier.
+
+### Plus tard : revenir au sans mot de passe
+
+Il faudra brancher un SMTP externe (Resend, Brevo — paliers gratuits largement
+suffisants) dans **Authentication → SMTP Settings**. Cela débloque à la fois la
+modification des modèles et l'envoi à n'importe quelle adresse. Le domaine
+kinerinxent.fr peut servir de domaine d'envoi.

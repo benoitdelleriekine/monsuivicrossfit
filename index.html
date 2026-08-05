@@ -606,23 +606,21 @@ function accountCard(){
    <div style="font-size:13px;color:var(--mute);line-height:1.65">Cette copie fonctionne en local : tes données restent sur cet appareil.
    Pour les retrouver sur plusieurs appareils, il faut relier l'application à un compte.</div></div>`;
   if(!c.user){
-   if(c.sent)return`<div class="card flat" style="margin-top:20px">
-    <div class="eyebrow" style="margin-bottom:10px">Compte</div>
-    <div style="font-size:13px;color:var(--mute);line-height:1.65;margin-bottom:14px">Un code à 6 chiffres a été envoyé à
-    <b style="color:var(--ink)">${esc(S.email)}</b>. Saisis-le ici — surtout, n'ouvre pas le lien du mail depuis l'application installée.</div>
-    <input class="inp" id="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
-     placeholder="000000" value="${esc(S.otp||"")}"
-     style="text-align:center;font-size:24px;letter-spacing:.35em;font-family:Montserrat,monospace;font-weight:700">
-    <button class="btn btn-go" style="margin-top:11px;padding:13px;font-size:14px" data-act="verify">${c.busy?"Vérification…":"Me connecter"}</button>
-    <div style="display:flex;gap:14px;margin-top:12px">
-    <button class="chip" data-act="signin">Renvoyer un code</button>
-    <button class="chip" data-act="otpback">Changer d'adresse</button></div></div>`;
+   const nouveau=!!c.signup;
    return`<div class="card flat" style="margin-top:20px">
    <div class="eyebrow" style="margin-bottom:10px">Compte</div>
-   <div style="font-size:13px;color:var(--mute);line-height:1.65;margin-bottom:14px">Connecte-toi pour retrouver tes séances sur tous tes appareils.
-   Tu recevras un code par mail, sans mot de passe à retenir.</div>
-   <input class="inp" id="mail" type="email" inputmode="email" autocomplete="email" placeholder="ton@mail.fr" value="${esc(S.email)}">
-   <button class="btn btn-quiet" style="margin-top:11px;padding:13px;font-size:13.5px" data-act="signin">${c.busy?"Envoi…":"Recevoir mon code"}</button>
+   <div style="font-size:13px;color:var(--mute);line-height:1.65;margin-bottom:14px">${nouveau
+    ?"Choisis une adresse et un mot de passe. Ils te serviront à retrouver tes séances sur tous tes appareils."
+    :"Connecte-toi pour retrouver tes séances sur tous tes appareils."}</div>
+   <input class="inp" id="mail" type="email" inputmode="email" autocomplete="email"
+    placeholder="ton@mail.fr" value="${esc(S.email)}">
+   <input class="inp" id="pw" type="password" style="margin-top:9px"
+    autocomplete="${nouveau?"new-password":"current-password"}"
+    placeholder="${nouveau?"Mot de passe (6 caractères minimum)":"Mot de passe"}" value="${esc(S.pw||"")}">
+   <button class="btn btn-go" style="margin-top:11px;padding:13px;font-size:14px"
+    data-act="${nouveau?"signup":"signinpw"}">${c.busy?"Un instant…":(nouveau?"Créer mon compte":"Me connecter")}</button>
+   <button class="chip" style="margin-top:12px" data-act="toggsign">${nouveau
+    ?"J'ai déjà un compte":"Créer un compte"}</button>
    <div style="font-size:12px;color:var(--mute);line-height:1.55;margin-top:12px">Tu peux continuer sans compte : tout reste alors sur cet appareil.</div></div>`}
   return`<div class="card flat" style="margin-top:20px">
    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -1226,21 +1224,23 @@ document.addEventListener("click",ev=>{
   case"prog":S.prog=v;break;
   case"progg":S.progG=v;S.prog=null;break;
   case"prof":openProfil();break;
-  case"signin":{const m=(S.email||"").trim();
+  case"toggsign":S.cloud.signup=!S.cloud.signup;break;
+  case"signinpw":case"signup":{
+    const m=(S.email||"").trim(),pw=S.pw||"";
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)){alert("Vérifie l'adresse mail saisie.");return}
+    if(pw.length<6){alert("Le mot de passe doit compter au moins 6 caractères.");return}
     S.cloud.busy=true;render();
-    window.CLOUD.signIn(m).then(()=>{S.cloud.busy=false;S.cloud.sent=true;S.otp="";render()})
-     .catch(e=>{S.cloud.busy=false;render();
-      alert(/rate/i.test(e.message||"")?"Un envoi vient d'être fait : attends une minute avant d'en redemander un.":"Envoi impossible : "+(e.message||e))});
+    const fin=()=>{S.cloud.busy=false;S.pw="";render()};
+    const err=e=>{S.cloud.busy=false;render();
+      const t=(e&&e.message)||"";
+      alert(/Invalid login/i.test(t)?"Adresse ou mot de passe incorrect."
+        :/already registered/i.test(t)?"Un compte existe déjà avec cette adresse. Utilise « J'ai déjà un compte »."
+        :/CONFIRMATION_REQUISE/.test(t)?"La confirmation par mail est encore active côté Supabase. Désactive-la dans Authentication → Sign In / Providers → Email."
+        :/at least/i.test(t)?"Mot de passe trop court."
+        :"Connexion impossible : "+t)};
+    (a==="signup"?window.CLOUD.signUp(m,pw):window.CLOUD.signInPw(m,pw)).then(fin).catch(err);
     return}
-  case"verify":{const t=(S.otp||"").trim();
-    if(!/^\d{6}$/.test(t)){alert("Le code comporte 6 chiffres.");return}
-    S.cloud.busy=true;render();
-    window.CLOUD.verify((S.email||"").trim(),t).then(()=>{S.cloud.busy=false;S.cloud.sent=false;S.otp="";render()})
-     .catch(e=>{S.cloud.busy=false;render();
-      alert(/expired|invalid/i.test(e.message||"")?"Code invalide ou expiré. Demande un nouveau code.":"Vérification impossible : "+(e.message||e))});
-    return}
-  case"otpback":S.cloud.sent=false;S.otp="";break;
+
   case"signout":{if(!confirm("Te déconnecter ? Tes données restent sur cet appareil."))return;
     window.CLOUD.signOut();return}
   case"resync":cloudSync();return;
@@ -1358,7 +1358,7 @@ document.addEventListener("input",ev=>{const t=ev.target;
  if(t.id==="q"){S.q=t.value;render();return}
  if(t.id==="pn"){S.pname=t.value;return}
  if(t.id==="mail"){S.email=t.value;return}
- if(t.id==="otp"){S.otp=t.value.replace(/\D/g,"").slice(0,6);return}
+ if(t.id==="pw"){S.pw=t.value;return}
  const MC=S.draft&&S.mc!=null?(S.draft.metcons||[])[S.mc]:null;
  if(t.id==="mcname"){if(MC)MC.name=t.value;save();return}
  if(t.id==="mccap"){if(MC)MC.cap=t.value===""?0:Math.max(0,parseInt(t.value)||0);save();return}
@@ -1463,7 +1463,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const configured = !SUPABASE_URL.includes("REMPLACE") && SUPABASE_ANON_KEY.length > 40;
 const CLOUD = { enabled: configured, user: null, client: null,
-  async signIn(){}, async verify(){}, signOut(){}, async pull(){return null}, async push(){}, async wipe(){} };
+  async signIn(){}, async signInPw(){}, async signUp(){}, signOut(){}, async pull(){return null}, async push(){}, async wipe(){} };
 window.CLOUD = CLOUD;
 
 if (configured) {
@@ -1476,10 +1476,18 @@ if (configured) {
       email, options: { emailRedirectTo: window.location.origin + window.location.pathname }
     }).then(({ error }) => { if (error) throw error; });
 
-    /* Connexion par code : indispensable en application installée (iOS isole
-       le stockage de la web app de celui de Safari, où atterrit le lien). */
-    CLOUD.verify = (email, token) => sb.auth.verifyOtp({ email, token, type: "email" })
+    /* Mot de passe : seule méthode qui fonctionne en application installée.
+       iOS isole le stockage de la web app de celui de Safari, où atterrirait
+       un lien de connexion ; et le service de mail par défaut de Supabase
+       n'envoie qu'aux adresses de l'équipe du projet. Aucun mail ici. */
+    CLOUD.signInPw = (email, password) => sb.auth.signInWithPassword({ email, password })
       .then(({ error }) => { if (error) throw error; });
+
+    CLOUD.signUp = (email, password) => sb.auth.signUp({ email, password })
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (!data.session) throw new Error("CONFIRMATION_REQUISE");
+      });
 
     CLOUD.signOut = () => sb.auth.signOut();
 
