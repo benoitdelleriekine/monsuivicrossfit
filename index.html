@@ -20,9 +20,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0D0F12">
 <title>Mon Suivi CrossFit</title>
-<link rel="apple-touch-icon" href="apple-touch-icon.png"><rect width='180' height='180' fill='%23F0EEE9'/><circle cx='58' cy='118' r='20' fill='%233FA9A0'/><circle cx='90' cy='90' r='20' fill='%239B7BC0'/><circle cx='122' cy='62' r='20' fill='%23E88B5F'/></svg>">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"><rect width='180' height='180' fill='%23F0EEE9'/><circle cx='58' cy='118' r='20' fill='%233FA9A0'/><circle cx='90' cy='90' r='20' fill='%239B7BC0'/><circle cx='122' cy='62' r='20' fill='%23E88B5F'/></svg>">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Raleway:wght@400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1351,10 +1351,23 @@ function pushSoon(){
 
 function applyRemote(d){
  S.sessions=(d.sessions||[]).map(x=>({metcons:[],entries:[],...x}));
- S.custom=d.custom||[];S.bar=d.bar??15;S.profile=d.profile||null;
- S.lastExport=d.lastExport||null;S.updatedAt=d.updatedAt||Date.now();
+ /* Les séances viennent du cloud, mais les réglages ne sont écrasés que si la
+    version distante en possède un : une ligne poussée avant la création du profil
+    ne doit pas effacer celui saisi sur l'appareil. */
+ S.bar=d.bar??S.bar??15;
+ S.profile=d.profile||S.profile||null;
+ S.lastExport=d.lastExport||S.lastExport||null;
+ if(d.theme){S.theme=d.theme;applyTheme()}
+ /* Mouvements personnalisés : on réunit les deux côtés plutôt que d'en choisir un. */
+ const seen=new Set(),merged=[];
+ [...(d.custom||[]),...(S.custom||[])].forEach(c=>{if(c&&!seen.has(c.id)){seen.add(c.id);merged.push(c)}});
+ const grew=merged.length!==(d.custom||[]).length;
+ S.custom=merged;
+ S.updatedAt=d.updatedAt||Date.now();
  if(S.profile)S.pname=S.profile.name||"";
- try{localStorage.setItem(KEY,JSON.stringify(payload(true)))}catch(e){}}
+ try{localStorage.setItem(KEY,JSON.stringify(payload(true)))}catch(e){}
+ /* Ce que le cloud ne connaissait pas lui est renvoyé. */
+ if((!d.profile&&S.profile)||grew)pushSoon();}
 
 async function cloudSync(){
  if(!window.CLOUD||!S.cloud.user)return;
