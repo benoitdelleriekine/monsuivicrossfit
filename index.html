@@ -423,6 +423,9 @@ function load(){let raw=null;
   S.custom=d.custom||[];S.bar=d.bar??15;S.draft=d.draft||null;
   S.profile=d.profile||null;S.lastExport=d.lastExport||null;S.updatedAt=d.updatedAt||0;
   S.theme=d.theme||"dark"}catch(e){}
+ /* Réparation des profils écrits par une version antérieure défectueuse :
+    sans âge ni poids valides, les barèmes ne veulent rien dire. */
+ if(S.profile&&(!Number.isFinite(S.profile.age)||!Number.isFinite(S.profile.bw)))S.profile=null;
  applyTheme()}
 
 /* Le thème pilote l'attribut racine ; les variables CSS font le reste. */
@@ -621,6 +624,10 @@ function accountCard(){
 
 function vProfil(){
   const p=S.profile,first=!p;
+  /* Filet de sécurité : si les compteurs ont perdu leur valeur, on les
+     réamorce depuis le profil enregistré plutôt que d'afficher du vide. */
+  if(!Number.isFinite(Number(S.d.age)))S.d.age=(p&&Number.isFinite(p.age))?p.age:30;
+  if(!Number.isFinite(Number(S.d.bw)))S.d.bw=(p&&Number.isFinite(p.bw))?p.bw:60;
   let h=`<div class="head">${first?`<div class="eyebrow">Première étape</div><h1>Bienvenue</h1>`
    :`<div class="eyebrow">Réglages</div><h1>Mon profil</h1>`}</div><div class="pane">`;
   if(first)h+=`<div class="card"><div style="font-size:14px;line-height:1.7;color:var(--mute)">
@@ -1176,8 +1183,10 @@ function render(){
  if(id){const n=document.getElementById(id);if(n){n.focus();try{n.setSelectionRange(ps,ps)}catch(e){}}}}
 
 /* ══════════ ÉVÉNEMENTS ══════════ */
+/* On conserve les champs qui n'appartiennent pas à la série en cours
+   (âge, poids de corps) : ils vivent dans le même objet de saisie. */
 function seed(mid){const m=mv(mid),p=lastFor(mid),s=p&&p.e.sets[0];
- S.d={w:s&&s.weight!=null?s.weight:(m.k==="barbell"?S.bar:0),
+ S.d={...S.d,w:s&&s.weight!=null?s.weight:(m.k==="barbell"?S.bar:0),
   reps:s&&s.reps?s.reps:(m.u==="sec"?30:m.k==="barbell"?5:10),
   diff:s&&s.diff?s.diff:"juste",level:s&&s.level!=null?s.level:(lvlOf(mid)??0),
   dist:s&&s.dist?s.dist:500,min:s&&s.secs?Math.floor(s.secs/60):2,sec:s&&s.secs?s.secs%60:0}}
@@ -1220,9 +1229,11 @@ document.addEventListener("click",ev=>{
     })();
     return}
   case"psex":S.psex=v;break;
-  case"psave":{if(S.d.age<14||S.d.bw<30){alert("Vérifie l'âge et le poids saisis.");return}
+  case"psave":{const a=Number(S.d.age),b=Number(S.d.bw);
+    if(!Number.isFinite(a)||!Number.isFinite(b)||a<14||a>100||b<30||b>250){
+      alert("Vérifie l'âge et le poids saisis.");return}
     const first=!S.profile;
-    S.profile={sex:S.psex,age:Math.round(S.d.age),bw:S.d.bw,name:S.pname.trim()};
+    S.profile={sex:S.psex,age:Math.round(a),bw:b,name:(S.pname||"").trim()};
     S.tab=first?"progres":"profil";break}
   case"new":S.draft=blank();S.tab="noter";S.focus=null;S.mc=null;break;
   case"repeat":{const l=sorted()[0];if(!l)break;
@@ -1361,7 +1372,8 @@ function applyRemote(d){
     version distante en possède un : une ligne poussée avant la création du profil
     ne doit pas effacer celui saisi sur l'appareil. */
  S.bar=d.bar??S.bar??15;
- S.profile=d.profile||S.profile||null;
+ const rp=d.profile&&Number.isFinite(d.profile.age)&&Number.isFinite(d.profile.bw)?d.profile:null;
+ S.profile=rp||S.profile||null;
  S.lastExport=d.lastExport||S.lastExport||null;
  if(d.theme){S.theme=d.theme;applyTheme()}
  /* Mouvements personnalisés : on réunit les deux côtés plutôt que d'en choisir un. */
@@ -1373,7 +1385,7 @@ function applyRemote(d){
  if(S.profile)S.pname=S.profile.name||"";
  try{localStorage.setItem(KEY,JSON.stringify(payload(true)))}catch(e){}
  /* Ce que le cloud ne connaissait pas lui est renvoyé. */
- if((!d.profile&&S.profile)||grew)pushSoon();}
+ if((!rp&&S.profile)||grew)pushSoon();}
 
 async function cloudSync(){
  if(!window.CLOUD||!S.cloud.user)return;
