@@ -1,17 +1,17 @@
 {
-  "name": "Progrès — suivi CrossFit",
-  "short_name": "Progrès",
-  "description": "Suivi de séances CrossFit et de progression.",
+  "name": "Mon Suivi CrossFit",
+  "short_name": "Mon Suivi",
+  "description": "S'entraîner. Analyser. Progresser.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#F0EEE9",
-  "theme_color": "#F0EEE9",
+  "background_color": "#0D0F12",
+  "theme_color": "#0D0F12",
   "lang": "fr",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

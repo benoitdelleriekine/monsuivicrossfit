@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Mon Suivi CrossFit">
+  <title>Mon Suivi CrossFit</title>
+
+  <!-- Barre d'haltérophilie : la performance et la force -->
+  <g stroke="#FFFFFF" stroke-linecap="round" fill="#FFFFFF">
+    <line x1="52" y1="256" x2="205" y2="256" stroke-width="16"/>
+    <line x1="307" y1="256" x2="460" y2="256" stroke-width="16"/>
+    <rect x="86"  y="193" width="27" height="126" rx="12"/>
+    <rect x="40"  y="213" width="23" height="86"  rx="11"/>
+    <rect x="399" y="193" width="27" height="126" rx="12"/>
+    <rect x="449" y="213" width="23" height="86"  rx="11"/>
+  </g>
+
+  <!-- Hexagone : la structure, la communauté du box -->
+  <polygon points="420,256 338,398 174,398 92,256 174,114 338,114"
+           fill="none" stroke="#FFFFFF" stroke-width="27"
+           stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- Courbe de progression : l'analyse et l'amélioration continue -->
+  <polyline points="150,322 200,274 240,304 292,224 322,250 352,192"
+            fill="none" stroke="#33D6B0" stroke-width="26"
+            stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- Point de record personnel -->
+  <circle cx="368" cy="174" r="28" fill="none" stroke="#33D6B0" stroke-width="16"/>
+  <circle cx="368" cy="174" r="10" fill="#33D6B0"/>
+</svg>
