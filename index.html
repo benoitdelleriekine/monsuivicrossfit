@@ -57,15 +57,15 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .chip.on{background:var(--ink);border-color:var(--ink);color:var(--cloud);font-weight:600}
 .chip.on-a{background:var(--aqua);border-color:var(--aqua);color:#fff;font-weight:600}
 /* Frise des semaines */
-.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.gcell{aspect-ratio:1;border-radius:8px;background:#E5E2DB;animation:pop .3s backwards}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:252px;margin:0 auto}
+.gcell{aspect-ratio:1;border-radius:5px;background:#E5E2DB;animation:pop .3s backwards}
 .gcell.on{background:var(--aqua)}
 .gcell.ms{background:var(--melon)}
-.gcell.today{box-shadow:inset 0 0 0 2px var(--ink)}
+.gcell.today{box-shadow:inset 0 0 0 1.5px var(--ink)}
 @keyframes pop{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:scale(1)}}
-.glabel{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:7px}
-.glabel span{text-align:center;font-size:10px;color:var(--mute);font-weight:600}
-.legend{display:flex;gap:15px;margin-top:14px;font-size:11.5px;color:var(--mute);font-weight:500}
+.glabel{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:0 auto 6px;max-width:252px}
+.glabel span{text-align:center;font-size:9.5px;color:var(--mute);font-weight:600}
+.legend{display:flex;gap:14px;margin-top:12px;justify-content:center;font-size:11px;color:var(--mute);font-weight:500}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .stats{display:flex;gap:10px;margin-bottom:14px}
 .stat{flex:1;background:var(--card);border-radius:18px;padding:15px 6px;text-align:center;box-shadow:var(--sh-lo)}
@@ -130,11 +130,18 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .badge{font-size:10px;letter-spacing:.07em;text-transform:uppercase;padding:5px 10px;border-radius:999px;
   background:var(--cloud);color:var(--mute);font-weight:600;white-space:nowrap}
 .badge.hot{background:var(--melon);color:#fff}
+.gtab{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;-webkit-overflow-scrolling:touch}
+.gtab::-webkit-scrollbar{display:none}
+.gtab button{flex:none;display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;
+ background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:500;color:var(--mute);
+ box-shadow:var(--sh-lo);white-space:nowrap}
+.gtab button.on{background:var(--ink);border-color:var(--ink);color:var(--cloud);font-weight:600}
+.gtab svg{opacity:.85}
 .lvbar{display:flex;gap:4px;margin-bottom:8px}
 .lvseg{flex:1;height:10px;border-radius:5px;background:#E5E2DB}
 .lvnames{display:flex;justify-content:space-between;font-size:10px;color:var(--mute);font-weight:500}
 .lvnames span{flex:1;text-align:center}
-.hero-n{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:62px;letter-spacing:-.045em;line-height:.86}
+.hero-n{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:44px;letter-spacing:-.04em;line-height:.86}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* Tablette et ordinateur : colonne plus large, navigation en haut */
 @media (min-width:820px){
@@ -310,6 +317,20 @@ const REPSTD={
 /* Palier minimum de l'échelle à partir duquel une série compte pour le barème */
 const RX={"pull-up":6,"c2b":1,"push-up":2,"ring-dip":2,"t2b":2,"hspu":4,"pistol":2,"du":2};
 const NOBW=["du","sit-up"];
+/* Pictogrammes de catégorie, tracés au trait pour rester lisibles à 16 px */
+const GICON={
+ "Haltéro":'<path d="M2 8h12M4.5 4.8v6.4M11.5 4.8v6.4M1.6 6.2v3.6M14.4 6.2v3.6"/>',
+ "Force":'<circle cx="8" cy="8" r="5.6"/><circle cx="8" cy="8" r="1.5"/>',
+ "Haltères":'<path d="M4.6 8h6.8M3 5.4v5.2M6 4.2v7.6M10 4.2v7.6M13 5.4v5.2"/>',
+ "Gymnastique":'<path d="M5.4 2v4.2M10.6 2v4.2"/><circle cx="5.4" cy="9.6" r="3.4"/><circle cx="10.6" cy="9.6" r="3.4"/>',
+ "Cardio":'<path d="M1.5 8h2.8l1.7-3.6L8.4 12l1.9-4h4.2"/>',
+ "Mes mouvements":'<path d="M8 2.6v10.8M2.6 8h10.8"/>',
+ "_":'<circle cx="8" cy="8" r="5.6"/>'
+};
+const gicon=g=>`<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor"
+ stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GICON[g]||GICON._}</svg>`;
+
+const LVSHORT=["Déb.","Nov.","Inter.","Avan.","Élite"];
 const LVN={f:["Débutante","Novice","Intermédiaire","Avancée","Élite"],
            m:["Débutant","Novice","Intermédiaire","Avancé","Élite"]};
 
@@ -363,7 +384,7 @@ function weeksGrid(n){const rows=[],m=new Date();m.setDate(m.getDate()-((m.getDa
 
 /* ══════════ ÉTAT ══════════ */
 let S={sessions:[],custom:[],bar:15,tab:"progres",draft:null,focus:null,picker:false,q:"",prog:null,open:null,
- profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,
+ profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,
  updatedAt:0,cloud:{enabled:false,user:null,status:"",busy:false},email:"",
  d:{w:0,reps:5,diff:"juste",level:0,dist:500,min:2,sec:0,age:30,bw:60}};
 /* Instantané des données, avec horodatage pour arbitrer la synchronisation */
@@ -422,12 +443,12 @@ function vProgres(){
   let h=`<div class="head" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
    <div><div class="eyebrow">${S.profile&&S.profile.name?"Salut "+esc(S.profile.name):"Ton avancée"}</div><h1>Progrès</h1></div>
    <button class="chip" data-act="prof">Profil</button></div><div class="pane">
-   <div class="card"><div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px">
-   <div><div class="hero-n">${st}</div><div class="eyebrow" style="margin-top:8px">semaine${st>1?"s":""} d'affilée</div></div>
-   <div style="font-size:12.5px;color:var(--mute);font-weight:500;text-align:right">10 dernières<br>semaines</div></div>
+   <div class="card" style="padding:18px"><div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px">
+   <div><div class="hero-n">${st}</div><div class="eyebrow" style="margin-top:6px">semaine${st>1?"s":""} d'affilée</div></div>
+   <div style="font-size:11.5px;color:var(--mute);font-weight:500;text-align:right;line-height:1.4">10 dernières<br>semaines</div></div>
    <div class="glabel">${["L","M","M","J","V","S","D"].map(d=>`<span>${d}</span>`).join("")}</div>`;
   let n=0;
-  weeksGrid(10).forEach(w=>{h+=`<div class="grid" style="margin-bottom:6px">`+w.map(d=>{
+  weeksGrid(10).forEach(w=>{h+=`<div class="grid" style="margin-bottom:4px">`+w.map(d=>{
    const c=msDays.has(d)?"ms":days.has(d)?"on":"";n++;
    return`<div class="gcell ${c}${d===TODAY?" today":""}" style="animation-delay:${n*6}ms"></div>`}).join("")+`</div>`});
   h+=`<div class="legend"><span><i style="background:var(--aqua)"></i>séance</span>
@@ -445,7 +466,14 @@ function vProgres(){
   const inM=[...new Set(S.sessions.flatMap(s=>(s.metcons||[]).flatMap(mc=>mcTotals(mc).map(t=>t.id))))];
   const used=[...inE,...inM.filter(x=>!inE.includes(x))];
   if(used.length){
-   const sel=S.prog&&used.includes(S.prog)?S.prog:used[0],m=mv(sel),isCar=m.k==="cardio"||PACE[sel];
+   /* On classe d'abord par grande famille, puis par mouvement dans la famille. */
+   const ORDER=["Haltéro","Force","Haltères","Gymnastique","Cardio","Mes mouvements"];
+   const rank=g=>{const i=ORDER.indexOf(g);return i<0?99:i};
+   const groups=[...new Set(used.map(id=>mv(id).g))].sort((a,b)=>rank(a)-rank(b));
+   const gSel=S.progG&&groups.includes(S.progG)?S.progG
+    :(S.prog&&used.includes(S.prog)?mv(S.prog).g:groups[0]);
+   const inG=used.filter(id=>mv(id).g===gSel);
+   const sel=S.prog&&inG.includes(S.prog)?S.prog:inG[0],m=mv(sel),isCar=m.k==="cardio"||PACE[sel];
    const curve=S.sessions.map(s=>{let rm=null,rp=0,pc=null;
      (s.entries||[]).filter(e=>e.movementId===sel).forEach(e=>(e.sets||[]).forEach(x=>{
       const v=e1rm(x.weight,x.reps,x.diff);if(v&&(!rm||v>rm))rm=v;
@@ -455,8 +483,10 @@ function vProgres(){
     .filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date));
    const wr=curve.filter(c=>c.rm!=null),wp=curve.filter(c=>c.pace!=null),wn=curve.filter(c=>c.reps>0);
    const best=bestOf(sel),lv=m.lad?lvlOf(sel):null;
-   h+=`<div class="pane"><div class="chips" style="margin-bottom:13px">`+
-    used.map(id=>`<button class="chip ${sel===id?"on":""}" data-act="prog" data-v="${id}">${esc(mv(id).n)}</button>`).join("")+`</div>
+   h+=`<div class="pane"><div class="gtab">`+
+    groups.map(g=>`<button class="${gSel===g?"on":""}" data-act="progg" data-v="${esc(g)}">${gicon(g)}${g}</button>`).join("")+
+    `</div><div class="chips" style="margin:10px 0 13px">`+
+    inG.map(id=>`<button class="chip ${sel===id?"on":""}" data-act="prog" data-v="${id}">${esc(mv(id).n)}</button>`).join("")+`</div>
     <div class="card"><div class="dsp" style="font-size:24px;margin-bottom:16px">${esc(m.n)}</div>`;
    if(m.lad&&lv!=null){h+=`<div style="margin-bottom:20px"><div class="eyebrow" style="margin-bottom:10px">Où tu en es</div>
     <div style="position:relative"><div class="rline"></div>`+
@@ -510,7 +540,7 @@ function levelBlock(id){
     <button class="chip" style="padding:5px 11px;font-size:11.5px;box-shadow:none" data-act="prof">${S.profile.bw} kg · ${S.profile.age} ans</button></div>
    <div class="dsp" style="font-size:27px;margin-bottom:12px">${L.label}</div>
    <div class="lvbar">${L.segs.map((f,i)=>`<div class="lvseg" style="background:${f>=1?cols[i]:f<=0?"#E5E2DB":`linear-gradient(to right,${cols[i]} ${(f*100).toFixed(0)}%,#E5E2DB ${(f*100).toFixed(0)}%)`}"></div>`).join("")}</div>
-   <div class="lvnames">${names.map((n,i)=>`<span style="${i===L.idx?"color:var(--ink);font-weight:600":""}">${n.slice(0,4)}</span>`).join("")}</div>
+   <div class="lvnames">${names.map((n,i)=>`<span style="${i===L.idx?"color:var(--ink);font-weight:600":""}">${LVSHORT[i]}</span>`).join("")}</div>
    <div style="font-size:12.5px;color:var(--mute);line-height:1.6;margin-top:12px">
     ${L.next?`Encore <b style="color:var(--ink)">${(+L.next.need).toFixed(st.unit==="kg"?1:0)}${st.unit==="kg"?" kg":" reps"}</b> pour atteindre ${L.next.name}.`
       :G("Tu es arrivée","Tu es arrivé")+" au sommet de l'échelle sur ce mouvement."}
@@ -1121,6 +1151,7 @@ document.addEventListener("click",ev=>{
  switch(a){
   case"tab":S.tab=v;S.focus=null;break;
   case"prog":S.prog=v;break;
+  case"progg":S.progG=v;S.prog=null;break;
   case"prof":openProfil();break;
   case"signin":{const m=(S.email||"").trim();
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)){alert("Vérifie l'adresse mail saisie.");return}
