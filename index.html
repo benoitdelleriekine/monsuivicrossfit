@@ -184,6 +184,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 <script>try{var t=(JSON.parse(localStorage.getItem("cf-progres")||"{}").theme)||"dark";
 document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","dark")}</script>
 <div id="app"></div>
+<div id="spacer" style="height:0"></div>
 <nav id="tabs" class="tabs"></nav>
 <div id="overlay"></div>
 <script>
@@ -1424,9 +1425,15 @@ function render(){
     la page garde sa position absolue et le bloc semble sauter sous le doigt.
     On mesure sa position à l'écran avant et après, puis on compense. */
  const anc=pendingAnchor;pendingAnchor=null;
- let ancTop=null;
+ let ancTop=null,h0=null,sp0=0;
+ const sp=document.getElementById("spacer");
  if(anc){try{const e=document.getElementById(anc);
-   if(e&&e.getBoundingClientRect)ancTop=e.getBoundingClientRect().top}catch(e){}}
+   if(e&&e.getBoundingClientRect)ancTop=e.getBoundingClientRect().top;
+   /* Hauteur totale avant redessin, cale comprise. Si la page raccourcit,
+      le navigateur borne le défilement et remonte de force : aucune
+      compensation ne peut alors aboutir. On maintient donc la hauteur. */
+   if(sp){sp0=parseFloat(sp.style.height)||0;
+    h0=document.documentElement.scrollHeight}}catch(e){}}
  document.getElementById("app").innerHTML=
   S.tab==="progres"?(S.fiche?vFiche(S.fiche):vProgres()):S.tab==="noter"?vNoter():S.tab==="profil"?vProfil():vHist();
  /* La barre d'onglets et les feuilles vivent hors de #app : un `position:fixed`
@@ -1442,10 +1449,16 @@ function render(){
     de la nouvelle page, à la hauteur où l'on avait laissé la précédente. */
  const clef=[S.tab,S.fiche||"",S.focus||"",S.mc==null?"":S.mc,S.picker?1:0].join("|");
  if(clef!==lastView){lastView=clef;
+  if(sp)sp.style.height="0px";
   try{window.scrollTo({top:0,behavior:"instant"})}catch(e){try{window.scrollTo(0,0)}catch(e2){}}}
- else if(anc&&ancTop!=null){try{const e=document.getElementById(anc);
-   if(e&&e.getBoundingClientRect){const d=e.getBoundingClientRect().top-ancTop;
-    if(Math.abs(d)>1&&window.scrollBy)window.scrollBy(0,d)}}catch(e){}}
+ else if(anc){try{
+   /* 1. rétablir la hauteur avant toute chose, sinon le défilement reste borné */
+   if(sp&&h0!=null){const h1=document.documentElement.scrollHeight;
+    sp.style.height=Math.max(0,sp0+(h0-h1))+"px"}
+   /* 2. puis recaler le bloc à sa position visuelle d'origine */
+   if(ancTop!=null){const e=document.getElementById(anc);
+    if(e&&e.getBoundingClientRect){const d=e.getBoundingClientRect().top-ancTop;
+     if(Math.abs(d)>1&&window.scrollBy)window.scrollBy(0,d)}}}catch(e){}}
  if(id){const n=document.getElementById(id);if(n){
    if(raw!=null&&n.value!==raw)n.value=raw;
    n.focus();try{n.setSelectionRange(ps,ps)}catch(e){}}}}
