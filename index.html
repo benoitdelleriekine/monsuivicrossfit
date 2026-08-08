@@ -537,7 +537,7 @@ function vProgres(){
 
   /* ─── Bloc calendrier, trois vues au choix ─── */
   const vue=S.hv||"mois";
-  h+=`<div class="card" style="padding:16px 16px 14px">
+  h+=`<div class="card" id="calblock" style="padding:16px 16px 14px">
    <div class="gtab" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px">`+
    [["mois","Mois"],["semaines","Semaines"],["annee","Année"]].map(([k,l])=>
     `<button class="${vue===k?"on":""}" data-act="hv" data-v="${k}"><span>${l}</span></button>`).join("")+`</div>`;
@@ -663,7 +663,7 @@ function vProgres(){
     :tri==="freq"?(cnt[b]||0)-(cnt[a]||0)||mv(a).n.localeCompare(mv(b).n,"fr")
     :(lastUse[b]||"").localeCompare(lastUse[a]||"")||mv(a).n.localeCompare(mv(b).n,"fr"));
 
-   h+=`<div class="pane"><div class="eyebrow" style="margin-bottom:11px">Mes mouvements</div>
+   h+=`<div class="pane" id="movblock"><div class="eyebrow" style="margin-bottom:11px">Mes mouvements</div>
     <div class="gtab" style="grid-template-columns:repeat(${groups.length},minmax(0,1fr))">`+
     groups.map(g=>`<button class="${gSel===g?"on":""}" data-act="progg" data-v="${esc(g)}"
      title="${esc(g)}">${gicon(g)}<span>${GSHORT[g]||g}</span></button>`).join("")+`</div>`;
@@ -1413,13 +1413,20 @@ function vPicker(){const q=S.q.toLowerCase().trim();
  return h+`</div></div></div>`}
 
 /* ══════════ RENDU ══════════ */
-let lastView=null;
+let lastView=null,pendingAnchor=null;
 function render(){
  /* On mémorise le texte exact en cours de frappe. Sans cela, la valeur
     recalculée est réinjectée à chaque caractère et un champ vidé se remplit
     aussitôt d'un zéro, empêchant de tout effacer avant de saisir. */
  const a=document.activeElement,id=a&&a.id,ps=a&&a.selectionStart;
  const raw=a&&a.tagName==="INPUT"&&a.type!=="date"?a.value:null;
+ /* Changer de catégorie ou de vue modifie la hauteur du contenu. Sans ancrage,
+    la page garde sa position absolue et le bloc semble sauter sous le doigt.
+    On mesure sa position à l'écran avant et après, puis on compense. */
+ const anc=pendingAnchor;pendingAnchor=null;
+ let ancTop=null;
+ if(anc){try{const e=document.getElementById(anc);
+   if(e&&e.getBoundingClientRect)ancTop=e.getBoundingClientRect().top}catch(e){}}
  document.getElementById("app").innerHTML=
   S.tab==="progres"?(S.fiche?vFiche(S.fiche):vProgres()):S.tab==="noter"?vNoter():S.tab==="profil"?vProfil():vHist();
  /* La barre d'onglets et les feuilles vivent hors de #app : un `position:fixed`
@@ -1436,6 +1443,9 @@ function render(){
  const clef=[S.tab,S.fiche||"",S.focus||"",S.mc==null?"":S.mc,S.picker?1:0].join("|");
  if(clef!==lastView){lastView=clef;
   try{window.scrollTo({top:0,behavior:"instant"})}catch(e){try{window.scrollTo(0,0)}catch(e2){}}}
+ else if(anc&&ancTop!=null){try{const e=document.getElementById(anc);
+   if(e&&e.getBoundingClientRect){const d=e.getBoundingClientRect().top-ancTop;
+    if(Math.abs(d)>1&&window.scrollBy)window.scrollBy(0,d)}}catch(e){}}
  if(id){const n=document.getElementById(id);if(n){
    if(raw!=null&&n.value!==raw)n.value=raw;
    n.focus();try{n.setSelectionRange(ps,ps)}catch(e){}}}}
@@ -1469,13 +1479,13 @@ document.addEventListener("click",ev=>{
  switch(a){
   case"tab":S.tab=v;S.focus=null;S.fiche=null;break;
   case"prog":S.prog=v;break;
-  case"progg":S.progG=v;S.prog=null;S.mq="";break;
-  case"msort":S.msort=v;break;
+  case"progg":S.progG=v;S.prog=null;S.mq="";pendingAnchor="movblock";break;
+  case"msort":S.msort=v;pendingAnchor="movblock";break;
   case"fiche":S.fiche=v;break;
-  case"hv":S.hv=v;S.day=null;break;
-  case"moff":{S.moff=Math.min(0,(S.moff||0)+(+v));S.day=null;break}
-  case"day":S.day=S.day===v?null:v;break;
-  case"dayclose":S.day=null;break;
+  case"hv":S.hv=v;S.day=null;pendingAnchor="calblock";break;
+  case"moff":{S.moff=Math.min(0,(S.moff||0)+(+v));S.day=null;pendingAnchor="calblock";break}
+  case"day":S.day=S.day===v?null:v;pendingAnchor="calblock";break;
+  case"dayclose":S.day=null;pendingAnchor="calblock";break;
   case"openday":S.tab="historique";S.open=v;S.day=null;break;
   case"fclose":S.fiche=null;break;
   case"ficheclose":S.done=null;S.tab="progres";S.fiche=v;break;
@@ -1584,7 +1594,7 @@ document.addEventListener("click",ev=>{
     S.draft=null;S.focus=null;S.tab="progres";
     if(fresh.length)S.done=fresh.slice(0,5);break}
   case"donecl":case"doneclbg":S.done=null;break;
-  case"pat":S.pat=!S.pat;break;
+  case"pat":S.pat=!S.pat;pendingAnchor="movblock";break;
   case"drop":if(confirm("Abandonner cette saisie ?")){S.draft=null;S.focus=null;S.mc=null}break;
   case"open":S.open=S.open===b.dataset.id?null:b.dataset.id;break;
   case"edit":{const s=S.sessions.find(x=>x.id===b.dataset.id);if(!s)break;
@@ -1613,7 +1623,7 @@ document.addEventListener("click",ev=>{
 document.addEventListener("input",ev=>{const t=ev.target;
  if(t.id==="q"){S.q=t.value;render();return}
  if(t.id==="pn"){S.pname=t.value;return}
- if(t.id==="mq"){S.mq=t.value;render();return}
+ if(t.id==="mq"){S.mq=t.value;pendingAnchor="movblock";render();return}
  if(t.id==="mail"){S.email=t.value;return}
  if(t.id==="pw"){S.pw=t.value;return}
  const MC=S.draft&&S.mc!=null?(S.draft.metcons||[])[S.mc]:null;
