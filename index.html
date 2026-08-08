@@ -75,6 +75,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .gcell.on{background:var(--aqua)}
 .gcell.ms{background:var(--melon)}
 .gcell.today{box-shadow:inset 0 0 0 1.5px var(--mute)}
+.gcell.pick{box-shadow:inset 0 0 0 2px var(--ink)}
+.gcell:disabled{opacity:1}
 @keyframes pop{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:scale(1)}}
 .glabel{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:0 auto 6px;max-width:252px}
 .glabel span{text-align:center;font-size:9.5px;color:var(--mute);font-weight:600}
@@ -405,7 +407,7 @@ function weeksGrid(n){const rows=[],m=new Date();m.setDate(m.getDate()-((m.getDa
 
 /* ══════════ ÉTAT ══════════ */
 let S={sessions:[],custom:[],bar:15,tab:"progres",draft:null,focus:null,picker:false,q:"",prog:null,open:null,
- profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,theme:"dark",
+ profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",hv:"mois",moff:0,day:null,theme:"dark",
  updatedAt:0,cloud:{enabled:false,user:null,status:"",busy:false,sent:false},email:"",otp:"",
  d:{w:0,reps:5,diff:"juste",level:0,dist:500,min:2,sec:0,age:30,bw:60}};
 /* Instantané des données, avec horodatage pour arbitrer la synchronisation */
@@ -453,100 +455,252 @@ const unitLabel=u=>u==="sec"?"secondes":u==="m"?"mètres":"répétitions";
 function milestones(ss){const out=[],seen=new Set(),mx={},rm={},rp={};
  [...ss].sort((a,b)=>a.date.localeCompare(b.date)).forEach(s=>(s.entries||[]).forEach(e=>{
   const m=mv(e.movementId);
-  if(!seen.has(m.id)){seen.add(m.id);out.push({date:s.date,t:"Découvert",v:m.n})}
+  if(!seen.has(m.id)){seen.add(m.id);out.push({date:s.date,t:"Découvert",v:m.n,id:m.id})}
   (e.sets||[]).forEach(st=>{
    if(m.lad&&st.level!=null&&(mx[m.id]==null||st.level>mx[m.id])){
     const first=mx[m.id]==null;mx[m.id]=st.level;
-    if(!first||st.level>0)out.push({date:s.date,t:"Nouveau palier",v:m.n+" — "+m.lad[st.level]})}
+    if(!first||st.level>0)out.push({date:s.date,t:"Nouveau palier",v:m.n+" — "+m.lad[st.level],id:m.id})}
    const v=e1rm(st.weight,st.reps,st.diff);
-   if(v){if(rm[m.id]&&v>rm[m.id]+.4)out.push({date:s.date,t:"Record",v:m.n+" — "+v.toFixed(1)+" kg"});
+   if(v){if(rm[m.id]&&v>rm[m.id]+.4)out.push({date:s.date,t:"Record",v:m.n+" — "+v.toFixed(1)+" kg",id:m.id});
     if(!rm[m.id]||v>rm[m.id])rm[m.id]=v}
    else if(!st.weight&&st.reps&&m.k==="gym"){
-    if(rp[m.id]&&st.reps>rp[m.id])out.push({date:s.date,t:"Record",v:m.n+" — "+st.reps+" "+(m.u==="sec"?"s":"reps")+" d'affilée"});
+    if(rp[m.id]&&st.reps>rp[m.id])out.push({date:s.date,t:"Record",v:m.n+" — "+st.reps+" "+(m.u==="sec"?"s":"reps")+" d'affilée",id:m.id});
     if(!rp[m.id]||st.reps>rp[m.id])rp[m.id]=st.reps}})}));
  return out.reverse()}
 
 /* ══════════ VUE : PROGRÈS ══════════ */
+/* ══════════ ACCUEIL ══════════ */
+const MOIS=["janvier","février","mars","avril","mai","juin","juillet","août",
+ "septembre","octobre","novembre","décembre"];
+
+/* Grille du mois : 6 lignes de 7 cases, les jours hors mois restent vides */
+function monthGrid(off){
+ const now=new Date(), base=new Date(now.getFullYear(), now.getMonth()+off, 1);
+ const y=base.getFullYear(), mo=base.getMonth();
+ const first=(new Date(y,mo,1).getDay()+6)%7;          // lundi = 0
+ const nb=new Date(y,mo+1,0).getDate();
+ const cells=[];
+ for(let i=0;i<first;i++)cells.push(null);
+ for(let d=1;d<=nb;d++)cells.push(iso(new Date(y,mo,d)));
+ while(cells.length%7)cells.push(null);
+ return{y,mo,label:MOIS[mo]+" "+y,cells,
+  from:iso(new Date(y,mo,1)),to:iso(new Date(y,mo,nb))}}
+
+/* Chiffres d'une période */
+function statsRange(from,to){
+ const ss=S.sessions.filter(s=>s.date>=from&&s.date<=to);
+ let vol=0;
+ ss.forEach(x=>{(x.entries||[]).forEach(e=>(e.sets||[]).forEach(y=>{
+   vol+=y.dist?Math.round(y.dist/50):(y.reps||0)}));
+  (x.metcons||[]).forEach(mc=>mcTotals(mc).forEach(t=>vol+=t.reps+Math.round(t.dist/50)+t.cal))});
+ const ms=milestones(S.sessions).filter(m=>m.date>=from&&m.date<=to);
+ return{n:ss.length,vol,ms:ms.length,rec:ms.filter(m=>m.t==="Record").length}}
+
+/* Une phrase d'accueil tirée des données réelles, jamais culpabilisante */
+function accroche(){
+ const G=(f,m)=>S.profile&&S.profile.sex==="f"?f:m;
+ const ms=milestones(S.sessions), st=streak(S.sessions);
+ const der=sorted()[0];
+ const jours=der?Math.round((new Date(TODAY)-new Date(der.date))/864e5):null;
+ const recent=ms.find(m=>(new Date(TODAY)-new Date(m.date))/864e5<=7);
+ if(jours===0)return["Séance notée aujourd'hui.","C'est dans la boîte."];
+ if(recent)return[recent.t==="Record"?"Nouveau record cette semaine.":"Une première fois cette semaine.",esc(recent.v).replace(/\.$/,"")+"."];
+ if(st>=2)return[st+" semaines d'affilée.","Le rythme est installé."];
+ if(jours!=null&&jours<=3)return["Dernière séance il y a "+jours+" jour"+(jours>1?"s":"")+".","À toi de jouer quand tu veux."];
+ if(jours!=null)return["Dernière séance le "+fMid(der.date).replace(/\.$/,"")+".","Reprends quand ça t'arrange."];
+ return["Bienvenue.","Ta première séance t'attend."]}
+
 function vProgres(){
   if(!S.sessions.length)return`<div class="head"><div class="eyebrow">Bienvenue</div><h1>Tes progrès</h1></div>
    <div class="pane"><div class="empty">Ici s'afficheront tes records, tes paliers franchis et tes premières fois.<br>Tout commence par une séance notée.</div>
    <button class="btn btn-go" data-act="new">Noter ma première séance</button></div>`;
   const ms=milestones(S.sessions),st=streak(S.sessions),msDays=new Set(ms.map(x=>x.date));
   const days=new Set(S.sessions.map(s=>s.date));
-  const thisW=S.sessions.filter(s=>s.date>=monday(new Date())).length;
+  const [titre,sous]=accroche();
+
   let h=`<div class="head" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
    <div><div style="display:flex;align-items:center;gap:9px;margin-bottom:2px">${LOGOMARK}
-   <span class="eyebrow">${S.profile&&S.profile.name?"Salut "+esc(S.profile.name):"Mon suivi CrossFit"}</span></div>
+   <span class="eyebrow">${S.profile&&S.profile.name?esc(S.profile.name):"Mon suivi CrossFit"}</span></div>
    <h1>Progrès</h1></div>
    <button class="chip" data-act="prof">Profil</button></div><div class="pane">
-   <div class="card" style="padding:18px"><div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px">
-   <div><div class="hero-n">${st}</div><div class="eyebrow" style="margin-top:6px">semaine${st>1?"s":""} d'affilée</div></div>
-   <div style="font-size:11.5px;color:var(--mute);font-weight:500;text-align:right;line-height:1.4">10 dernières<br>semaines</div></div>
-   <div class="glabel">${["L","M","M","J","V","S","D"].map(d=>`<span>${d}</span>`).join("")}</div>`;
-  let n=0;
-  weeksGrid(10).forEach(w=>{h+=`<div class="grid" style="margin-bottom:4px">`+w.map(d=>{
-   const c=msDays.has(d)?"ms":days.has(d)?"on":"";n++;
-   return`<div class="gcell ${c}${d===TODAY?" today":""}" style="animation-delay:${n*6}ms"></div>`}).join("")+`</div>`});
-  h+=`<div class="legend"><span><i style="background:var(--aqua)"></i>séance</span>
-   <span><i style="background:var(--melon)"></i>première fois</span></div></div>
-   <div class="stats"><div class="stat"><b>${thisW}</b><span>cette semaine</span></div>
-   <div class="stat"><b>${S.sessions.length}</b><span>séances notées</span></div>
-   <div class="stat"><b>${ms.length}</b><span>premières fois</span></div></div></div>`;
+
+   <div class="card" style="padding:20px">
+   <div class="dsp" style="font-size:21px;line-height:1.25">${titre}</div>
+   <div style="font-size:14px;color:var(--mute);margin-top:5px;line-height:1.5">${sous}</div>
+   <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-go" style="flex:1;padding:13px;font-size:14px" data-act="new">Noter une séance</button>
+    ${st>0?`<div style="flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:0 15px;border:1px solid var(--line);border-radius:16px">
+      <b style="font-size:19px;font-family:Montserrat,sans-serif">${st}</b>
+      <span style="font-size:9.5px;color:var(--mute);font-weight:600;letter-spacing:.04em">SEM.</span></div>`:""}
+   </div></div>`;
+
+  /* ─── Bloc calendrier, trois vues au choix ─── */
+  const vue=S.hv||"mois";
+  h+=`<div class="card" style="padding:16px 16px 14px">
+   <div class="gtab" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px">`+
+   [["mois","Mois"],["semaines","Semaines"],["annee","Année"]].map(([k,l])=>
+    `<button class="${vue===k?"on":""}" data-act="hv" data-v="${k}"><span>${l}</span></button>`).join("")+`</div>`;
+
+  if(vue==="mois"){
+   const g=monthGrid(S.moff||0), sm=statsRange(g.from,g.to);
+   h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <button class="chip" style="padding:7px 12px" data-act="moff" data-v="-1">‹</button>
+    <b style="font-size:14.5px;text-transform:capitalize">${g.label}</b>
+    <button class="chip" style="padding:7px 12px;${(S.moff||0)>=0?"opacity:.35":""}" data-act="moff" data-v="1">›</button></div>
+    <div class="glabel" style="max-width:none">${["L","M","M","J","V","S","D"].map(d=>`<span>${d}</span>`).join("")}</div>`;
+   for(let i=0;i<g.cells.length;i+=7){
+    h+=`<div class="grid" style="max-width:none;margin-bottom:4px">`+g.cells.slice(i,i+7).map(d=>{
+     if(!d)return`<div style="aspect-ratio:1"></div>`;
+     const c=msDays.has(d)?"ms":days.has(d)?"on":"";
+     const jour=+d.slice(8);
+     return`<button class="gcell ${c}${d===TODAY?" today":""}${S.day===d?" pick":""}"
+      data-act="day" data-v="${d}" style="display:flex;align-items:center;justify-content:center;
+      font-size:10.5px;font-weight:600;color:${c?"var(--onacc)":"var(--mute)"}">${jour}</button>`}).join("")+`</div>`}
+   h+=`<div class="legend" style="margin-top:11px"><span><i style="background:var(--aqua)"></i>séance</span>
+    <span><i style="background:var(--melon)"></i>première fois</span></div>
+    <div style="display:flex;gap:6px;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)">
+    <div style="flex:1;text-align:center"><b style="font-family:Montserrat,sans-serif;font-size:18px">${sm.n}</b>
+     <div style="font-size:10px;color:var(--mute);font-weight:600;margin-top:2px">SÉANCES</div></div>
+    <div style="flex:1;text-align:center"><b style="font-family:Montserrat,sans-serif;font-size:18px">${sm.vol.toLocaleString("fr-FR")}</b>
+     <div style="font-size:10px;color:var(--mute);font-weight:600;margin-top:2px">MOUVEMENTS</div></div>
+    <div style="flex:1;text-align:center"><b style="font-family:Montserrat,sans-serif;font-size:18px">${sm.ms}</b>
+     <div style="font-size:10px;color:var(--mute);font-weight:600;margin-top:2px">PREMIÈRES FOIS</div></div></div>`;
+  }
+
+  if(vue==="semaines"){
+   const wks=[],m0=new Date();m0.setDate(m0.getDate()-((m0.getDay()+6)%7));
+   for(let i=7;i>=0;i--){const st1=new Date(m0);st1.setDate(st1.getDate()-i*7);
+    const en=new Date(st1);en.setDate(en.getDate()+6);
+    const a=iso(st1),b=iso(en),r=statsRange(a,b);
+    wks.push({...r,label:fSh(a).slice(0,5)})}
+   const mx=Math.max(1,...wks.map(w=>w.vol));
+   h+=`<div style="display:flex;align-items:flex-end;gap:6px;height:96px">`+
+    wks.map((w,i)=>`<div style="flex:1;text-align:center">
+     <div style="height:${Math.max(3,w.vol/mx*74)}px;border-radius:5px 5px 2px 2px;
+      background:${i===7?"var(--aqua)":"var(--track)"}"></div>
+     <div style="font-size:9.5px;color:var(--mute);margin-top:5px;font-weight:600">${w.n||"–"}</div></div>`).join("")+
+    `</div><div style="font-size:11px;color:var(--mute);text-align:center;margin-top:3px">séances par semaine, sur 8 semaines</div>
+    <div style="font-size:13px;color:var(--mute);line-height:1.6;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)">
+    Cette semaine : <b style="color:var(--ink)">${wks[7].vol.toLocaleString("fr-FR")}</b> mouvements${
+     wks[6].vol?` — la précédente, ${wks[6].vol.toLocaleString("fr-FR")}`:""}.</div>`;
+  }
+
+  if(vue==="annee"){
+   const mos=[];
+   for(let i=11;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
+    const from=iso(new Date(d.getFullYear(),d.getMonth(),1));
+    const to=iso(new Date(d.getFullYear(),d.getMonth()+1,0));
+    mos.push({...statsRange(from,to),label:MOIS[d.getMonth()].slice(0,3),m:d.getMonth()})}
+   const mx=Math.max(1,...mos.map(x=>x.n));
+   h+=`<div style="display:flex;align-items:flex-end;gap:4px;height:100px">`+
+    mos.map((x,i)=>`<div style="flex:1;text-align:center">
+     <div style="height:${Math.max(3,x.n/mx*76)}px;border-radius:4px 4px 2px 2px;
+      background:${i===11?"var(--aqua)":"var(--track)"}"></div>
+     <div style="font-size:8.5px;color:var(--mute);margin-top:5px;font-weight:600">${x.label}</div></div>`).join("")+
+    `</div><div style="font-size:13px;color:var(--mute);line-height:1.6;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)">
+    <b style="color:var(--ink)">${mos.reduce((a,x)=>a+x.n,0)}</b> séances sur douze mois,
+    dont <b style="color:var(--ink)">${mos.reduce((a,x)=>a+x.rec,0)}</b> avec un record.</div>`;
+  }
+  h+=`</div>`;
+
+  /* ─── Détail du jour sélectionné ─── */
+  if(S.day){
+   const dss=S.sessions.filter(x=>x.date===S.day);
+   h+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${dss.length?"12px":"0"}">
+    <b style="font-size:14.5px;text-transform:capitalize">${fLong(S.day)}</b>
+    <button class="chip" style="padding:6px 11px" data-act="dayclose">Fermer</button></div>`;
+   if(!dss.length)h+=`<div style="font-size:13.5px;color:var(--mute)">Aucune séance ce jour-là.</div>`;
+   dss.forEach(x=>{
+    const movs=[...new Set([...(x.entries||[]).map(e=>mv(e.movementId).n),
+      ...(x.metcons||[]).flatMap(mc=>mcTotals(mc).map(t=>t.n))])];
+    h+=`<button style="width:100%;text-align:left;border-top:1px solid var(--line);padding:12px 0"
+     data-act="openday" data-v="${x.id}">
+     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+     <span style="font-size:13.5px;color:var(--mute);flex:1">${movs.slice(0,4).map(esc).join(" · ")}${movs.length>4?" +"+(movs.length-4):""}</span>
+     <span style="color:var(--mute);font-size:17px">›</span></div>
+     <div style="font-size:12px;color:var(--mute);margin-top:5px">${(x.entries||[]).length} mouvement${(x.entries||[]).length>1?"s":""}${
+      (x.metcons||[]).length?` · ${(x.metcons||[]).length} metcon`:""}</div></button>`});
+   h+=`</div>`}
 
   if(ms.length){h+=`<div class="pane" style="padding-bottom:0"><div class="eyebrow" style="margin-bottom:11px">Premières fois</div></div>
-   <div class="scroll">`+ms.slice(0,12).map(x=>`<div class="ms-card" style="background:${MSC[x.t]}">
-   <span class="tag">${x.t}</span><b>${esc(x.v)}</b><small>${fMid(x.date)}</small></div>`).join("")+`</div><div style="height:16px"></div>`}
+   <div class="scroll">`+ms.slice(0,12).map(x=>`<button class="ms-card" style="background:${MSC[x.t]};text-align:left"
+   ${x.id?`data-act="fiche" data-v="${x.id}"`:""}>
+   <span class="tag">${x.t}</span><b>${esc(x.v)}</b>
+   <small style="display:flex;justify-content:space-between;align-items:center">${fMid(x.date)}${x.id?'<span style="font-size:15px;opacity:.7">›</span>':""}</small></button>`).join("")+`</div><div style="height:16px"></div>`}
 
-  h+=weekLoad()+benchCard();
+  h+=benchCard();
   const inE=[...new Set(S.sessions.flatMap(s=>(s.entries||[]).filter(e=>e.sets&&e.sets.length).map(e=>e.movementId)))];
   const inM=[...new Set(S.sessions.flatMap(s=>(s.metcons||[]).flatMap(mc=>mcTotals(mc).map(t=>t.id))))];
   const used=[...inE,...inM.filter(x=>!inE.includes(x))];
   if(used.length){
-   /* On classe d'abord par grande famille, puis par mouvement dans la famille. */
+   /* Familles ordonnées, puis liste des mouvements de la famille retenue. */
    const ORDER=["Haltéro","Force","Haltères","Gymnastique","Cardio","Mes mouvements"];
    const rank=g=>{const i=ORDER.indexOf(g);return i<0?99:i};
    const groups=[...new Set(used.map(id=>mv(id).g))].sort((a,b)=>rank(a)-rank(b));
-   const gSel=S.progG&&groups.includes(S.progG)?S.progG
-    :(S.prog&&used.includes(S.prog)?mv(S.prog).g:groups[0]);
-   const inG=used.filter(id=>mv(id).g===gSel);
-   const sel=S.prog&&inG.includes(S.prog)?S.prog:inG[0],m=mv(sel),isCar=m.k==="cardio"||PACE[sel];
-   const curve=curveFor(sel);
-   const wr=curve.filter(c=>c.rm!=null),wp=curve.filter(c=>c.pace!=null),wn=curve.filter(c=>c.reps>0);
-   const best=bestOf(sel),lv=m.lad?lvlOf(sel):null;
-   h+=`<div class="pane"><div class="gtab" style="grid-template-columns:repeat(${groups.length},minmax(0,1fr))">`+
+   const gSel=S.progG&&groups.includes(S.progG)?S.progG:groups[0];
+   let inG=used.filter(id=>mv(id).g===gSel);
+
+   /* Filtre texte, proposé seulement quand la liste devient longue */
+   const q=(S.mq||"").toLowerCase().trim();
+   const longue=inG.length>8;
+   if(q)inG=inG.filter(id=>mv(id).n.toLowerCase().includes(q));
+
+   /* Tri : par défaut les plus récemment travaillés remontent */
+   const tri=S.msort||"recent";
+   const lastUse={};
+   S.sessions.forEach(s2=>{
+    const t=[...(s2.entries||[]).map(e=>e.movementId),...(s2.metcons||[]).flatMap(mc=>mcTotals(mc).map(x=>x.id))];
+    t.forEach(id=>{if(!lastUse[id]||s2.date>lastUse[id])lastUse[id]=s2.date})});
+   const cnt={};
+   S.sessions.forEach(s2=>{
+    const t=new Set([...(s2.entries||[]).map(e=>e.movementId),...(s2.metcons||[]).flatMap(mc=>mcTotals(mc).map(x=>x.id))]);
+    t.forEach(id=>cnt[id]=(cnt[id]||0)+1)});
+   inG=[...inG].sort((a,b)=>
+    tri==="alpha"?mv(a).n.localeCompare(mv(b).n,"fr")
+    :tri==="freq"?(cnt[b]||0)-(cnt[a]||0)||mv(a).n.localeCompare(mv(b).n,"fr")
+    :(lastUse[b]||"").localeCompare(lastUse[a]||"")||mv(a).n.localeCompare(mv(b).n,"fr"));
+
+   h+=`<div class="pane"><div class="eyebrow" style="margin-bottom:11px">Mes mouvements</div>
+    <div class="gtab" style="grid-template-columns:repeat(${groups.length},minmax(0,1fr))">`+
     groups.map(g=>`<button class="${gSel===g?"on":""}" data-act="progg" data-v="${esc(g)}"
-     title="${esc(g)}">${gicon(g)}<span>${GSHORT[g]||g}</span></button>`).join("")+
-    `</div><div class="chips" style="margin:10px 0 13px">`+
-    inG.map(id=>`<button class="chip ${sel===id?"on":""}" data-act="prog" data-v="${id}">${esc(mv(id).n)}</button>`).join("")+`</div>
-    <div class="card"><button style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px"
-     data-act="fiche" data-v="${sel}"><span class="dsp" style="font-size:24px">${esc(m.n)}</span>
-     <span style="color:var(--mute);font-size:19px">›</span></button>`;
-   if(m.lad&&lv!=null){h+=`<div style="margin-bottom:20px"><div class="eyebrow" style="margin-bottom:10px">Où tu en es</div>
-    <div style="position:relative"><div class="rline"></div>`+
-    m.lad.map((r,i)=>`<div class="rung ${i<lv?"done":i===lv?"now":""}"><span class="rdot"></span><span>${r}</span>
-    ${i===lv?'<span class="badge hot" style="margin-left:auto">ici</span>':""}</div>`).join("")+`</div>`;
-    if(lv<m.lad.length-1)h+=`<div style="font-size:13px;color:var(--mute);margin-top:12px">Prochaine marche : <b style="color:var(--ink)">${m.lad[lv+1]}</b></div>`;
-    h+=`</div>`}
-   /* En-tête chiffré : charge estimée, meilleure série, ou allure */
-   let hero=null,dl=null;
-   if(best!=null&&wr.length){hero=["Charge max estimée",best.toFixed(1),"kg"];
-    if(wr.length>1)dl=[wr[wr.length-1].rm-wr[0].rm,"kg",1]}
-   else if(isCar&&wp.length){hero=["Meilleure allure",mmss(Math.min(...wp.map(c=>c.pace))),"/ "+(PACE[sel]||500)+" m"];
-    if(wp.length>1)dl=[wp[0].pace-wp[wp.length-1].pace,"s",1]}
-   else if(wn.length){const b=Math.max(...wn.map(c=>c.reps));hero=["Meilleure série",b,m.u==="sec"?"s":m.u==="m"?"m":"reps"];
-    if(wn.length>1)dl=[wn[wn.length-1].reps-wn[0].reps,hero[2],1]}
-   if(hero)h+=`<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px">
-    <div><div class="eyebrow">${hero[0]}</div>
-    <div class="dsp" style="font-size:44px;margin-top:6px">${hero[1]}<span style="font-size:17px;color:var(--mute);font-weight:500"> ${hero[2]}</span></div></div>
-    ${dl?`<span class="badge" style="background:${dl[0]>=0?"var(--alex)":"var(--lava)"};color:#fff">${dl[0]>=0?"+":""}${(+dl[0]).toFixed(1)} ${dl[1]}</span>`:""}</div>`;
-   h+=volLine(sel)+levelBlock(sel);
-   const src=wr.length>1?[wr,"rm"," kg",false]:wp.length>1?[wp,"pace","",true]:wn.length>1?[wn,"reps"," "+(m.u==="sec"?"s":m.u==="m"?"m":"reps"),false]:null;
-   h+=src?chart(src[0],src[1],src[2],src[3])
-    :`<div style="font-size:13.5px;color:var(--mute);line-height:1.65">Deux séances suffisent pour faire apparaître la courbe.</div>`;
-   h+=`<button class="btn btn-quiet" style="margin-top:16px;padding:13px;font-size:13.5px"
-    data-act="fiche" data-v="${sel}">Voir l'historique détaillé →</button>`;
-   h+=`</div></div>`}
+     title="${esc(g)}">${gicon(g)}<span>${GSHORT[g]||g}</span></button>`).join("")+`</div>`;
+
+   if(longue||q)h+=`<input class="inp" id="mq" style="margin-top:10px;padding:11px 14px;font-size:14px"
+    placeholder="Filtrer dans ${esc(GSHORT[gSel]||gSel)}…" value="${esc(S.mq||"")}">`;
+
+   h+=`<div class="chips" style="margin:10px 0 12px">`+
+    [["recent","Récents"],["freq","Les plus faits"],["alpha","A → Z"]].map(([k,l])=>
+     `<button class="chip" style="padding:7px 12px;font-size:12px;${tri===k?"font-weight:700;color:var(--ink);border-color:var(--ink)":""}"
+      data-act="msort" data-v="${k}">${l}</button>`).join("")+`</div>`;
+
+   if(!inG.length)h+=`<div class="card"><div style="font-size:13.5px;color:var(--mute)">Aucun mouvement ne correspond.</div></div>`;
+   else h+=`<div class="card" style="padding:4px 16px">`+inG.map((id,i)=>{
+    const m2=mv(id),st2=movStat(id);
+    return`<button style="width:100%;display:flex;align-items:center;gap:12px;padding:13px 0;text-align:left;
+     ${i?"border-top:1px solid var(--line)":""}" data-act="fiche" data-v="${id}">
+     <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m2.n)}</div>
+      <div style="font-size:11.5px;color:var(--mute);margin-top:3px">${st2.sub}</div></div>
+     ${st2.txt?`<span class="dsp" style="font-size:17px;white-space:nowrap">${st2.txt}</span>`:""}
+     <span style="color:var(--mute);font-size:17px;flex:none">›</span></button>`}).join("")+`</div>`;
+   h+=`</div>`}
+
   return h+patternCard()+`<div class="pane"><button class="btn btn-go" style="margin-bottom:24px" data-act="new">Noter une séance</button></div>`}
+
+/* Chiffre clé d'un mouvement pour l'affichage en liste */
+function movStat(id){
+ const m=mv(id),isCar=m.k==="cardio"||PACE[id];
+ const best=bestOf(id),c=curveFor(id);
+ const nb=c.length;
+ const dernier=nb?c[nb-1].date:null;
+ const sub=nb?`${nb} séance${nb>1?"s":""} · dernière ${fMid(dernier)}`:"vu en metcon";
+ if(best!=null)return{txt:best.toFixed(1)+" kg",sub};
+ const wp=c.filter(x=>x.pace!=null);
+ if(isCar&&wp.length)return{txt:mmss(Math.min(...wp.map(x=>x.pace))),sub};
+ const wn=c.filter(x=>x.reps>0);
+ if(wn.length)return{txt:Math.max(...wn.map(x=>x.reps))+(m.u==="sec"?" s":m.u==="m"?" m":" reps"),sub};
+ return{txt:"",sub}}
 
 /* ══════════ FICHE MOUVEMENT ══════════ */
 function vFiche(id){
@@ -646,8 +800,9 @@ function vDone(){
    <div style="width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 20px"></div>
    <div class="eyebrow">${t}</div>
    <div class="dsp" style="font-size:30px;margin:8px 0 20px">${S.done.length>1?"Tu as franchi "+S.done.length+" étapes":"Tu as franchi une étape"}</div>`+
-   S.done.map(x=>`<div class="ms-card" style="width:100%;margin-bottom:11px;background:${MSC[x.t]}">
-    <span class="tag">${x.t}</span><b>${esc(x.v)}</b></div>`).join("")+
+   S.done.map(x=>`<button class="ms-card" style="width:100%;margin-bottom:11px;background:${MSC[x.t]};text-align:left"
+    ${x.id?`data-act="ficheclose" data-v="${x.id}"`:""}>
+    <span class="tag">${x.t}</span><b>${esc(x.v)}</b>${x.id?'<small style="opacity:.75">Voir l\'historique ›</small>':""}</button>`).join("")+
    `<button class="btn btn-go" style="margin-top:12px" data-act="donecl">Voir mes progrès</button></div></div></div>`}
 
 const SYNCTXT={pending:"synchronisation…",ok:"à jour",err:"échec de synchronisation"};
@@ -1306,9 +1461,16 @@ document.addEventListener("click",ev=>{
  switch(a){
   case"tab":S.tab=v;S.focus=null;S.fiche=null;break;
   case"prog":S.prog=v;break;
-  case"progg":S.progG=v;S.prog=null;break;
+  case"progg":S.progG=v;S.prog=null;S.mq="";break;
+  case"msort":S.msort=v;break;
   case"fiche":S.fiche=v;break;
+  case"hv":S.hv=v;S.day=null;break;
+  case"moff":{S.moff=Math.min(0,(S.moff||0)+(+v));S.day=null;break}
+  case"day":S.day=S.day===v?null:v;break;
+  case"dayclose":S.day=null;break;
+  case"openday":S.tab="historique";S.open=v;S.day=null;break;
   case"fclose":S.fiche=null;break;
+  case"ficheclose":S.done=null;S.tab="progres";S.fiche=v;break;
   case"prof":openProfil();break;
   case"toggsign":S.cloud.signup=!S.cloud.signup;break;
   case"signinpw":case"signup":{
@@ -1443,6 +1605,7 @@ document.addEventListener("click",ev=>{
 document.addEventListener("input",ev=>{const t=ev.target;
  if(t.id==="q"){S.q=t.value;render();return}
  if(t.id==="pn"){S.pname=t.value;return}
+ if(t.id==="mq"){S.mq=t.value;render();return}
  if(t.id==="mail"){S.email=t.value;return}
  if(t.id==="pw"){S.pw=t.value;return}
  const MC=S.draft&&S.mc!=null?(S.draft.metcons||[])[S.mc]:null;
