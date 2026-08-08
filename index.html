@@ -623,6 +623,8 @@ function vProgres(){
       (x.metcons||[]).length?` · ${(x.metcons||[]).length} metcon`:""}</div></button>`});
    h+=`</div>`}
 
+  h+=`</div>`;   /* le conteneur d'accueil se referme ici : les sections
+                    suivantes ouvrent chacune le leur, sinon les marges s'ajoutent */
   if(ms.length){h+=`<div class="pane" style="padding-bottom:0"><div class="eyebrow" style="margin-bottom:11px">Premières fois</div></div>
    <div class="scroll">`+ms.slice(0,12).map(x=>`<button class="ms-card" style="background:${MSC[x.t]};text-align:left"
    ${x.id?`data-act="fiche" data-v="${x.id}"`:""}>
@@ -1411,6 +1413,7 @@ function vPicker(){const q=S.q.toLowerCase().trim();
  return h+`</div></div></div>`}
 
 /* ══════════ RENDU ══════════ */
+let lastView=null;
 function render(){
  /* On mémorise le texte exact en cours de frappe. Sans cela, la valeur
     recalculée est réinjectée à chaque caractère et un champ vidé se remplit
@@ -1428,6 +1431,11 @@ function render(){
      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TABICON[k]}</svg>
     <span>${l}</span></button>`).join("");
  document.getElementById("overlay").innerHTML=(S.picker?vPicker():"")+(S.done?vDone():"");
+ /* Changer d'écran doit repartir du haut : sans cela on arrive au milieu
+    de la nouvelle page, à la hauteur où l'on avait laissé la précédente. */
+ const clef=[S.tab,S.fiche||"",S.focus||"",S.mc==null?"":S.mc,S.picker?1:0].join("|");
+ if(clef!==lastView){lastView=clef;
+  try{window.scrollTo({top:0,behavior:"instant"})}catch(e){try{window.scrollTo(0,0)}catch(e2){}}}
  if(id){const n=document.getElementById(id);if(n){
    if(raw!=null&&n.value!==raw)n.value=raw;
    n.focus();try{n.setSelectionRange(ps,ps)}catch(e){}}}}
