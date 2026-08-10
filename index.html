@@ -1125,7 +1125,7 @@ function patternShare(days){
 function itemLabel(it,st){const m=mv(it.movementId);
  if(it.cal)return`${it.cal} cal ${esc(m.n)}`;
  if(it.dist)return`${it.dist} m ${esc(m.n)}`;
- if(it.seq&&it.seq.length)return`${it.seq.join("-")} ${esc(m.n)}`;
+ if(it.seq&&it.seq.length)return`${it.seq.join("-")} ${esc(m.n)}${it.weight?" @ "+it.weight+" kg":""}`;
  const r=st&&st.sch&&it.lad!==false?st.label:(it.reps||"?");
  return`${r} ${esc(m.n)}${it.weight?" @ "+it.weight+" kg":""}`}
 
