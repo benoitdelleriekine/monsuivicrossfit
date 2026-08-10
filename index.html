@@ -10,7 +10,7 @@
  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://esm.sh;
  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
  font-src https://fonts.gstatic.com;
- img-src 'self' data:;
+ img-src 'self' data: blob:;
  form-action 'none';
  base-uri 'self';
  object-src 'none';
@@ -28,6 +28,7 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 button,input,textarea,label,.chip,.tab,.gtab button,.step-btn{touch-action:manipulation}
+.grip{touch-action:none}
 :root{ /* « Mon Suivi CrossFit » — thème sombre par défaut */
   --cloud:#0D0F12;--card:#1A1F26;--sunk:#12161B;--ink:#FFFFFF;--mute:#96A2AE;--line:#2A313A;
   --aqua:#33D6B0;--orchid:#8B7BD8;--melon:#F2C14E;--alex:#33D6B0;--lava:#E4614F;
@@ -190,23 +191,23 @@ document.documentElement.setAttribute("data-theme",t);}catch(e){document.documen
 <script>
 /* ══════════ ÉCHELLES DE PROGRESSION ══════════ */
 const LAD={
- "pull-up":["Ring row","Élastique épais","Élastique moyen","Élastique fin","Négatives","Kipping","Strict"],
- "c2b":["Élastique","Kipping","Strict"],
- "bmu":["Transitions au sol","Avec saut","Kipping","Strict"],
- "rmu":["Transitions","Avec saut","Kipping","Strict"],
- "hspu":["Pompes surélevées","Pieds sur box","ATR mur + coussins","HSPU kipping","HSPU strict"],
- "handstand-walk":["ATR au mur","Shoulder taps","Marche 1–3 m","Marche 5 m et +"],
- "wall-walk":["Pieds sur box","Montée partielle","Wall walk complet"],
- "t2b":["Genoux relevés","Genoux poitrine","Toes-to-bar"],
- "k2e":["Genoux relevés","Knees-to-elbows"],
- "ring-dip":["Élastique","Négatives","Complètes"],
- "push-up":["Sur les genoux","Mains sur box","Complètes","En déficit"],
- "pistol":["Assis sur box","Avec contrepoids","Complet"],
- "rope-climb":["Tirages au sol","Avec les pieds","Sans les jambes"],
- "du":["Simples","Simple–double alterné","Doubles enchaînés"],
+ "pull-up":["Ring Row","Thick band","Medium band","Light band","Negatives","Kipping","Strict"],
+ "c2b":["Band assisted","Kipping","Strict"],
+ "bmu":["Floor transitions","Jumping","Kipping","Strict"],
+ "rmu":["Transitions","Jumping","Kipping","Strict"],
+ "hspu":["Elevated push-ups","Feet on box","Wall HS + abmats","Kipping HSPU","Strict HSPU"],
+ "handstand-walk":["Wall handstand","Shoulder taps","Walk 1–3 m","Walk 5 m +"],
+ "wall-walk":["Feet on box","Partial","Full wall walk"],
+ "t2b":["Knee raises","Knees to chest","Toes-to-Bar"],
+ "k2e":["Knee raises","Knees-to-Elbows"],
+ "ring-dip":["Band assisted","Negatives","Full"],
+ "push-up":["On knees","Hands on box","Full","Deficit"],
+ "pistol":["To box","Counterbalanced","Full"],
+ "rope-climb":["Floor pulls","With feet","Legless"],
+ "du":["Singles","Single–double","Unbroken doubles"],
  "box-jump":["Step-up","Box 40 cm","Box 50 cm","Box 60 cm"],
  "wall-ball":["Ball 4 kg","Ball 6 kg","Ball 9 kg"],
- "ring-row":["Buste haut","Buste à 45°","À l'horizontale","Pieds surélevés"]
+ "ring-row":["Buste haut","45° torso","Horizontal","Feet elevated"]
 };
 /* id, nom, famille, groupe, description, unité (reps par défaut) */
 const M=[
@@ -408,7 +409,7 @@ function weeksGrid(n){const rows=[],m=new Date();m.setDate(m.getDate()-((m.getDa
 
 /* ══════════ ÉTAT ══════════ */
 let S={sessions:[],custom:[],bar:15,tab:"progres",draft:null,focus:null,picker:false,q:"",prog:null,open:null,
- profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",hv:"mois",moff:0,day:null,theme:"dark",
+ profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
  updatedAt:0,cloud:{enabled:false,user:null,status:"",busy:false,sent:false},email:"",otp:"",
  d:{w:0,reps:5,diff:"juste",level:0,dist:500,min:2,sec:0,age:30,bw:60}};
 /* Instantané des données, avec horodatage pour arbitrer la synchronisation */
@@ -558,7 +559,11 @@ function vProgres(){
      return`<button class="gcell ${c}${d===TODAY?" today":""}${S.day===d?" pick":""}"
       data-act="day" data-v="${d}" style="display:flex;align-items:center;justify-content:center;
       font-size:10.5px;font-weight:600;color:${c?"var(--onacc)":"var(--mute)"}">${jour}</button>`}).join("")+`</div>`}
-   h+=`<div class="legend" style="margin-top:11px"><span><i style="background:var(--aqua)"></i>séance</span>
+   h+=`<div style="display:flex;justify-content:flex-end;margin-top:10px">
+    <button class="chip" style="padding:6px 12px;font-size:12px" data-act="share" data-t="mois" data-v="${S.moff||0}">Partager le mois</button></div>
+   <div style="display:flex;justify-content:flex-end;margin-top:10px">
+    <button class="chip" style="padding:6px 12px;font-size:12px" data-act="share" data-t="mois" data-v="${S.moff||0}">Partager le mois</button></div>
+   <div class="legend" style="margin-top:11px"><span><i style="background:var(--aqua)"></i>séance</span>
     <span><i style="background:var(--melon)"></i>première fois</span></div>
     <div style="display:flex;gap:6px;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)">
     <div style="flex:1;text-align:center"><b style="font-family:Montserrat,sans-serif;font-size:18px">${sm.n}</b>
@@ -712,7 +717,9 @@ function vFiche(id){
  const wr=curve.filter(c=>c.rm!=null),wp=curve.filter(c=>c.pace!=null),wn=curve.filter(c=>c.reps>0);
  const best=bestOf(id);
  let h=`<div class="head" style="padding-bottom:12px">
-  <button class="chip" style="margin-bottom:14px" data-act="fclose">← Progrès</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+  <button class="chip" data-act="fclose">← Progrès</button>
+  ${bestOf(id)!=null?`<button class="chip" data-act="share" data-t="record" data-v="${id}">Partager</button>`:""}</div>
   <div class="eyebrow">${esc(m.g)}</div><h1 style="font-size:34px">${esc(m.n)}</h1></div><div class="pane">`;
 
  /* Chiffre principal */
@@ -806,7 +813,10 @@ function vDone(){
    S.done.map(x=>`<button class="ms-card" style="width:100%;margin-bottom:11px;background:${MSC[x.t]};text-align:left"
     ${x.id?`data-act="ficheclose" data-v="${x.id}"`:""}>
     <span class="tag">${x.t}</span><b>${esc(x.v)}</b>${x.id?'<small style="opacity:.75">Voir l\'historique ›</small>':""}</button>`).join("")+
-   `<button class="btn btn-go" style="margin-top:12px" data-act="donecl">Voir mes progrès</button></div></div></div>`}
+   `${S.done[0]&&S.done[0].id&&S.done[0].t==="Record"
+     ?`<button class="btn btn-quiet" style="margin-top:12px;padding:13px;font-size:13.5px"
+        data-act="sharerec" data-v="${S.done[0].id}">Partager ce record</button>`:""}
+    <button class="btn btn-go" style="margin-top:10px" data-act="donecl">Voir mes progrès</button></div></div></div>`}
 
 const SYNCTXT={pending:"synchronisation…",ok:"à jour",err:"échec de synchronisation"};
 function accountCard(){
@@ -1047,6 +1057,14 @@ function parseScheme(str){
 const HASROUNDS=["fortime","intervals","chipper"];
 
 function mcStructure(mc){
+ /* Trois modes : tours identiques, schéma commun, ou une suite propre
+    à chaque mouvement (mc.mode === "seq"). */
+ /* Le mode s'impose aussi si des suites existent déjà : une séance importée
+    ou saisie dans une version antérieure doit rester cohérente à l'écran. */
+ const dejaSeq=(mc.items||[]).some(x=>x&&x.seq&&x.seq.length);
+ if(mc.mode==="seq"||dejaSeq){
+  const n=Math.max(1,mc.rounds||1,...(mc.items||[]).map(x=>(x&&x.seq?x.seq.length:0)));
+  return{sch:null,seq:true,n,label:n>1?n+" passages":"1 passage"}}
  const sch=parseScheme(mc.scheme);
  if(sch)return{sch,n:sch.length,label:sch.join("-")};
  const n=Math.max(1,mc.rounds||1);
@@ -1149,12 +1167,20 @@ function vMetcon(mc,idx){
     <span style="font-size:13.5px;color:var(--mute);flex:1">${f.capL}</span>
     <input class="sin" style="width:74px;flex:none" type="number" inputmode="numeric" id="mccap" value="${mc.cap||""}" placeholder="—"></div>`;
   if(HASROUNDS.includes(mc.format)){const sch=parseScheme(mc.scheme);
+   const seqm=mc.mode==="seq";
    h+=`<div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
    <div class="eyebrow" style="margin-bottom:11px">Structure</div>
    <div class="chips" style="margin-bottom:14px">
-    <button class="chip ${!sch?"on":""}" data-act="mcstruct" data-v="rounds">Tours identiques</button>
-    <button class="chip ${sch?"on":""}" data-act="mcstruct" data-v="scheme">Schéma dégressif</button></div>`;
-   if(!sch)h+=`<div style="display:flex;align-items:center;gap:12px">
+    <button class="chip ${!sch&&!seqm?"on":""}" data-act="mcstruct" data-v="rounds">Tours identiques</button>
+    <button class="chip ${sch&&!seqm?"on":""}" data-act="mcstruct" data-v="scheme">Schéma dégressif</button>
+    <button class="chip ${seqm?"on":""}" data-act="mcstruct" data-v="seq">Par mouvement</button></div>`;
+   if(seqm)h+=`<div style="display:flex;align-items:center;gap:12px">
+    <span style="font-size:13.5px;color:var(--mute);flex:1">Nombre de passages</span>
+    <button class="step-btn sm" data-act="mcpass" data-v="-1" style="width:44px;height:44px;border-radius:13px">−</button>
+    <b style="font-family:Montserrat,sans-serif;font-size:20px;min-width:26px;text-align:center">${Math.max(1,mc.rounds||1)}</b>
+    <button class="step-btn sm" data-act="mcpass" data-v="1" style="width:44px;height:44px;border-radius:13px">+</button></div>
+    <div style="font-size:12px;color:var(--mute);margin-top:10px;line-height:1.55">Chaque mouvement reçoit ses propres répétitions, passage par passage.</div>`;
+   else if(!sch)h+=`<div style="display:flex;align-items:center;gap:12px">
     <span style="font-size:13.5px;color:var(--mute);flex:1">Nombre de tours prévus</span>
     <input class="sin" style="width:74px;flex:none" type="number" inputmode="numeric" id="mcrounds" value="${mc.rounds||1}" placeholder="1"></div>`;
    else h+=`<div style="display:flex;align-items:center;gap:12px">
@@ -1164,16 +1190,26 @@ function vMetcon(mc,idx){
    h+=`</div>`}
   h+=`</div>
 
-   <div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+   <div class="card" id="mcwork"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
    <div class="eyebrow">Le travail</div>
    ${HASROUNDS.includes(mc.format)&&!(mcStructure(mc).n===1&&!mcStructure(mc).sch&&mc.items.some(x=>x.seq))
      ?`<div class="eyebrow" style="letter-spacing:.06em;color:var(--ink)">${mcStructure(mc).label} de :</div>`:""}</div>`;
   const ST=mcStructure(mc);
   if(mc.items.length){h+=mc.items.map((it,i)=>{const m=mv(it.movementId),car=m.k==="cardio";
    const follows=ST.sch&&it.lad!==false;
-   return`<div class="srow" style="flex-wrap:wrap">
+   return`<div class="srow" data-row="${i}" style="flex-wrap:wrap;${S.drag&&S.drag.i===i?"background:var(--sunk);border-radius:12px;box-shadow:0 0 0 2px var(--aqua) inset":""}">
     <span style="flex:1 0 100%;font-weight:600;font-size:14.5px;margin-bottom:2px">${esc(m.n)}
-    <span style="float:right;display:flex;gap:12px;align-items:center">
+    <span style="float:right;display:flex;gap:10px;align-items:center">
+     ${mc.items.length>1?`<button class="grip" data-drag="${i}" aria-label="Déplacer ${esc(m.n)}"
+       style="color:var(--mute);padding:2px 4px;cursor:grab">
+       <svg viewBox="0 0 16 16" width="17" height="17" fill="currentColor" aria-hidden="true">
+        <circle cx="6" cy="3.5" r="1.4"/><circle cx="10" cy="3.5" r="1.4"/>
+        <circle cx="6" cy="8" r="1.4"/><circle cx="10" cy="8" r="1.4"/>
+        <circle cx="6" cy="12.5" r="1.4"/><circle cx="10" cy="12.5" r="1.4"/></svg></button>
+      <button data-act="mcmove" data-i="${i}" data-d="-1" aria-label="Monter"
+       style="color:var(--mute);font-size:15px;${i===0?"opacity:.25":""}">↑</button>
+      <button data-act="mcmove" data-i="${i}" data-d="1" aria-label="Descendre"
+       style="color:var(--mute);font-size:15px;${i===mc.items.length-1?"opacity:.25":""}">↓</button>`:""}
      <button data-act="mcdup" data-i="${i}" aria-label="Dupliquer ce mouvement"
       style="color:var(--mute);font-size:13px;font-weight:600">Dupliquer</button>
      <button data-act="mcitemdel" data-i="${i}" aria-label="Retirer" style="color:var(--mute);font-size:19px">×</button>
@@ -1186,15 +1222,23 @@ function vMetcon(mc,idx){
      :(follows
       ?`<div style="flex:1;min-width:0"><button class="chip on-a" style="width:100%;text-align:center;box-shadow:none"
           data-act="mclad" data-i="${i}">${ST.label}</button></div><span class="sunit">reps</span>`
-      :`<div style="flex:1;min-width:0"><input class="sin" type="text" inputmode="numeric" id="mi-${i}-reps"
-        data-mi="${i}" data-f="reps" value="${it.seq?it.seq.join("-"):(it.reps||"")}"
+      :(ST.seq
+       ?`<div style="flex:1 0 100%;display:flex;gap:6px;align-items:center;margin-top:2px">`+
+          Array.from({length:ST.n},(_,k)=>`<div style="flex:1;min-width:0">
+           <input class="sin" type="number" inputmode="numeric" id="mi-${i}-s${k}"
+            data-mi="${i}" data-f="s${k}" value="${(it.seq&&it.seq[k]!=null)?it.seq[k]:""}"
+            placeholder="—" aria-label="Passage ${k+1}"></div>`).join("")+
+         `<span class="sunit" style="flex:none">${m.u==="sec"?"s":m.u==="m"?"m":"reps"}</span></div>`
+       :`<div style="flex:1;min-width:0"><input class="sin" type="number" inputmode="numeric" id="mi-${i}-reps"
+        data-mi="${i}" data-f="reps" value="${it.reps||""}"
         placeholder="—" aria-label="Répétitions"></div>
        <span class="sunit">${m.u==="sec"?"s":m.u==="m"?"m":"reps"}</span>
-       ${ST.sch&&!it.seq?`<button class="sdiff" data-act="mclad" data-i="${i}">fixe</button>`:""}`)
-      +`<div style="flex:1;min-width:0"><input class="sin" type="number" inputmode="decimal" id="mi-${i}-weight"
-        data-mi="${i}" data-f="weight" value="${it.weight||""}" placeholder="PdC" aria-label="Charge"></div><span class="sunit">kg</span>`)
-    +(it.seq?`<div style="flex:1 0 100%;font-size:11.5px;color:var(--aqua);margin-top:6px;font-weight:600">
-      ${it.seq.length} passages : ${it.seq.join(" · ")} — ${it.seq.reduce((a,b)=>a+b,0)} au total</div>`:"")
+       ${ST.sch?`<button class="sdiff" data-act="mclad" data-i="${i}">fixe</button>`:""}`))
+      +`<div style="${ST.seq?"flex:0 0 118px;margin-top:6px":"flex:1"};min-width:0"><input class="sin" type="number" inputmode="decimal" id="mi-${i}-weight"
+        data-mi="${i}" data-f="weight" value="${it.weight||""}" placeholder="PdC" aria-label="Charge"></div>
+       <span class="sunit" style="${ST.seq?"margin-top:6px":""}">kg</span>`)
+    +(it.seq&&ST.seq?`<div style="flex:1 0 100%;font-size:11.5px;color:var(--aqua);margin-top:6px;font-weight:600">
+      ${it.seq.reduce((a,b)=>a+(+b||0),0)} ${m.u==="sec"?"s":"reps"} au total</div>`:"")
     +`</div>`}).join("")}
   else h+=`<div style="font-size:13px;color:var(--mute);line-height:1.6;margin-bottom:12px">Ajoute les mouvements du metcon, avec les répétitions, la charge, la distance ou les calories prescrites.</div>`;
   const rec=recents(8).filter(id=>!car0(id));
@@ -1423,6 +1467,7 @@ function vHist(){const H=sorted();
     if(s.feel)h+=`<span class="badge" style="margin-top:9px;display:inline-block">Sensation : ${FEEL[s.feel]}</span>`;
     if(s.note)h+=`<div style="font-size:13px;color:var(--mute);margin-top:11px;line-height:1.6">${esc(s.note)}</div>`;
     h+=`<div style="display:flex;gap:10px;margin-top:15px">
+    <button class="btn btn-quiet" style="padding:12px;font-size:13px" data-act="share" data-t="seance" data-v="${s.id}">Partager</button>
     <button class="btn btn-quiet" style="padding:12px;font-size:13px" data-act="edit" data-id="${s.id}">Modifier</button>
     <button class="btn btn-quiet" style="padding:12px;font-size:13px;color:var(--lava)" data-act="del" data-id="${s.id}">Supprimer</button></div></div>`}
    h+=`</div>`})}
@@ -1449,6 +1494,295 @@ function vPicker(){
   <span style="font-weight:500">${esc(m.n)}${m.d?`<br><small>${m.d}</small>`:""}</span><span style="color:var(--mute)">›</span></button>`).join("")+`</div>`});
  if(!q)h+=`<button class="btn btn-quiet" style="margin-top:20px" data-act="createAsk">Créer un mouvement</button>`;
  return h+`</div></div></div>`}
+
+
+/* ══════════════════ EXPORT VISUEL ══════════════════
+   Un calque dessiné dans un canvas, exporté en PNG. Trois fonds possibles :
+   une photo de la bibliothèque, un aplat sombre, ou rien (calque transparent
+   à poser soi-même dans Photos ou Instagram). */
+const SHCOL={aqua:"#33D6B0",gold:"#F2C14E",violet:"#8B7BD8",blanc:"#FFFFFF"};
+const SHCOLN={aqua:"Menthe",gold:"Or",violet:"Violet",blanc:"Blanc"};
+const SHFMT={"45":{w:1080,h:1350,l:"Publication 4:5"},"916":{w:1080,h:1920,l:"Story 9:16"}};
+
+function shareData(){
+ const k=S.share&&S.share.t;
+ if(k==="record"){
+  const id=S.share.id,m=mv(id),c=curveFor(id).filter(x=>x.rm!=null);
+  const best=bestOf(id);
+  const gain=c.length>1?best-c[0].rm:null;
+  const quand=c.length?c[c.length-1].date:TODAY;
+  return{tag:"RECORD",titre:m.n,val:best!=null?best.toFixed(best%1?1:0):"—",unit:"kg",
+   sous:(gain&&gain>0?"+"+gain.toFixed(1)+" kg depuis "+fMid(c[0].date)+"  ·  ":"")+"charge max estimée",
+   pied:fLong(quand)};}
+ if(k==="metcon"){
+  const s2=S.sessions.find(x=>x.id===S.share.id);if(!s2)return null;
+  const mc=(s2.metcons||[])[S.share.i||0];if(!mc)return null;
+  const f=FMT[mc.format]||FORMATS[0],sc=mcScore(mc),st=mcStructure(mc);
+  return{tag:(f.l+(mc.cap?" · "+mc.cap+" MIN":"")).toUpperCase(),
+   titre:mc.name||f.l,val:sc?sc.txt:"—",unit:"",
+   rx:mc.rx,liste:mc.items.map(it=>itemLabel(it,st)).join("  ·  "),
+   pied:fLong(s2.date)};}
+ if(k==="seance"){
+  const s2=S.sessions.find(x=>x.id===S.share.id);if(!s2)return null;
+  const li=[];
+  (s2.entries||[]).forEach(e=>{const m=mv(e.movementId);
+   let best=null,bv=null;
+   (e.sets||[]).forEach(x=>{const v=e1rm(x.weight,x.reps,x.diff);
+    if(v&&(bv==null||v>bv)){bv=v;best=x}});
+   const x=best||(e.sets||[])[0];
+   if(x)li.push([m.n,setLabel(x,m)]);});
+  (s2.metcons||[]).forEach(mc=>{const sc=mcScore(mc),f=FMT[mc.format]||FORMATS[0];
+   li.push([mc.name||f.l,sc?sc.txt:"terminé"]);});
+  let reps=0,ton=0;
+  (s2.entries||[]).forEach(e=>(e.sets||[]).forEach(x=>{
+   reps+=x.dist?Math.round(x.dist/50):(x.reps||0);ton+=(x.reps||0)*(x.weight||0)}));
+  (s2.metcons||[]).forEach(mc=>mcTotals(mc).forEach(t=>{reps+=t.reps+t.cal+Math.round(t.dist/50);ton+=t.ton}));
+  return{tag:fLong(s2.date).toUpperCase(),titre:"Séance",lignes:li.slice(0,6),
+   pied:reps+" répétitions  ·  "+Math.round(ton).toLocaleString("fr-FR")+" kg soulevés"};}
+ if(k==="mois"){
+  const g=monthGrid(S.share.off||0),st=statsRange(g.from,g.to);
+  const jours=new Set(S.sessions.map(x=>x.date));
+  return{tag:g.label.toUpperCase(),titre:st.n+" séance"+(st.n>1?"s":""),
+   /* Régularité rapportée aux semaines réellement écoulées : un mois en cours
+      ne doit pas être divisé comme s'il était terminé. */
+   cols:[["VOLUME",st.vol.toLocaleString("fr-FR"),"mouvements"],
+         ["RECORDS",String(st.rec),""],
+         ["RÉGULARITÉ",(st.n/Math.max(1,(Math.min(new Date(TODAY),new Date(g.to+"T12:00"))
+           -new Date(g.from+"T12:00"))/6048e5)).toFixed(1).replace(".",","),"/ semaine"]],
+   cells:g.cells.map(d=>d&&jours.has(d)),pied:"Mon Suivi CrossFit"};}
+ return null}
+
+function rrect(g,x,y,w,h,r){g.beginPath();
+ g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);
+ g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
+
+function shLogo(g,x,y,s,col,acc){
+ const k=v=>v*s/512;
+ const P=[[420,256],[338,398],[174,398],[92,256],[174,114],[338,114]];
+ g.strokeStyle=col;g.lineJoin="round";g.lineCap="round";
+ g.lineWidth=k(27);g.beginPath();
+ P.forEach(([a,b],i)=>i?g.lineTo(x+k(a),y+k(b)):g.moveTo(x+k(a),y+k(b)));
+ g.closePath();g.stroke();
+ g.lineWidth=k(16);
+ g.beginPath();g.moveTo(x+k(52),y+k(256));g.lineTo(x+k(205),y+k(256));g.stroke();
+ g.beginPath();g.moveTo(x+k(307),y+k(256));g.lineTo(x+k(460),y+k(256));g.stroke();
+ g.fillStyle=col;
+ [[86,193,27,126],[40,213,23,86],[399,193,27,126],[449,213,23,86]].forEach(([a,b,w,h])=>{
+  rrect(g,x+k(a),y+k(b),k(w),k(h),k(12));g.fill()});
+ g.strokeStyle=acc;g.lineWidth=k(26);g.beginPath();
+ [[150,322],[200,274],[240,304],[292,224],[322,250],[352,192]].forEach(([a,b],i)=>
+  i?g.lineTo(x+k(a),y+k(b)):g.moveTo(x+k(a),y+k(b)));
+ g.stroke();
+ g.lineWidth=k(16);g.beginPath();g.arc(x+k(368),y+k(174),k(28),0,7);g.stroke()}
+
+
+/* Dessin du calque. Tout est proportionnel à la largeur pour que les deux
+   formats partagent la même mise en page. */
+async function paintShare(){
+ /* Le canevas peut ne pas être encore monté, ou l'API être indisponible :
+    l'export ne doit jamais faire tomber le rendu. */
+ const cv=document.getElementById("shcv");
+ if(!cv||!S.share||typeof cv.getContext!=="function")return;
+ const D=shareData();if(!D)return;
+ const F=SHFMT[S.share.fmt||"45"],W=F.w,H=F.h;
+ cv.width=W;cv.height=H;
+ const g=cv.getContext("2d"),acc=SHCOL[S.share.col||"aqua"];
+ const M=88, BAS=H-96;
+ g.clearRect(0,0,W,H);
+
+ /* ── Fond ── */
+ const fond=S.share.bg||"sombre";
+ if(fond==="photo"&&S.sharePhoto){
+  const img=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=S.sharePhoto});
+  if(img){const r=Math.max(W/img.width,H/img.height),w=img.width*r,h=img.height*r;
+   g.drawImage(img,(W-w)/2,(H-h)/2,w,h);}
+  else{g.fillStyle="#0D0F12";g.fillRect(0,0,W,H)}
+ }else if(fond==="sombre"){g.fillStyle="#0D0F12";g.fillRect(0,0,W,H)}
+
+ /* Voile dégradé : le texte doit tenir sur n'importe quelle photo */
+ if(fond!=="transparent"){
+  const gr=g.createLinearGradient(0,H*0.32,0,H);
+  gr.addColorStop(0,"rgba(9,11,14,0)");gr.addColorStop(.55,"rgba(9,11,14,.72)");
+  gr.addColorStop(1,"rgba(9,11,14,.94)");
+  g.fillStyle=gr;g.fillRect(0,H*0.32,W,H*0.68);}
+
+ const MO=(w,s)=>`${w} ${s}px Montserrat, sans-serif`;
+ const RA=(w,s)=>`${w} ${s}px Raleway, sans-serif`;
+ const blanc="#FFFFFF",mute="rgba(214,222,230,.86)";
+ let y=BAS;
+
+ /* ── Pied commun ── */
+ if(S.share.logo!==false){shLogo(g,W-M-72,y-64,72,blanc,acc)}
+ g.textBaseline="alphabetic";
+ g.font=RA(500,30);g.fillStyle=mute;
+ g.fillText(D.pied,M,y-12);
+ y-=104;
+ g.strokeStyle="rgba(255,255,255,.28)";g.lineWidth=2;
+ g.beginPath();g.moveTo(M,y);g.lineTo(W-M,y);g.stroke();
+ y-=44;
+
+ /* ── Corps, selon le modèle ── */
+ if(S.share.t==="record"){
+  g.font=RA(600,32);g.fillStyle=mute;g.fillText(D.sous,M,y);y-=96;
+  g.font=MO(800,236);g.fillStyle=acc;g.fillText(D.val,M,y);
+  const w=g.measureText(D.val).width;
+  g.font=MO(700,60);g.fillStyle=mute;g.fillText(D.unit,M+w+22,y);
+  y-=132;
+  g.font=MO(800,Math.min(100,W*2.05/Math.max(9,D.titre.length)));g.fillStyle=blanc;
+  g.fillText(D.titre,M,y);y-=76;
+  g.font=MO(700,30);const tw=g.measureText(D.tag).width;
+  g.fillStyle=acc;rrect(g,M,y-46,tw+68,58,29);g.fill();
+  g.fillStyle="#0B1013";g.fillText(D.tag,M+34,y-8);
+ }
+
+ if(S.share.t==="metcon"){
+  g.font=RA(600,30);g.fillStyle=mute;g.fillText(D.liste,M,y);y-=76;
+  if(D.rx){g.font=MO(700,28);g.fillStyle=acc;rrect(g,M,y-42,92,52,26);g.fill();
+   g.fillStyle="#0B1013";g.fillText("RX",M+27,y-8);y-=72;}
+  g.font=MO(800,168);g.fillStyle=acc;g.fillText(D.val,M,y);y-=196;
+  g.font=MO(800,Math.min(132,W*2.1/Math.max(6,D.titre.length)));g.fillStyle=blanc;
+  g.fillText(D.titre,M,y);y-=68;
+  g.font=MO(600,30);g.fillStyle=acc;g.fillText(D.tag,M,y);
+ }
+
+ if(S.share.t==="seance"){
+  const n=D.lignes.length;
+  y-=6;
+  for(let i=n-1;i>=0;i--){
+   const [a,b]=D.lignes[i];
+   g.font=MO(700,36);g.fillStyle=acc;
+   const bw=g.measureText(b).width;g.fillText(b,W-M-bw,y);
+   g.font=RA(600,36);g.fillStyle=blanc;g.fillText(a,M,y);
+   y-=64;
+   g.strokeStyle="rgba(255,255,255,.16)";g.lineWidth=1;
+   g.beginPath();g.moveTo(M,y+18);g.lineTo(W-M,y+18);g.stroke();}
+  y-=34;
+  g.font=MO(800,110);g.fillStyle=blanc;g.fillText(D.titre,M,y);y-=62;
+  g.font=MO(600,30);g.fillStyle=acc;g.fillText(D.tag,M,y);
+ }
+
+ if(S.share.t==="mois"){
+  /* mini-calendrier */
+  const cs=(W-2*M-6*14)/7, lignes=Math.ceil(D.cells.length/7);
+  y-=8;
+  for(let r=lignes-1;r>=0;r--){
+   for(let c=0;c<7;c++){const d=D.cells[r*7+c];
+    if(d===undefined||d===null&&false)continue;
+    g.fillStyle=d?acc:"rgba(255,255,255,.16)";
+    rrect(g,M+c*(cs+14),y-cs,cs,cs,cs*0.26);g.fill();}
+   y-=cs+14;}
+  y-=44;
+  let x=M;
+  D.cols.forEach(([t,v,u])=>{
+   g.font=MO(600,24);g.fillStyle=mute;g.fillText(t,x,y-118);
+   g.font=MO(800,68);g.fillStyle=acc;g.fillText(v,x,y-42);
+   if(u){g.font=RA(500,26);g.fillStyle=mute;g.fillText(u,x,y-4)}
+   x+=(W-2*M)/3;});
+  y-=170;
+  g.font=MO(800,104);g.fillStyle=blanc;g.fillText(D.titre,M,y);y-=62;
+  g.font=MO(600,30);g.fillStyle=acc;g.fillText(D.tag,M,y);
+ }
+}
+
+/* Les polices doivent être chargées avant le premier tracé,
+   sinon le canvas retombe sur une police système. */
+let shFonts=null;
+function shReady(){
+ if(shFonts)return shFonts;
+ shFonts=(document.fonts&&document.fonts.load)
+  ?Promise.all(["800 100px Montserrat","700 40px Montserrat","600 30px Montserrat",
+    "600 30px Raleway","500 30px Raleway"].map(f=>document.fonts.load(f))).catch(()=>{})
+  :Promise.resolve();
+ return shFonts}
+
+async function shBlob(){
+ const cv=document.getElementById("shcv");
+ if(!cv||typeof cv.toBlob!=="function")return null;
+ await shReady();await paintShare();
+ return new Promise(r=>cv.toBlob(r,"image/png"));}
+
+
+/* Feuille d'export : aperçu en direct et réglages */
+function vShare(){
+ const S1=S.share,F=SHFMT[S1.fmt||"45"];
+ const opt=(act,v,cur,lab,st)=>`<button class="chip ${cur===v?"on":""}" style="padding:8px 13px;font-size:12.5px;${st||""}"
+   data-act="${act}" data-v="${v}">${lab}</button>`;
+ const modeles=[["seance","Séance"],["metcon","Metcon"],["record","Record"],["mois","Mois"]]
+  .filter(([k])=>SHOK[k]);
+ return`<div class="sheet" data-act="shclosebg"><div class="sheet-in" data-stop="1">
+  <div style="padding:18px 22px calc(24px + env(safe-area-inset-bottom));overflow-y:auto">
+  <div style="width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 16px"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+   <div class="eyebrow">Partager</div>
+   <button class="chip" style="padding:6px 12px" data-act="shclose">Fermer</button></div>
+
+  <div style="background:var(--sunk);border:1px solid var(--line);border-radius:18px;padding:10px;margin-bottom:16px">
+   <canvas id="shcv" style="width:100%;display:block;border-radius:10px;
+    background:${(S1.bg||"sombre")==="transparent"?"repeating-conic-gradient(rgba(255,255,255,.06) 0% 25%,transparent 0% 50%) 50%/22px 22px":"transparent"}"></canvas></div>
+
+  ${modeles.length>1?`<div class="eyebrow" style="margin-bottom:8px">Modèle</div>
+  <div class="chips" style="margin-bottom:16px">`+modeles.map(([k,l])=>opt("shtype",k,S1.t,l)).join("")+`</div>`:""}
+
+  <div class="eyebrow" style="margin-bottom:8px">Format</div>
+  <div class="chips" style="margin-bottom:16px">`+
+   Object.entries(SHFMT).map(([k,v])=>opt("shfmt",k,S1.fmt||"45",v.l)).join("")+`</div>
+
+  <div class="eyebrow" style="margin-bottom:8px">Fond</div>
+  <div class="chips" style="margin-bottom:16px">`+
+   [["photo","Une photo"],["sombre","Fond sombre"],["transparent","Transparent"]]
+    .map(([k,l])=>opt("shbg",k,S1.bg||"sombre",l)).join("")+`</div>
+  ${(S1.bg||"sombre")==="photo"?`<button class="btn btn-quiet" style="margin-bottom:16px;padding:13px;font-size:13.5px"
+    data-act="shpick">${S.sharePhoto?"Changer de photo":"Choisir une photo"}</button>
+   <input type="file" id="shfile" accept="image/*" style="display:none">`:""}
+
+  <div class="eyebrow" style="margin-bottom:8px">Couleur</div>
+  <div class="chips" style="margin-bottom:16px">`+
+   Object.entries(SHCOL).map(([k,c])=>`<button class="chip" style="padding:8px 13px;font-size:12.5px;
+    ${(S1.col||"aqua")===k?`background:${c};border-color:${c};color:#0B1013;font-weight:700`:""}"
+    data-act="shcol" data-v="${k}">${SHCOLN[k]}</button>`).join("")+`</div>
+
+  <div class="chips" style="margin-bottom:18px">`+
+   opt("shlogo",S1.logo===false?"1":"0",null,S1.logo===false?"Afficher le logo":"Masquer le logo")+`</div>
+
+  <button class="btn btn-go" style="padding:15px;font-size:15px" data-act="shsave">Enregistrer l'image</button>
+  <button class="btn btn-quiet" style="margin-top:10px;padding:13px;font-size:13.5px" data-act="shcopy">Copier</button>
+  <div style="font-size:12px;color:var(--mute);line-height:1.55;margin-top:12px">
+   L'image est créée sur ton téléphone ; rien n'est envoyé nulle part.</div>
+  </div></div></div>`}
+
+/* Modèles disponibles selon le contexte d'ouverture */
+let SHOK={};
+
+
+/* Déplacement au doigt. Le rendu reconstruit le DOM à chaque changement,
+   donc on écoute sur le document — les écouteurs survivent au redessin —
+   et on réordonne dès que le doigt franchit le milieu d'une ligne voisine. */
+function rowRect(i){const e=document.querySelector(`[data-row="${i}"]`);
+ return e&&e.getBoundingClientRect?e.getBoundingClientRect():null}
+
+document.addEventListener("pointerdown",ev=>{
+ const g=ev.target.closest&&ev.target.closest("[data-drag]");
+ if(!g||!S.draft||S.mc==null)return;
+ const mc=(S.draft.metcons||[])[S.mc];if(!mc||mc.items.length<2)return;
+ S.drag={i:+g.dataset.drag};
+ ev.preventDefault();render();},{passive:false});
+
+document.addEventListener("pointermove",ev=>{
+ if(!S.drag)return;
+ const mc=(S.draft.metcons||[])[S.mc];if(!mc)return;
+ const i=S.drag.i,y=ev.clientY;
+ for(const j of [i-1,i+1]){
+  if(j<0||j>=mc.items.length)continue;
+  const r=rowRect(j);if(!r)continue;
+  const mid=r.top+r.height/2;
+  if((j<i&&y<mid)||(j>i&&y>mid)){
+   const [x]=mc.items.splice(i,1);mc.items.splice(j,0,x);
+   S.drag.i=j;save();render();break}}
+ ev.preventDefault();},{passive:false});
+
+const dragEnd=()=>{if(S.drag){S.drag=null;save();render()}};
+document.addEventListener("pointerup",dragEnd);
+document.addEventListener("pointercancel",dragEnd);
 
 /* ══════════ RENDU ══════════ */
 let lastView=null,pendingAnchor=null;
@@ -1481,7 +1815,8 @@ function render(){
     <svg viewBox="0 0 16 16" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.6"
      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TABICON[k]}</svg>
     <span>${l}</span></button>`).join("");
- document.getElementById("overlay").innerHTML=(S.picker?vPicker():"")+(S.done?vDone():"");
+ document.getElementById("overlay").innerHTML=(S.picker?vPicker():"")+(S.done?vDone():"")+(S.share?vShare():"");
+ if(S.share)shReady().then(paintShare).catch(()=>{});
  /* Changer d'écran doit repartir du haut : sans cela on arrive au milieu
     de la nouvelle page, à la hauteur où l'on avait laissé la précédente. */
  const clef=[S.tab,S.fiche||"",S.focus||"",S.mc==null?"":S.mc,S.picker?1:0].join("|");
@@ -1517,13 +1852,14 @@ function createMove(name){const n=(name||"").trim();if(!n)return null;
 
 document.addEventListener("click",ev=>{
  const b=ev.target.closest("[data-act]");if(!b)return;
- if((b.dataset.act==="closepick"||b.dataset.act==="doneclbg")&&ev.target.closest("[data-stop]"))return;
+ if((b.dataset.act==="closepick"||b.dataset.act==="doneclbg"||b.dataset.act==="shclosebg")&&ev.target.closest("[data-stop]"))return;
  const a=b.dataset.act,v=b.dataset.v,en=entryOf();
  /* Un rendu obsolète peut laisser un bouton dont le contexte n'existe plus
     (séance abandonnée, metcon supprimé) : on l'ignore au lieu de planter. */
  if(/^(date|feel|focus|rm|saveS|drop|pick|mcpick|mcadd|mcopen|mcdel)$/.test(a)&&!S.draft)return;
  const MC=S.draft&&S.mc!=null?(S.draft.metcons||[])[S.mc]:null;
- if(/^(mcname|mcfmt|mcres|mcdone|mcrx|mcitemdel|mcstruct|mclad|mcdup|mcquick)$/.test(a)&&!MC)return;
+ if(/^(mcname|mcfmt|mcres|mcdone|mcrx|mcitemdel|mcstruct|mclad|mcdup|mcquick|mcmove|mcpass)$/.test(a)&&!MC)return;
+ if(/^(shtype|shfmt|shbg|shcol|shlogo|shsave|shcopy|shpick)$/.test(a)&&!S.share)return;
  if(/^(push|pop|sadd|scycle)$/.test(a)&&!en)return;
  if(a==="add"&&!S.draft)return;
  switch(a){
@@ -1538,6 +1874,40 @@ document.addEventListener("click",ev=>{
   case"dayclose":S.day=null;pendingAnchor="calblock";break;
   case"openday":S.tab="historique";S.open=v;S.day=null;break;
   case"fclose":S.fiche=null;break;
+  case"share":{const t=b.dataset.t;
+    SHOK={};
+    if(t==="seance"){const s2=S.sessions.find(x=>x.id===v);
+      SHOK.seance=true;SHOK.metcon=!!(s2&&(s2.metcons||[]).length);
+      S.share={t:"seance",id:v,i:0,fmt:"45",bg:"sombre",col:"aqua",logo:true}}
+    else if(t==="record"){SHOK.record=true;S.share={t:"record",id:v,fmt:"45",bg:"sombre",col:"gold",logo:true}}
+    else if(t==="mois"){SHOK.mois=true;S.share={t:"mois",off:+v||0,fmt:"45",bg:"sombre",col:"aqua",logo:true}}
+    break}
+  case"sharerec":{SHOK={record:true};S.done=null;
+    S.share={t:"record",id:v,fmt:"45",bg:"sombre",col:"gold",logo:true};break}
+  case"shtype":S.share.t=v;break;
+  case"shfmt":S.share.fmt=v;break;
+  case"shbg":S.share.bg=v;break;
+  case"shcol":S.share.col=v;break;
+  case"shlogo":S.share.logo=v==="0";break;
+  case"shclose":case"shclosebg":S.share=null;break;
+  case"shpick":{const f=document.getElementById("shfile");if(f)f.click();return}
+  case"shsave":{(async()=>{
+    const bl=await shBlob();if(!bl){alert("Image indisponible.");return}
+    const nom="mon-suivi-crossfit.png";
+    const file=new File([bl],nom,{type:"image/png"});
+    /* iOS refuse le partage de fichier si un titre est fourni : on n'en met pas. */
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file]});return}catch(e){if(e&&e.name==="AbortError")return}}
+    const u=URL.createObjectURL(bl);
+    const a=document.createElement("a");a.href=u;a.download=nom;a.click();
+    setTimeout(()=>URL.revokeObjectURL(u),4000);
+    })();return}
+  case"shcopy":{(async()=>{
+    const bl=await shBlob();if(!bl)return;
+    try{await navigator.clipboard.write([new ClipboardItem({"image/png":bl})]);
+      alert("Image copiée. Colle-la où tu veux.")}
+    catch(e){alert("La copie d'image n'est pas possible sur cet appareil. Utilise « Enregistrer l'image ».")}
+    })();return}
   case"ficheclose":S.done=null;S.tab="progres";S.fiche=v;break;
   case"prof":openProfil();break;
   case"toggsign":S.cloud.signup=!S.cloud.signup;break;
@@ -1600,12 +1970,31 @@ document.addEventListener("click",ev=>{
   case"mcdone":{MC.res.done=v==="1";break}
   case"mcrx":{MC.rx=v==="1";break}
   case"mcitemdel":{MC.items.splice(+b.dataset.i,1);break}
+  case"mcmove":{const i=+b.dataset.i,j=i+(+b.dataset.d);
+    if(j<0||j>=MC.items.length)return;
+    const [x]=MC.items.splice(i,1);MC.items.splice(j,0,x);
+    pendingAnchor="mcwork";break}
   case"mcdup":{const it=MC.items[+b.dataset.i];if(!it)return;
     MC.items.splice(+b.dataset.i+1,0,{...it,seq:it.seq?[...it.seq]:null});break}
   case"mcquick":{MC.items.push({movementId:v,reps:null,weight:null,dist:null,cal:null,seq:null});break}
+  case"mcpass":{const n=Math.max(1,Math.min(20,(MC.rounds||1)+(+v)));
+    MC.rounds=n;
+    MC.items.forEach(it=>{const q=(it.seq||[]).slice(0,n);
+      while(q.length<n)q.push(q.length?q[q.length-1]:(it.reps||10));
+      it.seq=q;it.reps=null});
+    break}
   case"mcstruct":{const mc=MC;
-    if(v==="scheme"){if(!parseScheme(mc.scheme))mc.scheme="21-15-9"}
-    else{mc.scheme="";if(!mc.rounds)mc.rounds=1}break}
+    if(v==="seq"){mc.mode="seq";mc.scheme="";
+      /* un seul passage n'aurait pas de sens dans ce mode */
+      mc.rounds=(mc.rounds&&mc.rounds>1)?mc.rounds:3;
+      const n=mc.rounds;
+      mc.items.forEach(it=>{const q=(it.seq||[]).slice(0,n);
+        while(q.length<n)q.push(q.length?q[q.length-1]:(it.reps||10));
+        it.seq=q;it.reps=null});}
+    else{mc.mode=null;mc.items.forEach(it=>{if(it.seq){it.reps=it.seq[0]||null;it.seq=null}});
+      if(v==="scheme"){if(!parseScheme(mc.scheme))mc.scheme="21-15-9"}
+      else{mc.scheme="";if(!mc.rounds)mc.rounds=1}}
+    break}
   case"mclad":{const it=MC.items[+b.dataset.i];if(it)it.lad=it.lad===false;break}
   case"closepick":S.picker=false;break;
   case"add":{
@@ -1676,6 +2065,10 @@ document.addEventListener("click",ev=>{
 document.addEventListener("input",ev=>{const t=ev.target;
  if(t.id==="q"){S.q=t.value;render();return}
  if(t.id==="pn"){S.pname=t.value;return}
+ if(t.id==="shfile"){const f=t.files&&t.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{S.sharePhoto=r.result;render()};
+  r.readAsDataURL(f);return}
  if(t.id==="mq"){S.mq=t.value;pendingAnchor="movblock";render();return}
  if(t.id==="mail"){S.email=t.value;return}
  if(t.id==="pw"){S.pw=t.value;return}
@@ -1685,12 +2078,13 @@ document.addEventListener("input",ev=>{const t=ev.target;
  if(t.id==="mcrounds"){if(MC)MC.rounds=Math.max(1,parseInt(t.value)||1);save();render();return}
  if(t.id==="mcscheme"){if(MC)MC.scheme=t.value;save();render();return}
  if(t.dataset.mi!=null){const it=MC&&MC.items[+t.dataset.mi];if(!it)return;
+  const ps=/^s(\d+)$/.exec(t.dataset.f||"");
+  if(ps){const k=+ps[1];
+   if(!it.seq)it.seq=[];
+   it.seq[k]=t.value===""?0:Math.max(0,parseInt(t.value)||0);
+   it.reps=null;save();render();return}
   if(t.dataset.f==="reps"){
-   /* « 10-15-20 » décrit trois passages successifs de ce mouvement ;
-      un nombre seul reste un nombre. */
-   const suite=parseScheme(t.value);
-   if(suite){it.seq=suite;it.reps=null}
-   else{it.seq=null;it.reps=t.value===""?null:Math.max(0,parseInt(t.value)||0)}
+   it.seq=null;it.reps=t.value===""?null:Math.max(0,parseInt(t.value)||0);
    save();render();return}
   const n=t.value===""?null:Math.max(0,parseFloat(t.value)||0);
   it[t.dataset.f]=n;
