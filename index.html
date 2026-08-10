@@ -561,8 +561,6 @@ function vProgres(){
       font-size:10.5px;font-weight:600;color:${c?"var(--onacc)":"var(--mute)"}">${jour}</button>`}).join("")+`</div>`}
    h+=`<div style="display:flex;justify-content:flex-end;margin-top:10px">
     <button class="chip" style="padding:6px 12px;font-size:12px" data-act="share" data-t="mois" data-v="${S.moff||0}">Partager le mois</button></div>
-   <div style="display:flex;justify-content:flex-end;margin-top:10px">
-    <button class="chip" style="padding:6px 12px;font-size:12px" data-act="share" data-t="mois" data-v="${S.moff||0}">Partager le mois</button></div>
    <div class="legend" style="margin-top:11px"><span><i style="background:var(--aqua)"></i>séance</span>
     <span><i style="background:var(--melon)"></i>première fois</span></div>
     <div style="display:flex;gap:6px;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)">
@@ -1524,20 +1522,24 @@ function shareData(){
    pied:fLong(s2.date)};}
  if(k==="seance"){
   const s2=S.sessions.find(x=>x.id===S.share.id);if(!s2)return null;
-  const li=[];
-  (s2.entries||[]).forEach(e=>{const m=mv(e.movementId);
-   let best=null,bv=null;
-   (e.sets||[]).forEach(x=>{const v=e1rm(x.weight,x.reps,x.diff);
-    if(v&&(bv==null||v>bv)){bv=v;best=x}});
-   const x=best||(e.sets||[])[0];
-   if(x)li.push([m.n,setLabel(x,m)]);});
-  (s2.metcons||[]).forEach(mc=>{const sc=mcScore(mc),f=FMT[mc.format]||FORMATS[0];
-   li.push([mc.name||f.l,sc?sc.txt:"terminé"]);});
+  /* Le travail spécifique : toutes les séries de chaque mouvement, pas
+     seulement la meilleure — c'est le détail complet demandé. */
+  let mov=(s2.entries||[]).filter(e=>(e.sets||[]).length).map(e=>{const m=mv(e.movementId);
+   return{n:m.n,sets:(e.sets||[]).map(x=>setLabel(x,m)).join("  ·  ")}});
+  const movExtra=Math.max(0,mov.length-8);
+  if(movExtra)mov=mov.slice(0,8);
+  /* Les metcons : structure complète, pas seulement le résultat. */
+  let mcs=(s2.metcons||[]).map(mc=>{const f=FMT[mc.format]||FORMATS[0],sc=mcScore(mc),st=mcStructure(mc);
+   let items=mc.items.map(it=>itemLabel(it,st));
+   const extra=Math.max(0,items.length-5);
+   if(extra)items=[...items.slice(0,5),"+ "+extra+" mouvement"+(extra>1?"s":"")];
+   return{n:mc.name||f.l,badge:(f.l+(mc.cap?" · "+mc.cap+"'":"")).toUpperCase(),
+    rx:mc.rx,items,res:sc?sc.txt:resLabel(mc)}});
   let reps=0,ton=0;
   (s2.entries||[]).forEach(e=>(e.sets||[]).forEach(x=>{
    reps+=x.dist?Math.round(x.dist/50):(x.reps||0);ton+=(x.reps||0)*(x.weight||0)}));
   (s2.metcons||[]).forEach(mc=>mcTotals(mc).forEach(t=>{reps+=t.reps+t.cal+Math.round(t.dist/50);ton+=t.ton}));
-  return{tag:fLong(s2.date).toUpperCase(),titre:"Séance",lignes:li.slice(0,6),
+  return{tag:fLong(s2.date).toUpperCase(),titre:"Séance",mov,movExtra,mcs,
    pied:reps+" répétitions  ·  "+Math.round(ton).toLocaleString("fr-FR")+" kg soulevés"};}
  if(k==="mois"){
   const g=monthGrid(S.share.off||0),st=statsRange(g.from,g.to);
@@ -1628,8 +1630,9 @@ async function paintShare(){
   const w=g.measureText(D.val).width;
   g.font=MO(700,60);g.fillStyle=mute;g.fillText(D.unit,M+w+22,y);
   y-=132;
-  g.font=MO(800,Math.min(100,W*2.05/Math.max(9,D.titre.length)));g.fillStyle=blanc;
-  g.fillText(D.titre,M,y);y-=76;
+  const rSize=Math.min(100,W*2.05/Math.max(9,D.titre.length));
+  g.font=MO(800,rSize);g.fillStyle=blanc;
+  g.fillText(D.titre,M,y);y-=rSize*0.92+16;
   g.font=MO(700,30);const tw=g.measureText(D.tag).width;
   g.fillStyle=acc;rrect(g,M,y-46,tw+68,58,29);g.fill();
   g.fillStyle="#0B1013";g.fillText(D.tag,M+34,y-8);
@@ -1640,28 +1643,63 @@ async function paintShare(){
   if(D.rx){g.font=MO(700,28);g.fillStyle=acc;rrect(g,M,y-42,92,52,26);g.fill();
    g.fillStyle="#0B1013";g.fillText("RX",M+27,y-8);y-=72;}
   g.font=MO(800,168);g.fillStyle=acc;g.fillText(D.val,M,y);y-=196;
-  g.font=MO(800,Math.min(132,W*2.1/Math.max(6,D.titre.length)));g.fillStyle=blanc;
-  g.fillText(D.titre,M,y);y-=68;
+  const mSize=Math.min(132,W*2.1/Math.max(6,D.titre.length));
+  g.font=MO(800,mSize);g.fillStyle=blanc;
+  g.fillText(D.titre,M,y);y-=mSize*0.92+16;
   g.font=MO(600,30);g.fillStyle=acc;g.fillText(D.tag,M,y);
  }
 
  if(S.share.t==="seance"){
-  const n=D.lignes.length;
-  y-=6;
-  for(let i=n-1;i>=0;i--){
-   const [a,b]=D.lignes[i];
-   g.font=MO(700,36);g.fillStyle=acc;
-   const bw=g.measureText(b).width;g.fillText(b,W-M-bw,y);
-   g.font=RA(600,36);g.fillStyle=blanc;g.fillText(a,M,y);
-   y-=64;
-   g.strokeStyle="rgba(255,255,255,.16)";g.lineWidth=1;
-   g.beginPath();g.moveTo(M,y+18);g.lineTo(W-M,y+18);g.stroke();}
-  y-=34;
-  g.font=MO(800,110);g.fillStyle=blanc;g.fillText(D.titre,M,y);y-=62;
+  /* Une ligne par élément à afficher : chaque mouvement, puis chaque metcon
+     avec son détail. La hauteur de ligne s'ajuste au nombre total pour que
+     tout tienne, sans jamais déborder sur le titre ou le pied de page. */
+  const rows=[];
+  D.mov.forEach(m=>rows.push({t:"mov",n:m.n,sets:m.sets}));
+  if(D.movExtra)rows.push({t:"note",txt:"+ "+D.movExtra+" mouvement"+(D.movExtra>1?"s":"")});
+  D.mcs.forEach(mc=>{
+   rows.push({t:"mchead",n:mc.n,res:mc.res});
+   rows.push({t:"mcmeta",txt:mc.badge+"   ·   "+(mc.rx?"RX":"ADAPTÉ")});
+   mc.items.forEach(it=>rows.push({t:"mcitem",txt:it}));
+  });
+  const HEADER=110+(110*0.92+16)+30+14, FOOTER=196, TOP=30;
+  const avail=Math.max(200,H-HEADER-FOOTER-TOP);
+  const rh=Math.max(38,Math.min(66,avail/Math.max(1,rows.length)));
+  const fName=Math.round(rh*0.5),fSets=Math.round(rh*0.38),
+        fMeta=Math.round(rh*0.32),fItem=Math.round(rh*0.35);
+  y-=rh*0.1;
+  for(let i=rows.length-1;i>=0;i--){
+   const r=rows[i];
+   if(r.t==="mov"){
+    /* La marge réservée au nom suit sa largeur réelle plutôt qu'un forfait :
+       un nom court laisse plus de place pour afficher toutes les séries.
+       Une liste encore trop longue réduit sa taille avant de se tronquer,
+       pour que "détail complet" reste vrai le plus souvent possible. */
+    g.font=RA(600,fName);const nameW=g.measureText(r.n).width;
+    const maxW=W-2*M-nameW-36;let b=r.sets,vf=fSets;
+    g.font=MO(700,vf);let bw=g.measureText(b).width;
+    while(bw>maxW&&vf>16){vf--;g.font=MO(700,vf);bw=g.measureText(b).width}
+    while(bw>maxW&&b.length>3){b=b.slice(0,-2)+"…";bw=g.measureText(b).width}
+    g.fillStyle=acc;g.fillText(b,W-M-bw,y);
+    g.font=RA(600,fName);g.fillStyle=blanc;g.fillText(r.n,M,y);
+   }else if(r.t==="mchead"){
+    g.font=MO(700,fSets);g.fillStyle=acc;
+    const bw=g.measureText(r.res).width;g.fillText(r.res,W-M-bw,y);
+    g.font=RA(700,fName);g.fillStyle=blanc;g.fillText(r.n,M,y);
+   }else if(r.t==="mcmeta"){
+    g.font=MO(600,fMeta);g.fillStyle=mute;g.fillText(r.txt,M,y);
+   }else if(r.t==="mcitem"){
+    g.font=RA(500,fItem);g.fillStyle=mute;g.fillText("·  "+r.txt,M+6,y);
+   }else{g.font=RA(600,fMeta);g.fillStyle=mute;g.fillText(r.txt,M,y);}
+   y-=rh;
+   if(i>0&&["mov","mchead","note"].includes(rows[i-1].t)){
+    g.strokeStyle="rgba(255,255,255,.16)";g.lineWidth=1;
+    g.beginPath();g.moveTo(M,y+rh*0.3);g.lineTo(W-M,y+rh*0.3);g.stroke();}}
+  y-=22;
+  g.font=MO(800,110);g.fillStyle=blanc;g.fillText(D.titre,M,y);y-=110*0.92+16;
   g.font=MO(600,30);g.fillStyle=acc;g.fillText(D.tag,M,y);
  }
 
- if(S.share.t==="mois"){
+if(S.share.t==="mois"){
   /* mini-calendrier */
   const cs=(W-2*M-6*14)/7, lignes=Math.ceil(D.cells.length/7);
   y-=8;
@@ -1679,7 +1717,7 @@ async function paintShare(){
    if(u){g.font=RA(500,26);g.fillStyle=mute;g.fillText(u,x,y-4)}
    x+=(W-2*M)/3;});
   y-=170;
-  g.font=MO(800,104);g.fillStyle=blanc;g.fillText(D.titre,M,y);y-=62;
+  g.font=MO(800,104);g.fillStyle=blanc;g.fillText(D.titre,M,y);y-=104*0.92+16;
   g.font=MO(600,30);g.fillStyle=acc;g.fillText(D.tag,M,y);
  }
 }
