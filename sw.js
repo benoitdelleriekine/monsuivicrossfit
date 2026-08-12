@@ -1,6 +1,6 @@
 /* Service worker : l'application reste utilisable hors connexion.
    Les appels au cloud passent toujours par le réseau. */
-const CACHE = "msc-v25";
+const CACHE = "msc-v26";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png", "./favicon-32.png"];
 
 self.addEventListener("install", (e) => {

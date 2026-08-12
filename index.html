@@ -131,10 +131,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .pill{width:26px;height:26px;border-radius:9px;background:var(--sunk);display:grid;place-items:center;
   font-size:12px;font-weight:600;color:var(--mute);flex:none}
 .tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;
-  display:flex;gap:6px;padding:9px 16px calc(11px + env(safe-area-inset-bottom));
+  display:flex;gap:6px;padding:9px 8px calc(11px + env(safe-area-inset-bottom));
   background:color-mix(in srgb,var(--cloud) 90%,transparent);backdrop-filter:blur(18px);
   -webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);z-index:40}
-.tab{flex:1;padding:8px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;
+.tab{flex:1;min-width:0;padding:8px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;
  font-size:10.5px;font-weight:600;color:var(--mute);border-radius:14px;letter-spacing:.01em}
 .tab.on{background:transparent;color:var(--aqua)}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);
@@ -348,7 +348,7 @@ const GICON={
  "Mes mouvements":'<path d="M8 2.6v10.8M2.6 8h10.8"/>',
  "_":'<circle cx="8" cy="8" r="5.6"/>'
 };
-const TABICON={"progres": "<path d=\"M2 12.5l3.4-3.6 2.6 2.2L14 4.5\"/><path d=\"M10.6 4.5H14v3.3\"/>", "noter": "<path d=\"M8 3v10M3 8h10\"/>", "historique": "<rect x=\"2.6\" y=\"3.2\" width=\"10.8\" height=\"10.2\" rx=\"2.2\"/><path d=\"M2.6 6.6h10.8M5.6 2v2.4M10.4 2v2.4\"/>", "profil": "<circle cx=\"8\" cy=\"5.8\" r=\"2.8\"/><path d=\"M2.9 13.6c.6-2.6 2.6-3.9 5.1-3.9s4.5 1.3 5.1 3.9\"/>"};
+const TABICON={"progres": "<path d=\"M2 12.5l3.4-3.6 2.6 2.2L14 4.5\"/><path d=\"M10.6 4.5H14v3.3\"/>", "noter": "<path d=\"M8 3v10M3 8h10\"/>", "historique": "<rect x=\"2.6\" y=\"3.2\" width=\"10.8\" height=\"10.2\" rx=\"2.2\"/><path d=\"M2.6 6.6h10.8M5.6 2v2.4M10.4 2v2.4\"/>", "niveau": "<path d=\"M2.6 13.4V9.2M6.6 13.4V6M10.6 13.4V3.4M14 13.4v-6\"/>", "profil": "<circle cx=\"8\" cy=\"5.8\" r=\"2.8\"/><path d=\"M2.9 13.6c.6-2.6 2.6-3.9 5.1-3.9s4.5 1.3 5.1 3.9\"/>"};
 const GSHORT={"Haltéro":"Oly","Force":"Strength","Haltères":"Dumbbell",
  "Gymnastique":"Gym","Cardio":"Cardio","Mes mouvements":"Perso"};
 const gicon=g=>`<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor"
@@ -409,12 +409,12 @@ function weeksGrid(n){const rows=[],m=new Date();m.setDate(m.getDate()-((m.getDa
 
 /* ══════════ ÉTAT ══════════ */
 let S={sessions:[],custom:[],bar:15,tab:"progres",draft:null,focus:null,picker:false,q:"",prog:null,open:null,
- profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
+ profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},nchain:null,share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
  updatedAt:0,cloud:{enabled:false,user:null,status:"",busy:false,sent:false},email:"",otp:"",
  d:{w:0,reps:5,diff:"juste",level:0,dist:500,min:2,sec:0,age:30,bw:60}};
 /* Instantané des données, avec horodatage pour arbitrer la synchronisation */
 function payload(local){return{sessions:S.sessions,custom:S.custom,bar:S.bar,profile:S.profile,
- lastExport:S.lastExport,theme:S.theme,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
+ lastExport:S.lastExport,theme:S.theme,tests:S.tests,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
 const save=()=>{S.updatedAt=Date.now();pushSoon();try{localStorage.setItem(KEY,JSON.stringify(
  payload(true)))}catch(e){alert("Sauvegarde impossible : la mémoire du navigateur est pleine ou bloquée.")}};
 function load(){let raw=null;
@@ -426,7 +426,7 @@ function load(){let raw=null;
   S.sessions=(d.sessions||[]).map(x=>({metcons:[],entries:[],...x}));
   S.custom=d.custom||[];S.bar=d.bar??15;S.draft=d.draft||null;
   S.profile=d.profile||null;S.lastExport=d.lastExport||null;S.updatedAt=d.updatedAt||0;
-  S.theme=d.theme||"dark"}catch(e){}
+  S.theme=d.theme||"dark";S.tests=d.tests&&typeof d.tests==="object"?d.tests:{}}catch(e){}
  /* Réparation des profils écrits par une version antérieure défectueuse :
     sans âge ni poids valides, les barèmes ne veulent rien dire. */
  if(S.profile&&(!Number.isFinite(S.profile.age)||!Number.isFinite(S.profile.bw)))S.profile=null;
@@ -1822,6 +1822,335 @@ const dragEnd=()=>{if(S.drag){S.drag=null;save();render()}};
 document.addEventListener("pointerup",dragEnd);
 document.addEventListener("pointercancel",dragEnd);
 
+
+/* ══════════════════ MON NIVEAU CROSSFIT ══════════════════
+   Deux référentiels distincts, volontairement séparés :
+   — MONROE : les 36 mouvements de la Table of Movement Progression,
+     répartis en 4 paliers. Situe le niveau global.
+   — CHAINS : les chaînes d'acquisition, qui disent dans quel ordre
+     apprendre. Sources : CrossFit L1 (strict avant kipping), BTWB,
+     P. Gagnon, C. Stroud, S. Low, r/bodyweightfitness.
+   Les seuils sont des repères de coachs, pas des normes validées. */
+
+const PALIERS=[
+ {n:1,l:"Fondations"},{n:2,l:"Structuration"},
+ {n:3,l:"Performance"},{n:4,l:"Rx"}];
+
+/* k : comment la valeur est obtenue
+     pct   = 1RM estimée rapportée au poids de corps
+     best  = meilleure série enregistrée
+     bwrep = répétitions à une charge ≥ poids de corps
+     test  = test chronométré, déclaratif
+   c : catégorie · z : compartiment */
+const MONROE=[
+ // ── Palier 1 · Fondations ──
+ {p:1,id:"burpee",   n:"Burpee",        k:"test", u:"reps/min", t:[8,13,18],  c:"cardio",e:"Machines"},
+ {p:1,id:"air-squat",n:"Squat profond", k:"test", u:"min",      t:[1,2,5],    c:"gym",   e:"Unilatéral"},
+ {p:1,id:"lunge",    n:"Lunge",         k:"pct",  u:"% PdC",    t:[75,100,125],c:"force",e:"Squat"},
+ {p:1,id:"row",      n:"Row",           k:"test", u:"cal/min",  t:[8,13,18],  c:"cardio",e:"Machines"},
+ {p:1,id:"deadlift", n:"Deadlift",      k:"bwrep",u:"reps PdC", t:[1,11,25],  c:"force", e:"Soulevé"},
+ {p:1,id:"du",       n:"Double Under",  k:"best", u:"reps",     t:[1,30,50],  c:"cardio",e:"Corde à sauter"},
+ {p:1,id:"box-jump", n:"Box Jump",      k:"test", u:"reps/min", t:[8,13,18],  c:"cardio",e:"Course"},
+ {p:1,id:"push-up",  n:"Push-Up",       k:"test", u:"reps/min", t:[1,21,36],  c:"gym",   e:"Poussée"},
+ {p:1,id:"pull-up",  n:"Pull-Up",       k:"best", u:"reps",     t:[1,5,11],   c:"gym",   e:"Tirage",sl:6},
+ // ── Palier 2 · Structuration ──
+ {p:2,id:"du",       n:"Double Under",  k:"best", u:"enchaînées",t:[1,30,50], c:"cardio",e:"Corde à sauter"},
+ {p:2,id:"ring-dip", n:"Ring Dip",      k:"best", u:"reps",     t:[1,4,8],    c:"gym",   e:"Poussée"},
+ {p:2,id:"bench",    n:"Bench Press",   k:"pct",  u:"% PdC",    t:[75,100,125],c:"force",e:"Développé"},
+ {p:2,id:"strict-press",n:"Strict Press",k:"pct", u:"% PdC",    t:[50,75,100],c:"force", e:"Développé"},
+ {p:2,id:"back-squat",n:"Back Squat",   k:"bwrep",u:"reps PdC", t:[5,11,21],  c:"force", e:"Squat"},
+ {p:2,id:"kb-swing", n:"KB Swing",      k:"best", u:"reps",     t:[5,11,21],  c:"force", e:"Soulevé"},
+ {p:2,id:"wall-ball",n:"Wall Ball",     k:"best", u:"reps",     t:[5,11,21],  c:"gym",   e:"Unilatéral"},
+ {p:2,id:"hs-hold",  n:"Handstand Hold",k:"test", u:"sec",      t:[1,4,8],    c:"gym",   e:"Poussée"},
+ {p:2,id:"t2b",      n:"Toes-to-Bar",   k:"best", u:"reps",     t:[1,6,21],   c:"gym",   e:"Gainage"},
+ // ── Palier 3 · Performance ──
+ {p:3,id:"front-squat",n:"Front Squat", k:"pct",  u:"% PdC",    t:[75,100,150],c:"force",e:"Squat"},
+ {p:3,id:"push-press",n:"Push Press",   k:"pct",  u:"% PdC",    t:[75,100,125],c:"oly",  e:"Jeté"},
+ {p:3,id:"thruster", n:"Thruster",      k:"pct",  u:"% PdC",    t:[75,100,125],c:"force",e:"Squat"},
+ {p:3,id:"push-jerk",n:"Push Jerk",     k:"pct",  u:"% PdC",    t:[75,100,125],c:"oly",  e:"Jeté"},
+ {p:3,id:"power-clean",n:"Power Clean", k:"pct",  u:"% PdC",    t:[75,100,125],c:"oly",  e:"Épaulé"},
+ {p:3,id:"power-snatch",n:"Power Snatch",k:"pct", u:"% PdC",    t:[75,100,125],c:"oly",  e:"Arraché"},
+ {p:3,id:"ohs",      n:"Overhead Squat",k:"pct",  u:"% PdC",    t:[75,100,125],c:"oly",  e:"Arraché"},
+ {p:3,id:"c2b",      n:"Chest-to-Bar",  k:"best", u:"reps",     t:[1,5,11],   c:"gym",   e:"Tirage",sl:2},
+ {p:3,id:"hspu",     n:"Handstand Push-Up",k:"best",u:"reps",   t:[1,5,10],   c:"gym",   e:"Poussée",sl:4},
+ // ── Palier 4 · Rx ──
+ {p:4,id:"snatch",   n:"Snatch",        k:"pct",  u:"% PdC",    t:[75,100,125],c:"oly",  e:"Arraché"},
+ {p:4,id:"clean",    n:"Clean",         k:"pct",  u:"% PdC",    t:[75,100,125],c:"oly",  e:"Épaulé"},
+ {p:4,id:"split-jerk",n:"Split Jerk",   k:"pct",  u:"% PdC",    t:[75,100,125],c:"oly",  e:"Jeté"},
+ {p:4,id:"rope-climb",n:"Rope Climb",   k:"test", u:"reps/min", t:[1,2,5],    c:"gym",   e:"Tirage"},
+ {p:4,id:"ghd",      n:"GHD Sit-Up",    k:"test", u:"reps/min", t:[1,11,25],  c:"gym",   e:"Gainage"},
+ {p:4,id:"handstand-walk",n:"Handstand Walk",k:"test",u:"m",    t:[1,4,9],    c:"gym",   e:"Poussée"},
+ {p:4,id:"pistol",   n:"Pistol",        k:"best", u:"reps",     t:[1,7,21],   c:"gym",   e:"Unilatéral"},
+ {p:4,id:"rmu",      n:"Ring Muscle-Up",k:"best", u:"reps",     t:[1,2,4],    c:"gym",   e:"Tirage"},
+ {p:4,id:"bmu",      n:"Bar Muscle-Up", k:"best", u:"reps",     t:[1,4,8],    c:"gym",   e:"Tirage"},
+];
+
+const CATS={gym:"Gymnastique",oly:"Haltérophilie",force:"Force",cardio:"Cardio et déplacement"};
+const CATZ={gym:["Tirage","Poussée","Gainage","Unilatéral"],
+            oly:["Arraché","Épaulé","Jeté"],
+            force:["Squat","Soulevé","Développé"],
+            cardio:["Machines","Corde à sauter","Course"]};
+const ZCOL={Tirage:"#6FA8DC",Poussée:"#E8956B",Gainage:"#9AA5AF",Unilatéral:"#B48FC7",
+            Arraché:"#E8615A",Épaulé:"#E8615A",Jeté:"#E8956B",
+            Squat:"#F0D264",Soulevé:"#E8615A",Développé:"#E8956B",
+            Machines:"#7DC383","Corde à sauter":"#7DC383",Course:"#7DC383"};
+
+/* Chaînes d'acquisition. Chaque étape : 3 séries de r répétitions propres
+   dans une même séance (convention calisthénique), ou une tenue unique.
+   mv/lv = mouvement du catalogue et palier d'échelle correspondant ;
+   tk    = étape déclarative, non déductible des séances. */
+const CHAINS=[
+ {id:"tirage",c:"gym",z:"Tirage",n:"Tirage",col:"#6FA8DC",steps:[
+  {n:"Ring Row",mv:"pull-up",lv:0,s:3,r:8},
+  {n:"Traction stricte",mv:"pull-up",lv:6,s:3,r:5,src:"BTWB · Stroud"},
+  {n:"Traction kipping",mv:"pull-up",lv:5,s:3,r:8,src:"Gagnon"},
+  {n:"Butterfly",tk:"butterfly",s:3,r:8,src:"Gagnon"},
+  {n:"Chest-to-Bar",mv:"c2b",lv:2,s:3,r:5,src:"Stroud"},
+  {n:"Bar Muscle-Up",mv:"bmu",s:3,r:1},
+  {n:"Ring Muscle-Up",mv:"rmu",s:1,r:1,src:"Stroud"}]},
+ {id:"poussee",c:"gym",z:"Poussée",n:"Poussée verticale",col:"#E8956B",steps:[
+  {n:"Pompe",mv:"push-up",lv:2,s:3,r:10},
+  {n:"Pike push-up",tk:"pike",s:3,r:8,src:"Low"},
+  {n:"ATR au mur",tk:"hs-hold",s:1,r:45,u:"s",src:"WODprep"},
+  {n:"HSPU stricte",mv:"hspu",lv:4,s:3,r:3,src:"CrossFit L1"},
+  {n:"HSPU kipping",mv:"hspu",lv:3,s:3,r:8},
+  {n:"Handstand walk",tk:"hs-walk",s:1,r:5,u:"m"},
+  {n:"HSPU déficit",tk:"hspu-def",s:3,r:3}]},
+ {id:"gainage",c:"gym",z:"Gainage",n:"Gainage",col:"#9AA5AF",steps:[
+  {n:"Hollow hold",mv:"hollow",s:1,r:45,u:"s",src:"Low"},
+  {n:"Dead hang",tk:"dead-hang",s:1,r:30,u:"s",src:"Calixpert"},
+  {n:"Relevés de genoux",mv:"t2b",lv:0,s:3,r:10,src:"Calixpert"},
+  {n:"Knees-to-Elbows",mv:"k2e",s:3,r:8},
+  {n:"Toes-to-Bar",mv:"t2b",lv:2,s:3,r:5},
+  {n:"GHD Sit-Up",mv:"ghd",s:3,r:10}]},
+ {id:"anneaux",c:"gym",z:"Poussée",n:"Poussée aux anneaux",col:"#E8956B",steps:[
+  {n:"Dips barre",tk:"bar-dip",s:3,r:5},
+  {n:"Ring dip négatives",mv:"ring-dip",lv:1,s:3,r:5,src:"Low"},
+  {n:"Ring dip strict",mv:"ring-dip",lv:2,s:3,r:5,src:"Stroud"}]},
+ {id:"unilateral",c:"gym",z:"Unilatéral",n:"Squat unilatéral",col:"#B48FC7",steps:[
+  {n:"Air squat",mv:"air-squat",s:3,r:15},
+  {n:"Pistol sur box",mv:"pistol",lv:0,s:3,r:5,src:"Low"},
+  {n:"Pistol contrepoids",mv:"pistol",lv:1,s:3,r:5,src:"Low"},
+  {n:"Pistol complet",mv:"pistol",lv:2,s:3,r:5}]},
+ {id:"corde",c:"gym",z:"Tirage",n:"Corde",col:"#6FA8DC",steps:[
+  {n:"Tirages au sol",mv:"rope-climb",lv:0,s:1,r:5},
+  {n:"Montée avec jambes",mv:"rope-climb",lv:1,s:1,r:3},
+  {n:"Montée sans jambes",mv:"rope-climb",lv:2,s:1,r:1}]},
+ {id:"arrache",c:"oly",z:"Arraché",n:"Arraché",col:"#E8615A",steps:[
+  {n:"Overhead Squat",mv:"ohs",s:3,r:5},
+  {n:"Snatch Balance",mv:"snatch-balance",s:3,r:3},
+  {n:"Power Snatch",mv:"power-snatch",s:3,r:3},
+  {n:"Snatch complet",mv:"snatch",s:3,r:2}]},
+ {id:"epaule",c:"oly",z:"Épaulé",n:"Épaulé",col:"#E8615A",steps:[
+  {n:"Front Squat",mv:"front-squat",s:3,r:5},
+  {n:"Hang Power Clean",mv:"hang-clean",s:3,r:3},
+  {n:"Power Clean",mv:"power-clean",s:3,r:3},
+  {n:"Clean complet",mv:"clean",s:3,r:2}]},
+];
+
+
+/* ══════════ MOTEUR DE NIVEAU ══════════
+   Ces calculs parcourent tout l'historique : on les mémorise et on ne les
+   recalcule qu'au changement de données, de profil ou de test déclaré. */
+let nivCache=null,nivKey=null;
+
+/* Meilleure série d'un mouvement, à un palier d'échelle donné.
+   Monroe note « strict / 2× kipping » : une répétition en kipping vaut
+   une demi-répétition stricte. */
+function bestSetAt(id,sl){
+ let b=0;
+ eachSet(id,x=>{
+  if(x.weight)return;
+  const r=x.reps||0;if(!r)return;
+  const v=(sl!=null&&x.level!=null&&x.level<sl)?r/2:r;
+  if(v>b)b=v});
+ return b||null}
+
+/* Répétitions réalisées à une charge au moins égale au poids de corps */
+function bestRepsAtBW(id,bw){
+ let b=0;eachSet(id,x=>{if(x.weight&&x.weight>=bw&&(x.reps||0)>b)b=x.reps});
+ return b||null}
+
+/* Valeur brute d'un critère de Monroe, ou null si la donnée manque */
+function monroeValue(m,bw){
+ if(m.k==="pct"){const v=bestOf(m.id);return v&&bw?v/bw*100:null}
+ if(m.k==="best")return bestSetAt(m.id,m.sl);
+ if(m.k==="bwrep")return bw?bestRepsAtBW(m.id,bw):null;
+ if(m.k==="test"){const v=(S.tests||{})[m.id];return Number.isFinite(v)&&v>0?v:null}
+ return null}
+
+/* 0 sous le premier seuil, puis 1, 2, 3. Escalier strict, aucune zone morte. */
+function monroeScore(v,t){
+ if(v==null)return null;
+ return v>=t[2]?3:v>=t[1]?2:v>=t[0]?1:0}
+
+/* Une étape de chaîne est acquise si s séries d'au moins r répétitions
+   ont été réalisées dans une même séance (convention calisthénique). */
+function stepState(st){
+ if(st.tk){const v=(S.tests||{})[st.tk];
+  return{ok:Number.isFinite(v)&&v>=st.r,best:Number.isFinite(v)?v:0,need:st.r,decl:true}}
+ let bestSets=0,bestRep=0;
+ S.sessions.forEach(se=>{
+  let n=0;
+  (se.entries||[]).filter(e=>e.movementId===st.mv).forEach(e=>(e.sets||[]).forEach(x=>{
+   if(x.weight)return;
+   const lvOk=st.lv==null||(x.level??0)>=st.lv;
+   if(!lvOk)return;
+   const r=x.reps||0;
+   if(r>bestRep)bestRep=r;
+   if(r>=st.r)n++}));
+  if(n>bestSets)bestSets=n});
+ return{ok:bestSets>=st.s,best:bestSets,bestRep,need:st.s,decl:false}}
+
+function niveau(){
+ const bw=S.profile&&Number.isFinite(S.profile.bw)?S.profile.bw:null;
+ const key=[S.updatedAt||0,bw,S.profile&&S.profile.sex,JSON.stringify(S.tests||{})].join("|");
+ if(nivCache&&nivKey===key)return nivCache;
+
+ /* ── Les 36 mouvements ── */
+ const mv36=MONROE.map(m=>{const v=monroeValue(m,bw);
+  return{...m,v,sc:monroeScore(v,m.t)}});
+
+ /* ── Paliers ── */
+ const paliers=PALIERS.map(P=>{
+  const L=mv36.filter(x=>x.p===P.n);
+  const somme=L.reduce((a,x)=>a+(x.sc||0),0);
+  const testes=L.filter(x=>x.sc!=null).length;
+  return{...P,pct:Math.round(somme/(L.length*3)*100),testes,total:L.length,
+   acquis:somme/(L.length*3)>=0.7}});
+ let courant=paliers.find(x=>!x.acquis)||paliers[paliers.length-1];
+
+ /* ── Catégories et compartiments ── */
+ const cats=Object.keys(CATS).map(c=>{
+  const zones=CATZ[c].map(z=>{
+   const L=mv36.filter(x=>x.c===c&&x.e===z&&x.sc!=null);
+   return{z,pct:L.length?Math.round(L.reduce((a,x)=>a+x.sc,0)/(L.length*3)*100):null,n:L.length}})
+   .filter(x=>x.pct!=null);
+  return{c,l:CATS[c],zones}}).filter(x=>x.zones.length);
+
+ /* ── Chaînes ── */
+ const chains=CHAINS.map(ch=>{
+  let bloque=false;
+  const steps=ch.steps.map(st=>{
+   const r=stepState(st);
+   const etat=r.ok?"acquis":bloque?"verrou":"encours";
+   if(!r.ok)bloque=true;
+   return{...st,...r,etat}});
+  const faits=steps.filter(x=>x.etat==="acquis").length;
+  const encours=steps.find(x=>x.etat==="encours");
+  return{...ch,steps,faits,total:steps.length,encours}});
+
+ const r={mv36,paliers,courant,cats,chains,bw};
+ nivKey=key;nivCache=r;return r}
+
+
+/* ══════════ ÉCRAN NIVEAU ══════════ */
+function vNiveau(){
+ const N=niveau();
+ if(!N.bw)return`<div class="head"><div class="eyebrow">Mon niveau CrossFit</div><h1>Niveau</h1></div>
+  <div class="pane"><div class="card"><div style="font-size:14px;color:var(--mute);line-height:1.7">
+  Renseigne ton poids de corps dans le profil : la plupart des repères s'expriment
+  en pourcentage du poids de corps.</div>
+  <button class="btn btn-quiet" style="margin-top:14px;padding:13px;font-size:13.5px" data-act="prof">Ouvrir le profil</button>
+  </div></div>`;
+ const P=N.courant;
+ let h=`<div class="head"><div class="eyebrow">Mon niveau CrossFit</div>
+  <h1 style="font-size:44px">Palier ${P.n}</h1>
+  <div style="font-size:22px;color:var(--aqua);font-weight:600;margin-top:6px">${P.l} · ${P.pct} %</div></div>
+  <div class="pane">`;
+
+ /* ── Paliers ── */
+ h+=`<div class="card"><div class="eyebrow" style="margin-bottom:16px">Progression par palier</div>`;
+ N.paliers.forEach(x=>{
+  const on=x.n===P.n;
+  h+=`<div style="margin-bottom:16px">
+   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px">
+   <span style="font-size:${on?"16.5px":"15px"};font-weight:${on?700:500};color:${on?"var(--ink)":"var(--mute)"}">${x.n}. ${x.l}</span>
+   <b style="font-family:Montserrat,sans-serif;font-size:16px;color:${on?"var(--aqua)":"var(--mute)"}">${x.pct} %</b></div>
+   <div style="height:10px;border-radius:5px;background:var(--track);overflow:hidden">
+    <div style="width:${x.pct}%;height:100%;border-radius:5px;background:${on?"var(--aqua)":"#3E6B62"}"></div></div>
+   <div style="font-size:11.5px;color:var(--mute);margin-top:5px">${x.testes} / ${x.total} mouvements renseignés${x.acquis?" · acquis":""}</div>
+  </div>`});
+ h+=`<div style="font-size:12px;color:var(--mute);line-height:1.6;padding-top:12px;border-top:1px solid var(--line)">
+  Repères d'après la Table of Movement Progression de Monroe Miller. Un palier est
+  considéré acquis à 70 %.</div></div>`;
+
+ /* ── Catégories ── */
+ h+=`<div class="card"><div class="eyebrow" style="margin-bottom:6px">Par catégorie</div>
+  <div style="font-size:12.5px;color:var(--mute);margin-bottom:14px">Chaque famille avec ses propres compartiments</div>`;
+ N.cats.forEach(c=>{
+  h+=`<div style="font-weight:700;font-size:15.5px;margin:14px 0 8px">${c.l}</div>`;
+  c.zones.forEach(z=>{
+   const col=ZCOL[z.z]||"var(--mute)";
+   h+=`<div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+    <span style="flex:0 0 6px;height:22px;border-radius:3px;background:${col}"></span>
+    <span style="flex:1;font-size:13.5px;color:var(--mute)">${z.z}</span>
+    <b style="font-family:Montserrat,sans-serif;font-size:14px;color:${col};min-width:32px;text-align:right">${z.pct}</b></div>
+    <div style="height:8px;border-radius:4px;background:var(--track);margin:0 0 4px 16px;overflow:hidden">
+     <div style="width:${z.pct}%;height:100%;border-radius:4px;background:${col}"></div></div>`})});
+ h+=`</div>`;
+
+ /* ── Chaînes ── */
+ h+=`<div class="eyebrow" style="margin:22px 0 12px">Chaînes de progression</div>`;
+ N.chains.forEach(ch=>{
+  const ouvert=S.nchain===ch.id;
+  h+=`<div class="card" style="padding:16px">
+   <button style="width:100%;display:flex;align-items:center;gap:12px;text-align:left" data-act="nchain" data-v="${ch.id}">
+   <span style="flex:0 0 6px;height:34px;border-radius:3px;background:${ch.col}"></span>
+   <span style="flex:1;min-width:0">
+    <span style="display:block;font-weight:600;font-size:15px">${ch.n}</span>
+    <span style="display:block;font-size:12px;color:var(--mute);margin-top:3px">${ch.faits} / ${ch.total} étapes${ch.encours?" · "+esc(ch.encours.n):""}</span></span>
+   <span style="color:var(--mute);font-size:17px">${ouvert?"−":"+"}</span></button>`;
+  if(ouvert)h+=chainSteps(ch);
+  h+=`</div>`});
+
+ /* ── Tests déclaratifs ── */
+ const manquants=N.mv36.filter(m=>m.k==="test"&&m.sc==null);
+ h+=`<div class="card flat" style="margin-top:6px">
+  <div class="eyebrow" style="margin-bottom:10px">Tests à renseigner</div>
+  <div style="font-size:12.5px;color:var(--mute);line-height:1.65;margin-bottom:${manquants.length?"14px":"0"}">
+  ${N.mv36.filter(m=>m.sc!=null).length} mouvements sur 36 sont renseignés depuis tes séances.
+  ${manquants.length?"Les suivants sont des tests chronométrés, à faire quand tu veux.":"Tout est complet."}</div>`;
+ manquants.forEach(m=>{
+  h+=`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)">
+   <span style="flex:1;min-width:0"><span style="font-size:13.5px;display:block">${esc(m.n)}</span>
+   <span style="font-size:11.5px;color:var(--mute)">${m.u} · repère ${m.t[0]} / ${m.t[1]} / ${m.t[2]}</span></span>
+   <input class="sin" style="width:82px;flex:none" type="number" inputmode="numeric"
+    id="tst-${m.id}" data-tst="${m.id}" value="" placeholder="—"></div>`});
+ h+=`</div>`;
+
+ h+=`<div class="card flat"><div style="font-size:12px;color:var(--mute);line-height:1.7">
+  Ces repères viennent de coachs — Monroe Miller, CrossFit, BTWB, P. Gagnon,
+  C. Stroud, S. Low — et non d'études. Ils indiquent un ordre conseillé,
+  pas une interdiction : un mouvement réalisé hors ordre est enregistré normalement.</div></div>`;
+ return h+`<div style="height:26px"></div></div>`}
+
+/* Détail d'une chaîne : étapes acquises, en cours, verrouillées */
+function chainSteps(ch){
+ let h=`<div style="margin-top:14px;padding-top:6px;border-top:1px solid var(--line)">`;
+ ch.steps.forEach((st,i)=>{
+  const dernier=i===ch.steps.length-1;
+  const col=st.etat==="acquis"?ch.col:st.etat==="encours"?"var(--aqua)":"var(--line)";
+  const txt=st.etat==="verrou"?"var(--mute)":"var(--ink)";
+  const cible=st.decl?`${st.r} ${st.u||""}`.trim():st.s>1?`${st.s} × ${st.r}`:`${st.r} ${st.u||"rep"}`;
+  h+=`<div style="display:flex;gap:13px;padding:9px 0">
+   <div style="flex:0 0 26px;display:flex;flex-direction:column;align-items:center">
+    <div style="width:22px;height:22px;border-radius:50%;flex:none;
+     ${st.etat==="acquis"?`background:${ch.col}`:st.etat==="encours"?`border:3px solid var(--aqua)`:`background:var(--sunk);border:2px solid var(--line)`}"></div>
+    ${!dernier?`<div style="width:2px;flex:1;min-height:22px;background:${st.etat==="acquis"?ch.col:"var(--line)"};margin-top:4px"></div>`:""}
+   </div>
+   <div style="flex:1;min-width:0;padding-bottom:4px">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+     <span style="font-size:14.5px;font-weight:${st.etat==="encours"?600:500};color:${txt}">${esc(st.n)}</span>
+     <span style="font-size:12px;font-weight:600;color:${st.etat==="verrou"?"var(--mute)":col};white-space:nowrap">${cible}</span></div>
+    ${st.etat==="encours"?`<div style="font-size:11.5px;color:var(--mute);margin-top:4px">${
+      st.decl?"à déclarer plus bas":st.best>0?`${st.best} série${st.best>1?"s":""} sur ${st.s}${st.bestRep?" · meilleure : "+st.bestRep+" reps":""}`
+      :st.bestRep?`meilleure série : ${st.bestRep} reps`:"pas encore enregistré"}</div>`:""}
+    ${st.etat==="verrou"?`<div style="font-size:11.5px;color:var(--mute);margin-top:4px">ordre conseillé — après ${esc(ch.steps[i-1].n)}</div>`:""}
+    ${st.src&&st.etat!=="verrou"?`<div style="font-size:10.5px;color:var(--mute);margin-top:3px;opacity:.8">${st.src}</div>`:""}
+   </div></div>`});
+ return h+`</div>`}
+
 /* ══════════ RENDU ══════════ */
 let lastView=null,pendingAnchor=null;
 function render(){
@@ -1844,11 +2173,12 @@ function render(){
    if(sp){sp0=parseFloat(sp.style.height)||0;
     h0=document.documentElement.scrollHeight}}catch(e){}}
  document.getElementById("app").innerHTML=
-  S.tab==="progres"?(S.fiche?vFiche(S.fiche):vProgres()):S.tab==="noter"?vNoter():S.tab==="profil"?vProfil():vHist();
+  S.tab==="progres"?(S.fiche?vFiche(S.fiche):vProgres()):S.tab==="noter"?vNoter()
+  :S.tab==="niveau"?vNiveau():S.tab==="profil"?vProfil():vHist();
  /* La barre d'onglets et les feuilles vivent hors de #app : un `position:fixed`
     se rattache au premier ancêtre transformé, ce qui le décrocherait de l'écran. */
  document.getElementById("tabs").innerHTML=
-  [["progres","Progrès"],["noter","Noter"],["historique","Suivi"],["profil","Profil"]]
+  [["progres","Progrès"],["noter","Noter"],["historique","Suivi"],["niveau","Niveau"],["profil","Profil"]]
    .map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" data-act="tab" data-v="${k}">
     <svg viewBox="0 0 16 16" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.6"
      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TABICON[k]}</svg>
@@ -1906,6 +2236,7 @@ document.addEventListener("click",ev=>{
   case"progg":S.progG=v;S.prog=null;S.mq="";pendingAnchor="movblock";break;
   case"msort":S.msort=v;pendingAnchor="movblock";break;
   case"fiche":S.fiche=v;break;
+  case"nchain":S.nchain=S.nchain===v?null:v;pendingAnchor=null;break;
   case"hv":S.hv=v;S.day=null;pendingAnchor="calblock";break;
   case"moff":{S.moff=Math.min(0,(S.moff||0)+(+v));S.day=null;pendingAnchor="calblock";break}
   case"day":S.day=S.day===v?null:v;pendingAnchor="calblock";break;
@@ -2107,6 +2438,13 @@ document.addEventListener("input",ev=>{const t=ev.target;
   const r=new FileReader();
   r.onload=()=>{S.sharePhoto=r.result;render()};
   r.readAsDataURL(f);return}
+ if(t.dataset.tst){
+  /* Test chronométré déclaré : une valeur vide efface la déclaration. */
+  if(!S.tests)S.tests={};
+  const v=parseFloat(String(t.value).replace(",","."));
+  if(t.value===""||!Number.isFinite(v)||v<=0)delete S.tests[t.dataset.tst];
+  else S.tests[t.dataset.tst]=v;
+  save();return}
  if(t.id==="mq"){S.mq=t.value;pendingAnchor="movblock";render();return}
  if(t.id==="mail"){S.email=t.value;return}
  if(t.id==="pw"){S.pw=t.value;return}
@@ -2176,6 +2514,7 @@ function applyRemote(d){
  const rp=d.profile&&Number.isFinite(d.profile.age)&&Number.isFinite(d.profile.bw)?d.profile:null;
  S.profile=rp||S.profile||null;
  S.lastExport=d.lastExport||S.lastExport||null;
+ S.tests=Object.assign({},S.tests||{},d.tests||{});
  if(d.theme){S.theme=d.theme;applyTheme()}
  /* Mouvements personnalisés : on réunit les deux côtés plutôt que d'en choisir un. */
  const seen=new Set(),merged=[];
