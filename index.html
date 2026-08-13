@@ -409,12 +409,12 @@ function weeksGrid(n){const rows=[],m=new Date();m.setDate(m.getDate()-((m.getDa
 
 /* ══════════ ÉTAT ══════════ */
 let S={sessions:[],custom:[],bar:15,tab:"progres",draft:null,focus:null,picker:false,q:"",prog:null,open:null,
- profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},nchain:null,share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
+ profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},nchain:null,share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
  updatedAt:0,cloud:{enabled:false,user:null,status:"",busy:false,sent:false},email:"",otp:"",
  d:{w:0,reps:5,diff:"juste",level:0,dist:500,min:2,sec:0,age:30,bw:60}};
 /* Instantané des données, avec horodatage pour arbitrer la synchronisation */
 function payload(local){return{sessions:S.sessions,custom:S.custom,bar:S.bar,profile:S.profile,
- lastExport:S.lastExport,theme:S.theme,tests:S.tests,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
+ lastExport:S.lastExport,theme:S.theme,tests:S.tests,decl:S.decl,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
 const save=()=>{S.updatedAt=Date.now();pushSoon();try{localStorage.setItem(KEY,JSON.stringify(
  payload(true)))}catch(e){alert("Sauvegarde impossible : la mémoire du navigateur est pleine ou bloquée.")}};
 function load(){let raw=null;
@@ -426,7 +426,8 @@ function load(){let raw=null;
   S.sessions=(d.sessions||[]).map(x=>({metcons:[],entries:[],...x}));
   S.custom=d.custom||[];S.bar=d.bar??15;S.draft=d.draft||null;
   S.profile=d.profile||null;S.lastExport=d.lastExport||null;S.updatedAt=d.updatedAt||0;
-  S.theme=d.theme||"dark";S.tests=d.tests&&typeof d.tests==="object"?d.tests:{}}catch(e){}
+  S.theme=d.theme||"dark";S.tests=d.tests&&typeof d.tests==="object"?d.tests:{};
+  S.decl=d.decl&&typeof d.decl==="object"?d.decl:{}}catch(e){}
  /* Réparation des profils écrits par une version antérieure défectueuse :
     sans âge ni poids valides, les barèmes ne veulent rien dire. */
  if(S.profile&&(!Number.isFinite(S.profile.age)||!Number.isFinite(S.profile.bw)))S.profile=null;
@@ -1844,14 +1845,14 @@ const PALIERS=[
    c : catégorie · z : compartiment */
 const MONROE=[
  // ── Palier 1 · Fondations ──
- {p:1,id:"burpee",   n:"Burpee",        k:"test", u:"reps/min", t:[8,13,18],  c:"cardio",e:"Machines"},
- {p:1,id:"air-squat",n:"Squat profond", k:"test", u:"min",      t:[1,2,5],    c:"gym",   e:"Unilatéral"},
+ {p:1,id:"burpee",   n:"Burpee",        k:"test", u:"reps",     t:[8,13,18],  c:"cardio",e:"Machines",d:"Répétitions en 1 minute"},
+ {p:1,id:"air-squat",n:"Deep Squat Hold",k:"test",u:"min",t:[1,2,5],   c:"gym",   e:"Gainage",d:"Temps passé accroupi en bas du squat, sans se relever"},
  {p:1,id:"lunge",    n:"Lunge",         k:"pct",  u:"% PdC",    t:[75,100,125],c:"force",e:"Squat"},
- {p:1,id:"row",      n:"Row",           k:"test", u:"cal/min",  t:[8,13,18],  c:"cardio",e:"Machines"},
+ {p:1,id:"row",      n:"Row",           k:"test", u:"cal",      t:[8,13,18],  c:"cardio",e:"Machines",d:"Calories par minute, en moyenne sur l'effort"},
  {p:1,id:"deadlift", n:"Deadlift",      k:"bwrep",u:"reps PdC", t:[1,11,25],  c:"force", e:"Soulevé"},
  {p:1,id:"du",       n:"Double Under",  k:"best", u:"reps",     t:[1,30,50],  c:"cardio",e:"Corde à sauter"},
- {p:1,id:"box-jump", n:"Box Jump",      k:"test", u:"reps/min", t:[8,13,18],  c:"cardio",e:"Course"},
- {p:1,id:"push-up",  n:"Push-Up",       k:"test", u:"reps/min", t:[1,21,36],  c:"gym",   e:"Poussée"},
+ {p:1,id:"box-jump", n:"Box Jump",      k:"test", u:"reps",     t:[8,13,18],  c:"cardio",e:"Course",d:"Répétitions en 1 minute · box 61 cm (H) / 51 cm (F)"},
+ {p:1,id:"push-up",  n:"Push-Up",       k:"test", u:"reps",     t:[1,21,36],  c:"gym",   e:"Poussée",d:"Répétitions en 1 minute"},
  {p:1,id:"pull-up",  n:"Pull-Up",       k:"best", u:"reps",     t:[1,5,11],   c:"gym",   e:"Tirage",sl:6},
  // ── Palier 2 · Structuration ──
  {p:2,id:"du",       n:"Double Under",  k:"best", u:"enchaînées",t:[1,30,50], c:"cardio",e:"Corde à sauter"},
@@ -1861,7 +1862,7 @@ const MONROE=[
  {p:2,id:"back-squat",n:"Back Squat",   k:"bwrep",u:"reps PdC", t:[5,11,21],  c:"force", e:"Squat"},
  {p:2,id:"kb-swing", n:"KB Swing",      k:"best", u:"reps",     t:[5,11,21],  c:"force", e:"Soulevé"},
  {p:2,id:"wall-ball",n:"Wall Ball",     k:"best", u:"reps",     t:[5,11,21],  c:"gym",   e:"Unilatéral"},
- {p:2,id:"hs-hold",  n:"Handstand Hold",k:"test", u:"sec",      t:[1,4,8],    c:"gym",   e:"Poussée"},
+ {p:2,id:"hs-hold",  n:"Freestanding Handstand",k:"test", u:"s",        t:[1,4,8],    c:"gym",   e:"Poussée",d:"Tenue en équilibre sur les mains, sans appui au mur"},
  {p:2,id:"t2b",      n:"Toes-to-Bar",   k:"best", u:"reps",     t:[1,6,21],   c:"gym",   e:"Gainage"},
  // ── Palier 3 · Performance ──
  {p:3,id:"front-squat",n:"Front Squat", k:"pct",  u:"% PdC",    t:[75,100,150],c:"force",e:"Squat"},
@@ -1877,9 +1878,9 @@ const MONROE=[
  {p:4,id:"snatch",   n:"Snatch",        k:"pct",  u:"% PdC",    t:[75,100,125],c:"oly",  e:"Arraché"},
  {p:4,id:"clean",    n:"Clean",         k:"pct",  u:"% PdC",    t:[75,100,125],c:"oly",  e:"Épaulé"},
  {p:4,id:"split-jerk",n:"Split Jerk",   k:"pct",  u:"% PdC",    t:[75,100,125],c:"oly",  e:"Jeté"},
- {p:4,id:"rope-climb",n:"Rope Climb",   k:"test", u:"reps/min", t:[1,2,5],    c:"gym",   e:"Tirage"},
- {p:4,id:"ghd",      n:"GHD Sit-Up",    k:"test", u:"reps/min", t:[1,11,25],  c:"gym",   e:"Gainage"},
- {p:4,id:"handstand-walk",n:"Handstand Walk",k:"test",u:"m",    t:[1,4,9],    c:"gym",   e:"Poussée"},
+ {p:4,id:"rope-climb",n:"Rope Climb",   k:"test", u:"montées",  t:[1,2,5],    c:"gym",   e:"Tirage",d:"Montées de 4,5 m en 1 minute"},
+ {p:4,id:"ghd",      n:"GHD Sit-Up",    k:"test", u:"reps",     t:[1,11,25],  c:"gym",   e:"Gainage",d:"Répétitions en 1 minute"},
+ {p:4,id:"handstand-walk",n:"Handstand Walk",k:"test",u:"m",    t:[1,3,9],    c:"gym",   e:"Poussée",d:"Distance parcourue sur les mains, d'une traite"},
  {p:4,id:"pistol",   n:"Pistol",        k:"best", u:"reps",     t:[1,7,21],   c:"gym",   e:"Unilatéral"},
  {p:4,id:"rmu",      n:"Ring Muscle-Up",k:"best", u:"reps",     t:[1,2,4],    c:"gym",   e:"Tirage"},
  {p:4,id:"bmu",      n:"Bar Muscle-Up", k:"best", u:"reps",     t:[1,4,8],    c:"gym",   e:"Tirage"},
@@ -1902,50 +1903,46 @@ const ZCOL={Tirage:"#6FA8DC",Poussée:"#E8956B",Gainage:"#9AA5AF",Unilatéral:"#
 const CHAINS=[
  {id:"tirage",c:"gym",z:"Tirage",n:"Tirage",col:"#6FA8DC",steps:[
   {n:"Ring Row",mv:"pull-up",lv:0,s:3,r:8},
-  {n:"Traction stricte",mv:"pull-up",lv:6,s:3,r:5,src:"BTWB · Stroud"},
-  {n:"Traction kipping",mv:"pull-up",lv:5,s:3,r:8,src:"Gagnon"},
-  {n:"Butterfly",tk:"butterfly",s:3,r:8,src:"Gagnon"},
+  {n:"Strict Pull-Up",mv:"pull-up",lv:6,s:3,r:5,src:"BTWB · Stroud"},
+  {n:"Kipping Pull-Up",mv:"pull-up",lv:5,s:3,r:8,src:"Gagnon"},
+  {n:"Butterfly",dcl:1,s:3,r:8,src:"Gagnon"},
   {n:"Chest-to-Bar",mv:"c2b",lv:2,s:3,r:5,src:"Stroud"},
   {n:"Bar Muscle-Up",mv:"bmu",s:3,r:1},
   {n:"Ring Muscle-Up",mv:"rmu",s:1,r:1,src:"Stroud"}]},
  {id:"poussee",c:"gym",z:"Poussée",n:"Poussée verticale",col:"#E8956B",steps:[
-  {n:"Pompe",mv:"push-up",lv:2,s:3,r:10},
-  {n:"Pike push-up",tk:"pike",s:3,r:8,src:"Low"},
-  {n:"ATR au mur",tk:"hs-hold",s:1,r:45,u:"s",src:"WODprep"},
-  {n:"HSPU stricte",mv:"hspu",lv:4,s:3,r:3,src:"CrossFit L1"},
-  {n:"HSPU kipping",mv:"hspu",lv:3,s:3,r:8},
-  {n:"Handstand walk",tk:"hs-walk",s:1,r:5,u:"m"},
-  {n:"HSPU déficit",tk:"hspu-def",s:3,r:3}]},
+  {n:"Push-Up",mv:"push-up",lv:2,s:3,r:10},
+  {n:"Pike push-up",dcl:1,s:3,r:8,src:"Low"},
+  {n:"Wall Handstand Hold",hold:1,s:1,r:45,u:"s",src:"WODprep"},
+  {n:"Strict HSPU",mv:"hspu",lv:4,s:3,r:3,src:"CrossFit L1"},
+  {n:"Kipping HSPU",mv:"hspu",lv:3,s:3,r:8},
+  {n:"Handstand Walk",hold:1,s:1,r:5,u:"m"},
+  {n:"Deficit HSPU",dcl:1,s:3,r:3}]},
  {id:"gainage",c:"gym",z:"Gainage",n:"Gainage",col:"#9AA5AF",steps:[
-  {n:"Hollow hold",mv:"hollow",s:1,r:45,u:"s",src:"Low"},
-  {n:"Dead hang",tk:"dead-hang",s:1,r:30,u:"s",src:"Calixpert"},
-  {n:"Relevés de genoux",mv:"t2b",lv:0,s:3,r:10,src:"Calixpert"},
+  {n:"Hollow hold",hold:1,s:1,r:45,u:"s",src:"Low"},
+  {n:"Dead hang",hold:1,s:1,r:30,u:"s",src:"Calixpert"},
+  {n:"Hanging Knee Raise",mv:"t2b",lv:0,s:3,r:10,src:"Calixpert"},
   {n:"Knees-to-Elbows",mv:"k2e",s:3,r:8},
   {n:"Toes-to-Bar",mv:"t2b",lv:2,s:3,r:5},
   {n:"GHD Sit-Up",mv:"ghd",s:3,r:10}]},
  {id:"anneaux",c:"gym",z:"Poussée",n:"Poussée aux anneaux",col:"#E8956B",steps:[
-  {n:"Dips barre",tk:"bar-dip",s:3,r:5},
-  {n:"Ring dip négatives",mv:"ring-dip",lv:1,s:3,r:5,src:"Low"},
-  {n:"Ring dip strict",mv:"ring-dip",lv:2,s:3,r:5,src:"Stroud"}]},
- {id:"unilateral",c:"gym",z:"Unilatéral",n:"Squat unilatéral",col:"#B48FC7",steps:[
-  {n:"Air squat",mv:"air-squat",s:3,r:15},
-  {n:"Pistol sur box",mv:"pistol",lv:0,s:3,r:5,src:"Low"},
-  {n:"Pistol contrepoids",mv:"pistol",lv:1,s:3,r:5,src:"Low"},
-  {n:"Pistol complet",mv:"pistol",lv:2,s:3,r:5}]},
+  {n:"Bar Dip",dcl:1,s:3,r:5},
+  {n:"Ring Dip negatives",mv:"ring-dip",lv:1,s:3,r:5,src:"Low"},
+  {n:"Strict Ring Dip",mv:"ring-dip",lv:2,s:3,r:5,src:"Stroud"}]},
  {id:"corde",c:"gym",z:"Tirage",n:"Corde",col:"#6FA8DC",steps:[
-  {n:"Tirages au sol",mv:"rope-climb",lv:0,s:1,r:5},
-  {n:"Montée avec jambes",mv:"rope-climb",lv:1,s:1,r:3},
-  {n:"Montée sans jambes",mv:"rope-climb",lv:2,s:1,r:1}]},
- {id:"arrache",c:"oly",z:"Arraché",n:"Arraché",col:"#E8615A",steps:[
-  {n:"Overhead Squat",mv:"ohs",s:3,r:5},
-  {n:"Snatch Balance",mv:"snatch-balance",s:3,r:3},
-  {n:"Power Snatch",mv:"power-snatch",s:3,r:3},
-  {n:"Snatch complet",mv:"snatch",s:3,r:2}]},
- {id:"epaule",c:"oly",z:"Épaulé",n:"Épaulé",col:"#E8615A",steps:[
-  {n:"Front Squat",mv:"front-squat",s:3,r:5},
-  {n:"Hang Power Clean",mv:"hang-clean",s:3,r:3},
-  {n:"Power Clean",mv:"power-clean",s:3,r:3},
-  {n:"Clean complet",mv:"clean",s:3,r:2}]},
+  {n:"Seated Rope Pull",mv:"rope-climb",lv:0,s:1,r:5},
+  {n:"Rope Climb",mv:"rope-climb",lv:1,s:1,r:3},
+  {n:"Legless Rope Climb",mv:"rope-climb",lv:2,s:1,r:1}]},
+ {id:"snatch",c:"oly",z:"Arraché",n:"Snatch",col:"#E8615A",ld:1,steps:[
+  {n:"Overhead Squat",mv:"ohs",s:3,r:5,ld:"ohs"},
+  {n:"Snatch Balance",mv:"snatch-balance",s:3,r:3,ld:"snatch-balance"},
+  {n:"Power Snatch",mv:"power-snatch",s:3,r:3,ld:"power-snatch"},
+  {n:"Squat Snatch",mv:"snatch",s:3,r:2,ld:"snatch"}]},
+ {id:"clean",c:"oly",z:"Épaulé",n:"Clean & Jerk",col:"#E8615A",ld:1,steps:[
+  {n:"Front Squat",mv:"front-squat",s:3,r:5,ld:"front-squat"},
+  {n:"Hang Power Clean",mv:"hang-clean",s:3,r:3,ld:"hang-clean"},
+  {n:"Power Clean",mv:"power-clean",s:3,r:3,ld:"power-clean"},
+  {n:"Squat Clean",mv:"clean",s:3,r:2,ld:"clean"},
+  {n:"Split Jerk",mv:"split-jerk",s:3,r:2,ld:"split-jerk"}]},
 ];
 
 
@@ -1986,10 +1983,19 @@ function monroeScore(v,t){
 
 /* Une étape de chaîne est acquise si s séries d'au moins r répétitions
    ont été réalisées dans une même séance (convention calisthénique). */
-function stepState(st){
- if(st.tk){const v=(S.tests||{})[st.tk];
-  return{ok:Number.isFinite(v)&&v>=st.r,best:Number.isFinite(v)?v:0,need:st.r,decl:true}}
+/* Une étape se valide de deux façons, et on retient la meilleure :
+   — depuis l'historique : s séries d'au moins r répétitions dans une même séance
+   — par déclaration : le nombre de répétitions par série que l'on sait tenir,
+     utile quand le mouvement se travaille ailleurs que dans les séances notées. */
+function stepState(st,ck,i){
+ const dk=ck+":"+i, dv=(S.decl||{})[dk];
+ const declare=Number.isFinite(dv)&&dv>0?dv:null;
+ if(st.hold){
+  const v=declare;
+  return{ok:v!=null&&v>=st.r,vu:v,need:st.r,hold:true,declare};}
  let bestSets=0,bestRep=0;
+ if(!st.mv)return{ok:declare!=null&&declare>=st.r,best:0,bestRep:0,
+  repEff:declare||0,need:st.s,declare,hold:false};
  S.sessions.forEach(se=>{
   let n=0;
   (se.entries||[]).filter(e=>e.movementId===st.mv).forEach(e=>(e.sets||[]).forEach(x=>{
@@ -2000,11 +2006,14 @@ function stepState(st){
    if(r>bestRep)bestRep=r;
    if(r>=st.r)n++}));
   if(n>bestSets)bestSets=n});
- return{ok:bestSets>=st.s,best:bestSets,bestRep,need:st.s,decl:false}}
+ /* La déclaration s'exprime en répétitions par série, sur le nombre de séries exigé. */
+ const repEff=Math.max(bestRep,declare||0);
+ const ok=bestSets>=st.s||(declare!=null&&declare>=st.r);
+ return{ok,best:bestSets,bestRep,repEff,need:st.s,declare,hold:false}}
 
 function niveau(){
  const bw=S.profile&&Number.isFinite(S.profile.bw)?S.profile.bw:null;
- const key=[S.updatedAt||0,bw,S.profile&&S.profile.sex,JSON.stringify(S.tests||{})].join("|");
+ const key=[S.updatedAt||0,bw,S.profile&&S.profile.sex,JSON.stringify(S.tests||{}),JSON.stringify(S.decl||{})].join("|");
  if(nivCache&&nivKey===key)return nivCache;
 
  /* ── Les 36 mouvements ── */
@@ -2031,8 +2040,8 @@ function niveau(){
  /* ── Chaînes ── */
  const chains=CHAINS.map(ch=>{
   let bloque=false;
-  const steps=ch.steps.map(st=>{
-   const r=stepState(st);
+  const steps=ch.steps.map((st,i)=>{
+   const r=stepState(st,ch.id,i);
    const etat=r.ok?"acquis":bloque?"verrou":"encours";
    if(!r.ok)bloque=true;
    return{...st,...r,etat}});
@@ -2075,21 +2084,6 @@ function vNiveau(){
   Repères d'après la Table of Movement Progression de Monroe Miller. Un palier est
   considéré acquis à 70 %.</div></div>`;
 
- /* ── Catégories ── */
- h+=`<div class="card"><div class="eyebrow" style="margin-bottom:6px">Par catégorie</div>
-  <div style="font-size:12.5px;color:var(--mute);margin-bottom:14px">Chaque famille avec ses propres compartiments</div>`;
- N.cats.forEach(c=>{
-  h+=`<div style="font-weight:700;font-size:15.5px;margin:14px 0 8px">${c.l}</div>`;
-  c.zones.forEach(z=>{
-   const col=ZCOL[z.z]||"var(--mute)";
-   h+=`<div style="display:flex;align-items:center;gap:10px;padding:5px 0">
-    <span style="flex:0 0 6px;height:22px;border-radius:3px;background:${col}"></span>
-    <span style="flex:1;font-size:13.5px;color:var(--mute)">${z.z}</span>
-    <b style="font-family:Montserrat,sans-serif;font-size:14px;color:${col};min-width:32px;text-align:right">${z.pct}</b></div>
-    <div style="height:8px;border-radius:4px;background:var(--track);margin:0 0 4px 16px;overflow:hidden">
-     <div style="width:${z.pct}%;height:100%;border-radius:4px;background:${col}"></div></div>`})});
- h+=`</div>`;
-
  /* ── Chaînes ── */
  h+=`<div class="eyebrow" style="margin:22px 0 12px">Chaînes de progression</div>`;
  N.chains.forEach(ch=>{
@@ -2114,7 +2108,8 @@ function vNiveau(){
  manquants.forEach(m=>{
   h+=`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)">
    <span style="flex:1;min-width:0"><span style="font-size:13.5px;display:block">${esc(m.n)}</span>
-   <span style="font-size:11.5px;color:var(--mute)">${m.u} · repère ${m.t[0]} / ${m.t[1]} / ${m.t[2]}</span></span>
+   ${m.d?`<span style="font-size:11.5px;color:var(--mute);display:block;line-height:1.45;margin-top:2px">${esc(m.d)}</span>`:""}
+   <span style="font-size:11px;color:var(--mute);display:block;margin-top:2px">repère ${m.t[0]} / ${m.t[1]} / ${m.t[2]} ${esc(m.u)}</span></span>
    <input class="sin" style="width:82px;flex:none" type="number" inputmode="numeric"
     id="tst-${m.id}" data-tst="${m.id}" value="" placeholder="—"></div>`});
  h+=`</div>`;
@@ -2125,30 +2120,51 @@ function vNiveau(){
   pas une interdiction : un mouvement réalisé hors ordre est enregistré normalement.</div></div>`;
  return h+`<div style="height:26px"></div></div>`}
 
-/* Détail d'une chaîne : étapes acquises, en cours, verrouillées */
+/* Détail d'une chaîne. Chaque étape peut se valider depuis l'historique
+   ou se déclarer à la main, pour ce qui se travaille hors séances notées. */
 function chainSteps(ch){
  let h=`<div style="margin-top:14px;padding-top:6px;border-top:1px solid var(--line)">`;
  ch.steps.forEach((st,i)=>{
   const dernier=i===ch.steps.length-1;
   const col=st.etat==="acquis"?ch.col:st.etat==="encours"?"var(--aqua)":"var(--line)";
   const txt=st.etat==="verrou"?"var(--mute)":"var(--ink)";
-  const cible=st.decl?`${st.r} ${st.u||""}`.trim():st.s>1?`${st.s} × ${st.r}`:`${st.r} ${st.u||"rep"}`;
-  h+=`<div style="display:flex;gap:13px;padding:9px 0">
+  const unite=st.u||"reps";
+  const cible=st.hold?`${st.r} ${unite}`:st.s>1?`${st.s} × ${st.r}`:`${st.r} ${unite}`;
+  const fait=st.hold?st.vu:st.repEff;
+  h+=`<div style="display:flex;gap:13px;padding:10px 0">
    <div style="flex:0 0 26px;display:flex;flex-direction:column;align-items:center">
     <div style="width:22px;height:22px;border-radius:50%;flex:none;
      ${st.etat==="acquis"?`background:${ch.col}`:st.etat==="encours"?`border:3px solid var(--aqua)`:`background:var(--sunk);border:2px solid var(--line)`}"></div>
-    ${!dernier?`<div style="width:2px;flex:1;min-height:22px;background:${st.etat==="acquis"?ch.col:"var(--line)"};margin-top:4px"></div>`:""}
+    ${!dernier?`<div style="width:2px;flex:1;min-height:34px;background:${st.etat==="acquis"?ch.col:"var(--line)"};margin-top:4px"></div>`:""}
    </div>
    <div style="flex:1;min-width:0;padding-bottom:4px">
     <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
      <span style="font-size:14.5px;font-weight:${st.etat==="encours"?600:500};color:${txt}">${esc(st.n)}</span>
-     <span style="font-size:12px;font-weight:600;color:${st.etat==="verrou"?"var(--mute)":col};white-space:nowrap">${cible}</span></div>
-    ${st.etat==="encours"?`<div style="font-size:11.5px;color:var(--mute);margin-top:4px">${
-      st.decl?"à déclarer plus bas":st.best>0?`${st.best} série${st.best>1?"s":""} sur ${st.s}${st.bestRep?" · meilleure : "+st.bestRep+" reps":""}`
-      :st.bestRep?`meilleure série : ${st.bestRep} reps`:"pas encore enregistré"}</div>`:""}
-    ${st.etat==="verrou"?`<div style="font-size:11.5px;color:var(--mute);margin-top:4px">ordre conseillé — après ${esc(ch.steps[i-1].n)}</div>`:""}
-    ${st.src&&st.etat!=="verrou"?`<div style="font-size:10.5px;color:var(--mute);margin-top:3px;opacity:.8">${st.src}</div>`:""}
-   </div></div>`});
+     <span style="font-size:12px;font-weight:600;color:${st.etat==="verrou"?"var(--mute)":col};white-space:nowrap">${cible}</span></div>`;
+  /* Où j'en suis, et de quelle source vient l'information */
+  if(st.etat!=="verrou"){
+   const src=st.declare!=null&&st.declare>=(st.bestRep||0)?"déclaré":"depuis tes séances";
+   h+=`<div style="font-size:11.5px;color:var(--mute);margin-top:4px">${
+     fait?`${st.hold?fait+" "+unite:st.s+" × "+fait} sur ${cible} · ${src}`:"pas encore renseigné"}</div>`;
+   if(fait&&!st.ok)h+=`<div style="height:6px;border-radius:3px;background:var(--track);margin-top:6px;overflow:hidden">
+     <div style="width:${Math.min(100,Math.round(fait/st.r*100))}%;height:100%;border-radius:3px;background:var(--aqua)"></div></div>`;
+  }else h+=`<div style="font-size:11.5px;color:var(--mute);margin-top:4px">ordre conseillé — après ${esc(ch.steps[i-1].n)}</div>`;
+  /* Déclaration manuelle, toujours accessible même sur une étape verrouillée */
+  h+=`<div style="display:flex;align-items:center;gap:9px;margin-top:8px">
+    <span style="font-size:11.5px;color:var(--mute);flex:1">${st.hold?"Je tiens":"Je fais "+st.s+" ×"}</span>
+    <input class="sin" style="width:74px;flex:none;padding:8px 4px;font-size:14px" type="number" inputmode="numeric"
+     id="dcl-${ch.id}-${i}" data-dcl="${ch.id}:${i}" value="${st.declare!=null?st.declare:""}" placeholder="—">
+    <span style="font-size:11.5px;color:var(--mute);flex:none;min-width:34px">${unite}</span></div>`;
+  if(st.ld){
+   const rm=bestOf(st.ld),dr=(S.decl||{})["rm:"+st.ld];
+   const val=Math.max(rm||0,Number.isFinite(dr)?dr:0);
+   h+=`<div style="display:flex;align-items:center;gap:9px;margin-top:6px">
+    <span style="font-size:11.5px;color:var(--mute);flex:1">Charge max${val?` · ${val.toFixed(val%1?1:0)} kg${rm&&val===rm?" estimée":""}`:""}</span>
+    <input class="sin" style="width:74px;flex:none;padding:8px 4px;font-size:14px" type="number" inputmode="decimal"
+     id="rm-${st.ld}" data-dcl="rm:${st.ld}" value="${Number.isFinite(dr)?dr:""}" placeholder="—">
+    <span style="font-size:11.5px;color:var(--mute);flex:none;min-width:34px">kg</span></div>`}
+  if(st.src&&st.etat!=="verrou")h+=`<div style="font-size:10.5px;color:var(--mute);margin-top:5px;opacity:.8">${st.src}</div>`;
+  h+=`</div></div>`});
  return h+`</div>`}
 
 /* ══════════ RENDU ══════════ */
@@ -2438,6 +2454,13 @@ document.addEventListener("input",ev=>{const t=ev.target;
   const r=new FileReader();
   r.onload=()=>{S.sharePhoto=r.result;render()};
   r.readAsDataURL(f);return}
+ if(t.dataset.dcl){
+  /* Déclaration manuelle : une valeur vide efface la déclaration. */
+  if(!S.decl)S.decl={};
+  const v=parseFloat(String(t.value).replace(",","."));
+  if(t.value===""||!Number.isFinite(v)||v<=0)delete S.decl[t.dataset.dcl];
+  else S.decl[t.dataset.dcl]=v;
+  save();render();return}
  if(t.dataset.tst){
   /* Test chronométré déclaré : une valeur vide efface la déclaration. */
   if(!S.tests)S.tests={};
@@ -2515,6 +2538,7 @@ function applyRemote(d){
  S.profile=rp||S.profile||null;
  S.lastExport=d.lastExport||S.lastExport||null;
  S.tests=Object.assign({},S.tests||{},d.tests||{});
+ S.decl=Object.assign({},S.decl||{},d.decl||{});
  if(d.theme){S.theme=d.theme;applyTheme()}
  /* Mouvements personnalisés : on réunit les deux côtés plutôt que d'en choisir un. */
  const seen=new Set(),merged=[];

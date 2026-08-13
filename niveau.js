@@ -25,7 +25,11 @@ S.tests={};S.sessions=[];
 console.log('═══ Intégrité des tables ═══');
 T('36 mouvements dans la table de Monroe', MONROE.length===36, MONROE.length);
 T('9 par palier', [1,2,3,4].every(p=>MONROE.filter(m=>m.p===p).length===9));
-T('8 chaînes définies', CHAINS.length===8, CHAINS.length);
+T('7 chaînes définies', CHAINS.length===7, CHAINS.length);
+T('aucun nom de mouvement en français dans les chaînes',
+  CHAINS.every(c=>c.steps.every(x=>!/[éèêàâôûç]/.test(x.n))),
+  CHAINS.flatMap(c=>c.steps.map(x=>x.n)).filter(n=>/[éèêàâôûç]/.test(n)).join(','));
+T('aucun « ATR » résiduel', !CHAINS.some(c=>c.steps.some(x=>/ATR/.test(x.n))));
 T('chaque compartiment déclaré existe dans CATZ',
   MONROE.every(m=>R.CATZ[m.c]&&R.CATZ[m.c].includes(m.e)),
   MONROE.filter(m=>!R.CATZ[m.c]||!R.CATZ[m.c].includes(m.e)).map(m=>m.c+'/'+m.e).join(','));
@@ -42,27 +46,28 @@ console.log('\n═══ Règle des 3 séries ═══');
 const seance=(date,sets)=>({id:'s'+date,date,feel:3,note:'',metcons:[],
  entries:[{id:'e',movementId:'pull-up',sets}]});
 const st={n:'Traction stricte',mv:'pull-up',lv:6,s:3,r:5};
+const SS=x=>stepState(x,'t',0);
 
 S.sessions=[seance('2026-08-01',[{weight:0,reps:5,diff:'fond',level:6},{weight:0,reps:5,diff:'fond',level:6}])];
-T('2 séries de 5 → pas encore acquis', !stepState(st).ok);
+T('2 séries de 5 → pas encore acquis', !SS(st).ok);
 S.sessions=[seance('2026-08-01',[{weight:0,reps:5,diff:'fond',level:6},{weight:0,reps:5,diff:'fond',level:6},
  {weight:0,reps:5,diff:'fond',level:6}])];
-T('3 séries de 5 dans la même séance → acquis', stepState(st).ok);
+T('3 séries de 5 dans la même séance → acquis', SS(st).ok);
 S.sessions=[seance('2026-08-01',[{weight:0,reps:5,diff:'fond',level:6},{weight:0,reps:5,diff:'fond',level:6}]),
             seance('2026-08-03',[{weight:0,reps:5,diff:'fond',level:6}])];
-T('2 + 1 séries sur deux séances → refusé (même séance exigée)', !stepState(st).ok);
+T('2 + 1 séries sur deux séances → refusé (même séance exigée)', !SS(st).ok);
 S.sessions=[seance('2026-08-01',[{weight:0,reps:12,diff:'fond',level:6}])];
-T('une seule grosse série → refusé', !stepState(st).ok);
+T('une seule grosse série → refusé', !SS(st).ok);
 S.sessions=[seance('2026-08-01',[{weight:0,reps:5,diff:'fond',level:5},{weight:0,reps:5,diff:'fond',level:5},
  {weight:0,reps:5,diff:'fond',level:5}])];
-T('3×5 en kipping ne valide pas la stricte', !stepState(st).ok);
+T('3×5 en kipping ne valide pas la stricte', !SS(st).ok);
 const stk={n:'kipping',mv:'pull-up',lv:5,s:3,r:5};
 S.sessions=[seance('2026-08-01',[{weight:0,reps:5,diff:'fond',level:6},{weight:0,reps:5,diff:'fond',level:6},
  {weight:0,reps:5,diff:'fond',level:6}])];
-T('3×5 en stricte valide aussi le kipping (niveau supérieur)', stepState(stk).ok);
+T('3×5 en stricte valide aussi le kipping (niveau supérieur)', SS(stk).ok);
 S.sessions=[seance('2026-08-01',[{weight:40,reps:5,diff:'fond',level:6},{weight:40,reps:5,diff:'fond',level:6},
  {weight:40,reps:5,diff:'fond',level:6}])];
-T('séries lestées ignorées pour un critère au poids de corps', !stepState(st).ok);
+T('séries lestées ignorées pour un critère au poids de corps', !SS(st).ok);
 
 console.log('\n═══ Règle « strict / 2× kipping » de Monroe ═══');
 S.sessions=[seance('2026-08-01',[{weight:0,reps:10,diff:'fond',level:5}])];
@@ -111,21 +116,21 @@ S.tab='niveau';render();
 T('écran rendu', H().length>2000, H().length+' car');
 T('titre du palier affiché', /Palier \d/.test(H()));
 T('les 4 paliers listés', ['Fondations','Structuration','Performance','Rx'].every(x=>H().includes(x)));
-T('catégories affichées', H().includes('Gymnastique')&&H().includes('Force'));
-T('« Charnière » a bien disparu', !H().includes('Charnière'));
-T('les 8 chaînes listées', (H().match(/data-act="nchain"/g)||[]).length===8,
+T('section « Par catégorie » retirée', !H().includes('Par catégorie'));
+T('chaînes d\'haltérophilie en anglais', H().includes('Snatch')&&H().includes('Clean & Jerk'));
+T('les 7 chaînes listées', (H().match(/data-act="nchain"/g)||[]).length===7,
   (H().match(/data-act="nchain"/g)||[]).length);
 T('aucune valeur invalide affichée', !/undefined|NaN|\[object/.test(H()),
   (H().match(/undefined|NaN/g)||[]).slice(0,3).join(','));
 
 console.log('\n═══ Ouverture d\'une chaîne ═══');
 click({act:'nchain',v:'tirage'});render();
-T('chaîne dépliée', H().includes('Traction stricte'));
+T('chaîne dépliée', H().includes('Strict Pull-Up'));
 T('étape acquise détectée depuis les séances', H().includes('Ring Row'));
 T('source citée', H().includes('BTWB'));
 T('mention « ordre conseillé »', H().includes('ordre conseillé'));
 click({act:'nchain',v:'tirage'});render();
-T('second tap referme', !H().includes('Traction stricte'));
+T('second tap referme', !H().includes('Strict Pull-Up'));
 
 console.log('\n═══ Tests déclaratifs ═══');
 render();
@@ -144,6 +149,60 @@ console.log('\n═══ Profil incomplet ═══');
 S.profile=null;S.updatedAt=3;render();
 T('message clair sans poids de corps', H().includes('poids de corps'));
 T('aucun plantage', H().length>200);
+
+
+
+console.log('\n═══ Déclaration manuelle (le cas de Benoît) ═══');
+S.profile={sex:'m',age:36,bw:80,name:'Benoit'};
+S.sessions=[];S.decl={};S.tests={};S.updatedAt=10;
+S.decl['tirage:0']=8;   // ring row : 3×8 su
+S.decl['tirage:1']=2;   // tractions : seulement 3×2
+S.updatedAt=11;
+let nn=niveau(); let tir=nn.chains.find(c=>c.id==='tirage');
+T('Ring Row déclaré à 8 → acquis', tir.steps[0].etat==='acquis', tir.steps[0].etat);
+T('Traction stricte déclarée à 2 → en cours, pas acquise', tir.steps[1].etat==='encours'&&!tir.steps[1].ok);
+T('progression visible 2 sur 5', tir.steps[1].repEff===2&&tir.steps[1].r===5, tir.steps[1].repEff);
+T('la suite reste verrouillée', tir.steps[2].etat==='verrou');
+S.decl['tirage:1']=5;S.updatedAt=12;
+tir=niveau().chains.find(c=>c.id==='tirage');
+T('déclaration portée à 5 → acquise, kipping débloqué',
+  tir.steps[1].etat==='acquis'&&tir.steps[2].etat==='encours', tir.steps.map(x=>x.etat).join(','));
+
+console.log('\n═══ Historique et déclaration se combinent ═══');
+S.decl={};S.sessions=[{id:'z',date:'2026-08-01',feel:3,note:'',metcons:[],
+ entries:[{id:'e',movementId:'pull-up',sets:[{weight:0,reps:3,diff:'fond',level:6},
+  {weight:0,reps:3,diff:'fond',level:6},{weight:0,reps:3,diff:'fond',level:6}]}]}];
+S.updatedAt=13;
+tir=niveau().chains.find(c=>c.id==='tirage');
+T('3×3 en séance → meilleure série 3 retenue', tir.steps[1].bestRep===3, tir.steps[1].bestRep);
+S.decl['tirage:1']=6;S.updatedAt=14;
+tir=niveau().chains.find(c=>c.id==='tirage');
+T('déclaration supérieure à l\'historique → retenue', tir.steps[1].ok);
+S.decl['tirage:1']=1;S.updatedAt=15;
+tir=niveau().chains.find(c=>c.id==='tirage');
+T('déclaration inférieure → historique conservé', tir.steps[1].repEff===3, tir.steps[1].repEff);
+
+console.log('\n═══ Charge max sur les chaînes d\'haltérophilie ═══');
+S.tab='niveau';S.nchain='snatch';S.updatedAt=16;render();
+T('champ de charge proposé', /data-dcl="rm:snatch"/.test(H()));
+T('champ de déclaration proposé', /data-dcl="snatch:0"/.test(H()));
+input('rm-snatch',{dcl:'rm:snatch'},'70');
+T('charge déclarée enregistrée', S.decl['rm:snatch']===70, JSON.stringify(S.decl));
+render();
+T('charge affichée', H().includes('70 kg'));
+
+console.log('\n═══ Squat unilatéral retiré ═══');
+S.nchain=null;render();
+T('plus de chaîne pistol', !H().includes('Pistol sur box'));
+
+console.log('\n═══ Tests clarifiés ═══');
+render();
+T('protocole du Deep Squat Hold expliqué', H().includes('accroupi en bas du squat'));
+T('Freestanding Handstand distingué du mur', H().includes('sans appui au mur')&&H().includes('Freestanding Handstand'));
+T('unités sans « /min » ambigu', !H().includes('reps/min'));
+
+console.log(`\n  ${ko?'✗ '+ko+' échec(s)':'✓ tout est conforme'}`);
+process.exit(ko?1:0);
 
 console.log(`\n  ${ko?'✗ '+ko+' échec(s)':'✓ tout est conforme'}`);
 process.exit(ko?1:0);
