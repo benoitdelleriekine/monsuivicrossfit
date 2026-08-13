@@ -1523,24 +1523,26 @@ function shareData(){
    pied:fLong(s2.date)};}
  if(k==="seance"){
   const s2=S.sessions.find(x=>x.id===S.share.id);if(!s2)return null;
-  /* Le travail spécifique : toutes les séries de chaque mouvement, pas
-     seulement la meilleure — c'est le détail complet demandé. */
-  let mov=(s2.entries||[]).filter(e=>(e.sets||[]).length).map(e=>{const m=mv(e.movementId);
-   return{n:m.n,sets:(e.sets||[]).map(x=>setLabel(x,m)).join("  ·  ")}});
-  const movExtra=Math.max(0,mov.length-8);
-  if(movExtra)mov=mov.slice(0,8);
-  /* Les metcons : structure complète, pas seulement le résultat. */
-  let mcs=(s2.metcons||[]).map(mc=>{const f=FMT[mc.format]||FORMATS[0],sc=mcScore(mc),st=mcStructure(mc);
-   let items=mc.items.map(it=>itemLabel(it,st));
-   const extra=Math.max(0,items.length-5);
-   if(extra)items=[...items.slice(0,5),"+ "+extra+" mouvement"+(extra>1?"s":"")];
-   return{n:mc.name||f.l,badge:(f.l+(mc.cap?" · "+mc.cap+"'":"")).toUpperCase(),
-    rx:mc.rx,items,res:sc?sc.txt:resLabel(mc)}});
+  /* Une série reste une série : on les garde séparées pour pouvoir
+     les mettre en page proprement, sans tronquer. */
+  const lab=(x,m)=>{
+   if(x.dist!=null)return`${x.dist} m — ${mmss(x.secs||0)}`;
+   const u=m.u==="sec"?" s":m.u==="m"?" m":" reps";
+   return x.weight>0?`${x.weight} kg × ${x.reps}`:`${x.reps}${u}`};
+  const mov=(s2.entries||[]).filter(e=>(e.sets||[]).length).map(e=>{const m=mv(e.movementId);
+   return{n:m.n,sets:(e.sets||[]).map(x=>lab(x,m))}});
+  const mcs=(s2.metcons||[]).map(mc=>{
+   const f=FMT[mc.format]||FORMATS[0],sc=mcScore(mc),st=mcStructure(mc);
+   const meta=[f.l+(mc.cap?" "+mc.cap+"'":"")];
+   if(st.label&&st.label!=="1 tour")meta.push(st.label.toUpperCase());
+   meta.push(mc.rx?"RX":"ADAPTÉ");
+   return{n:mc.name||f.l,meta:meta.join("   ·   ").toUpperCase(),
+    items:mc.items.map(it=>itemLabel(it,st)),res:sc?sc.txt:resLabel(mc)}});
   let reps=0,ton=0;
   (s2.entries||[]).forEach(e=>(e.sets||[]).forEach(x=>{
    reps+=x.dist?Math.round(x.dist/50):(x.reps||0);ton+=(x.reps||0)*(x.weight||0)}));
   (s2.metcons||[]).forEach(mc=>mcTotals(mc).forEach(t=>{reps+=t.reps+t.cal+Math.round(t.dist/50);ton+=t.ton}));
-  return{tag:fLong(s2.date).toUpperCase(),titre:"Séance",mov,movExtra,mcs,
+  return{tag:fLong(s2.date).toUpperCase(),titre:"Séance",mov,mcs,
    pied:reps+" répétitions  ·  "+Math.round(ton).toLocaleString("fr-FR")+" kg soulevés"};}
  if(k==="mois"){
   const g=monthGrid(S.share.off||0),st=statsRange(g.from,g.to);
@@ -1554,6 +1556,13 @@ function shareData(){
            -new Date(g.from+"T12:00"))/6048e5)).toFixed(1).replace(".",","),"/ semaine"]],
    cells:g.cells.map(d=>d&&jours.has(d)),pied:"Mon Suivi CrossFit"};}
  return null}
+
+/* Découpe un texte en lignes tenant dans une largeur donnée */
+function wrapTxt(g,txt,maxW){
+ const mots=String(txt).split("  ·  ");const out=[];let cur="";
+ mots.forEach(m=>{const essai=cur?cur+"  ·  "+m:m;
+  if(g.measureText(essai).width<=maxW||!cur)cur=essai;else{out.push(cur);cur=m}});
+ if(cur)out.push(cur);return out}
 
 function rrect(g,x,y,w,h,r){g.beginPath();
  g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);
@@ -1651,56 +1660,80 @@ async function paintShare(){
  }
 
  if(S.share.t==="seance"){
-  /* Une ligne par élément à afficher : chaque mouvement, puis chaque metcon
-     avec son détail. La hauteur de ligne s'ajuste au nombre total pour que
-     tout tienne, sans jamais déborder sur le titre ou le pied de page. */
-  const rows=[];
-  D.mov.forEach(m=>rows.push({t:"mov",n:m.n,sets:m.sets}));
-  if(D.movExtra)rows.push({t:"note",txt:"+ "+D.movExtra+" mouvement"+(D.movExtra>1?"s":"")});
-  D.mcs.forEach(mc=>{
-   rows.push({t:"mchead",n:mc.n,res:mc.res});
-   rows.push({t:"mcmeta",txt:mc.badge+"   ·   "+(mc.rx?"RX":"ADAPTÉ")});
-   mc.items.forEach(it=>rows.push({t:"mcitem",txt:it}));
-  });
-  const HEADER=110+(110*0.92+16)+30+14, FOOTER=196, TOP=30;
-  const avail=Math.max(200,H-HEADER-FOOTER-TOP);
-  const rh=Math.max(38,Math.min(66,avail/Math.max(1,rows.length)));
-  const fName=Math.round(rh*0.5),fSets=Math.round(rh*0.38),
-        fMeta=Math.round(rh*0.32),fItem=Math.round(rh*0.35);
-  y-=rh*0.1;
-  for(let i=rows.length-1;i>=0;i--){
-   const r=rows[i];
-   if(r.t==="mov"){
-    /* La marge réservée au nom suit sa largeur réelle plutôt qu'un forfait :
-       un nom court laisse plus de place pour afficher toutes les séries.
-       Une liste encore trop longue réduit sa taille avant de se tronquer,
-       pour que "détail complet" reste vrai le plus souvent possible. */
-    g.font=RA(600,fName);const nameW=g.measureText(r.n).width;
-    const maxW=W-2*M-nameW-36;let b=r.sets,vf=fSets;
-    g.font=MO(700,vf);let bw=g.measureText(b).width;
-    while(bw>maxW&&vf>16){vf--;g.font=MO(700,vf);bw=g.measureText(b).width}
-    while(bw>maxW&&b.length>3){b=b.slice(0,-2)+"…";bw=g.measureText(b).width}
-    g.fillStyle=acc;g.fillText(b,W-M-bw,y);
-    g.font=RA(600,fName);g.fillStyle=blanc;g.fillText(r.n,M,y);
-   }else if(r.t==="mchead"){
-    g.font=MO(700,fSets);g.fillStyle=acc;
-    const bw=g.measureText(r.res).width;g.fillText(r.res,W-M-bw,y);
-    g.font=RA(700,fName);g.fillStyle=blanc;g.fillText(r.n,M,y);
-   }else if(r.t==="mcmeta"){
-    g.font=MO(600,fMeta);g.fillStyle=mute;g.fillText(r.txt,M,y);
-   }else if(r.t==="mcitem"){
-    g.font=RA(500,fItem);g.fillStyle=mute;g.fillText("·  "+r.txt,M+6,y);
-   }else{g.font=RA(600,fMeta);g.fillStyle=mute;g.fillText(r.txt,M,y);}
-   y-=rh;
-   if(i>0&&["mov","mchead","note"].includes(rows[i-1].t)){
-    g.strokeStyle="rgba(255,255,255,.16)";g.lineWidth=1;
-    g.beginPath();g.moveTo(M,y+rh*0.3);g.lineTo(W-M,y+rh*0.3);g.stroke();}}
-  y-=22;
-  g.font=MO(800,110);g.fillStyle=blanc;g.fillText(D.titre,M,y);y-=110*0.92+16;
-  g.font=MO(600,30);g.fillStyle=acc;g.fillText(D.tag,M,y);
- }
+  /* Mise en page en deux temps : on construit d'abord toutes les lignes,
+     on mesure, puis on ajuste la taille pour que tout tienne — plutôt que
+     de tronquer. Le voile démarre juste au-dessus du bloc obtenu. */
+  const maxW=W-2*M;
+  const BASE={mvn:{f:34,h:46,w:600,fam:"RA"},
+              set:{f:27,h:37,w:700,fam:"MO"},
+              mch:{f:37,h:54,w:700,fam:"RA"},
+              mcm:{f:22,h:34,w:600,fam:"MO"},
+              mci:{f:26,h:39,w:500,fam:"RA"},
+              gap:{f:0, h:18},
+              gpm:{f:0, h:40}};
+  const police=(k,sc)=>(BASE[k].fam==="MO"?MO:RA)(BASE[k].w,Math.round(BASE[k].f*sc));
 
-if(S.share.t==="mois"){
+  function bloc(sc){
+   const L=[];
+   D.mov.forEach((m,i)=>{
+    if(i)L.push({k:"gap"});
+    L.push({k:"mvn",t:m.n});
+    g.font=police("set",sc);
+    wrapTxt(g,m.sets.join("  ·  "),maxW).forEach(t=>L.push({k:"set",t}));
+   });
+   D.mcs.forEach((mc,i)=>{
+    L.push({k:"gpm"});
+    L.push({k:"mch",t:mc.n,r:mc.res});
+    L.push({k:"mcm",t:mc.meta});
+    g.font=police("mci",sc);
+    mc.items.forEach(it=>wrapTxt(g,it,maxW-26).forEach(t=>L.push({k:"mci",t})));
+   });
+   const hh=L.reduce((a,x)=>a+BASE[x.k].h*sc,0);
+   return{L,hh}}
+
+  /* Trois itérations suffisent : la découpe dépend de la taille, qui dépend
+     de la hauteur totale, qui dépend de la découpe. */
+  const TITRE=110, PIED=104, SEP=44, HAUT=70;
+  const budget=BAS-PIED-SEP-TITRE*0.92-46-30-HAUT;
+  let sc=1;
+  for(let i=0;i<3;i++){
+   const{hh}=bloc(sc);
+   if(hh>budget)sc=Math.max(0.62,sc*budget/hh);
+   else if(i===0)break}
+  const{L,hh}=bloc(sc);
+
+  /* Voile ajusté au contenu réel */
+  if((S.share.bg||"sombre")!=="transparent"){
+   const top=Math.max(0,BAS-PIED-SEP-hh-TITRE*0.92-46-30-60);
+   const gr2=g.createLinearGradient(0,top,0,H);
+   gr2.addColorStop(0,"rgba(9,11,14,0)");gr2.addColorStop(.42,"rgba(9,11,14,.80)");
+   gr2.addColorStop(1,"rgba(9,11,14,.96)");
+   g.fillStyle=gr2;g.fillRect(0,top,W,H-top)}
+
+  /* Dessin de haut en bas */
+  let cy=BAS-PIED-SEP-hh;
+  const tagY=cy-46-TITRE*0.92-30, titY=cy-46;
+  g.font=MO(600,30);g.fillStyle=acc;g.fillText(D.tag,M,tagY);
+  g.font=MO(800,TITRE);g.fillStyle=blanc;g.fillText(D.titre,M,titY);
+
+  L.forEach(x=>{
+   const h=BASE[x.k].h*sc;
+   cy+=h;
+   const yb=cy-h*0.22;
+   if(x.k==="gap"||x.k==="gpm")return;
+   g.font=police(x.k,sc);
+   if(x.k==="mvn"){g.fillStyle=blanc;g.fillText(x.t,M,yb)}
+   else if(x.k==="set"){g.fillStyle=acc;g.fillText(x.t,M+14,yb)}
+   else if(x.k==="mch"){
+    g.fillStyle=acc;const rw=g.measureText(x.r).width;g.fillText(x.r,W-M-rw,yb);
+    g.fillStyle=blanc;g.font=police("mch",sc);g.fillText(x.t,M,yb);
+    g.strokeStyle="rgba(255,255,255,.18)";g.lineWidth=1;
+    g.beginPath();g.moveTo(M,cy+6);g.lineTo(W-M,cy+6);g.stroke()}
+   else if(x.k==="mcm"){g.fillStyle=mute;g.fillText(x.t,M,yb+6)}
+   else{g.fillStyle=mute;g.fillText("·  "+x.t,M+14,yb)}
+  });
+ }
+ if(S.share.t==="mois"){
   /* mini-calendrier */
   const cs=(W-2*M-6*14)/7, lignes=Math.ceil(D.cells.length/7);
   y-=8;
