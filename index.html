@@ -1590,6 +1590,46 @@ function shLogo(g,x,y,s,col,acc){
 
 /* Dessin du calque. Tout est proportionnel à la largeur pour que les deux
    formats partagent la même mise en page. */
+/* Mise en page du modèle Séance, calculée avant tout dessin.
+   Deux temps : on construit toutes les lignes, on mesure, puis on ajuste
+   la taille pour que tout tienne — plutôt que de tronquer. */
+function layoutSeance(g,D,W,H,M,BAS,MO,RA){
+ const maxW=W-2*M;
+ const BASE={mvn:{f:34,h:46,w:600,fam:"RA"},
+             set:{f:27,h:37,w:700,fam:"MO"},
+             mch:{f:37,h:54,w:700,fam:"RA"},
+             mcm:{f:22,h:34,w:600,fam:"MO"},
+             mci:{f:26,h:39,w:500,fam:"RA"},
+             gap:{f:0, h:18},
+             gpm:{f:0, h:40}};
+ const police=(k,sc)=>(BASE[k].fam==="MO"?MO:RA)(BASE[k].w,Math.round(BASE[k].f*sc));
+ function bloc(sc){
+  const L=[];
+  D.mov.forEach((m,i)=>{
+   if(i)L.push({k:"gap"});
+   L.push({k:"mvn",t:m.n});
+   g.font=police("set",sc);
+   wrapTxt(g,m.sets.join("  ·  "),maxW).forEach(t=>L.push({k:"set",t}));
+  });
+  D.mcs.forEach(mc=>{
+   L.push({k:"gpm"});
+   L.push({k:"mch",t:mc.n,r:mc.res});
+   L.push({k:"mcm",t:mc.meta});
+   g.font=police("mci",sc);
+   mc.items.forEach(it=>wrapTxt(g,it,maxW-26).forEach(t=>L.push({k:"mci",t})));
+  });
+  return{L,hh:L.reduce((a,x)=>a+BASE[x.k].h*sc,0)}}
+ const TITRE=110, PIED=104, SEP=44, HAUT=70;
+ const budget=BAS-PIED-SEP-TITRE*0.92-46-30-HAUT;
+ let sc=1;
+ for(let i=0;i<3;i++){
+  const{hh}=bloc(sc);
+  if(hh>budget)sc=Math.max(0.62,sc*budget/hh);
+  else if(i===0)break}
+ const{L,hh}=bloc(sc);
+ const top=Math.max(0,BAS-PIED-SEP-hh-TITRE*0.92-46-30-60);
+ return{L,hh,sc,top,BASE,police,TITRE}}
+
 async function paintShare(){
  /* Le canevas peut ne pas être encore monté, ou l'API être indisponible :
     l'export ne doit jamais faire tomber le rendu. */
@@ -1622,6 +1662,17 @@ async function paintShare(){
  const RA=(w,s)=>`${w} ${s}px Raleway, sans-serif`;
  const blanc="#FFFFFF",mute="rgba(214,222,230,.86)";
  let y=BAS;
+
+ /* Le modèle Séance ajuste son voile à la hauteur réelle du contenu :
+    il faut donc le calculer et le poser AVANT le pied de page, sinon
+    le dégradé recouvrirait le texte déjà écrit. */
+ let SEA=null;
+ if(S.share.t==="seance"){SEA=layoutSeance(g,D,W,H,M,BAS,MO,RA);
+  if(fond!=="transparent"){
+   const gr2=g.createLinearGradient(0,SEA.top,0,H);
+   gr2.addColorStop(0,"rgba(9,11,14,0)");gr2.addColorStop(.42,"rgba(9,11,14,.80)");
+   gr2.addColorStop(1,"rgba(9,11,14,.96)");
+   g.fillStyle=gr2;g.fillRect(0,SEA.top,W,H-SEA.top)}}
 
  /* ── Pied commun ── */
  if(S.share.logo!==false){shLogo(g,W-M-72,y-64,72,blanc,acc)}
@@ -1659,63 +1710,12 @@ async function paintShare(){
   g.font=MO(600,30);g.fillStyle=acc;g.fillText(D.tag,M,y);
  }
 
- if(S.share.t==="seance"){
-  /* Mise en page en deux temps : on construit d'abord toutes les lignes,
-     on mesure, puis on ajuste la taille pour que tout tienne — plutôt que
-     de tronquer. Le voile démarre juste au-dessus du bloc obtenu. */
-  const maxW=W-2*M;
-  const BASE={mvn:{f:34,h:46,w:600,fam:"RA"},
-              set:{f:27,h:37,w:700,fam:"MO"},
-              mch:{f:37,h:54,w:700,fam:"RA"},
-              mcm:{f:22,h:34,w:600,fam:"MO"},
-              mci:{f:26,h:39,w:500,fam:"RA"},
-              gap:{f:0, h:18},
-              gpm:{f:0, h:40}};
-  const police=(k,sc)=>(BASE[k].fam==="MO"?MO:RA)(BASE[k].w,Math.round(BASE[k].f*sc));
-
-  function bloc(sc){
-   const L=[];
-   D.mov.forEach((m,i)=>{
-    if(i)L.push({k:"gap"});
-    L.push({k:"mvn",t:m.n});
-    g.font=police("set",sc);
-    wrapTxt(g,m.sets.join("  ·  "),maxW).forEach(t=>L.push({k:"set",t}));
-   });
-   D.mcs.forEach((mc,i)=>{
-    L.push({k:"gpm"});
-    L.push({k:"mch",t:mc.n,r:mc.res});
-    L.push({k:"mcm",t:mc.meta});
-    g.font=police("mci",sc);
-    mc.items.forEach(it=>wrapTxt(g,it,maxW-26).forEach(t=>L.push({k:"mci",t})));
-   });
-   const hh=L.reduce((a,x)=>a+BASE[x.k].h*sc,0);
-   return{L,hh}}
-
-  /* Trois itérations suffisent : la découpe dépend de la taille, qui dépend
-     de la hauteur totale, qui dépend de la découpe. */
-  const TITRE=110, PIED=104, SEP=44, HAUT=70;
-  const budget=BAS-PIED-SEP-TITRE*0.92-46-30-HAUT;
-  let sc=1;
-  for(let i=0;i<3;i++){
-   const{hh}=bloc(sc);
-   if(hh>budget)sc=Math.max(0.62,sc*budget/hh);
-   else if(i===0)break}
-  const{L,hh}=bloc(sc);
-
-  /* Voile ajusté au contenu réel */
-  if((S.share.bg||"sombre")!=="transparent"){
-   const top=Math.max(0,BAS-PIED-SEP-hh-TITRE*0.92-46-30-60);
-   const gr2=g.createLinearGradient(0,top,0,H);
-   gr2.addColorStop(0,"rgba(9,11,14,0)");gr2.addColorStop(.42,"rgba(9,11,14,.80)");
-   gr2.addColorStop(1,"rgba(9,11,14,.96)");
-   g.fillStyle=gr2;g.fillRect(0,top,W,H-top)}
-
-  /* Dessin de haut en bas */
-  let cy=BAS-PIED-SEP-hh;
+ if(S.share.t==="seance"&&SEA){
+  const{L,sc,BASE,police,TITRE}=SEA;
+  let cy=BAS-104-44-SEA.hh;
   const tagY=cy-46-TITRE*0.92-30, titY=cy-46;
   g.font=MO(600,30);g.fillStyle=acc;g.fillText(D.tag,M,tagY);
   g.font=MO(800,TITRE);g.fillStyle=blanc;g.fillText(D.titre,M,titY);
-
   L.forEach(x=>{
    const h=BASE[x.k].h*sc;
    cy+=h;
