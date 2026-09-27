@@ -244,6 +244,7 @@ const M=[
  ["ghd","GHD Sit-Up","gym","Gymnastique"],["hollow","Hollow Hold","gym","Gymnastique","","sec"],
  ["plank","Plank","gym","Gymnastique","","sec"],
  ["rope-climb","Rope Climb","gym","Gymnastique"],["du","Double Under","gym","Gymnastique"],
+ ["su","Single Unders","gym","Gymnastique"],
  ["box-jump","Box Jump","gym","Gymnastique"],["box-step","Box Step-Up","gym","Gymnastique"],
  ["burpee","Burpee","gym","Gymnastique"],["bfb","Bar-Facing Burpee","gym","Gymnastique"],
  ["wall-ball","Wall Ball","gym","Gymnastique"],["dball","D-Ball Over Shoulder","gym","Gymnastique"],
@@ -409,12 +410,12 @@ function weeksGrid(n){const rows=[],m=new Date();m.setDate(m.getDate()-((m.getDa
 
 /* ══════════ ÉTAT ══════════ */
 let S={sessions:[],custom:[],bar:15,tab:"progres",draft:null,focus:null,picker:false,q:"",prog:null,open:null,
- profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},nchain:null,share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
+ profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},pin:[],histOpen:null,nchain:null,share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
  updatedAt:0,cloud:{enabled:false,user:null,status:"",busy:false,sent:false},email:"",otp:"",
  d:{w:0,reps:5,diff:"juste",level:0,dist:500,min:2,sec:0,age:30,bw:60}};
 /* Instantané des données, avec horodatage pour arbitrer la synchronisation */
 function payload(local){return{sessions:S.sessions,custom:S.custom,bar:S.bar,profile:S.profile,
- lastExport:S.lastExport,theme:S.theme,tests:S.tests,decl:S.decl,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
+ lastExport:S.lastExport,theme:S.theme,tests:S.tests,decl:S.decl,pin:S.pin,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
 const save=()=>{S.updatedAt=Date.now();pushSoon();try{localStorage.setItem(KEY,JSON.stringify(
  payload(true)))}catch(e){alert("Sauvegarde impossible : la mémoire du navigateur est pleine ou bloquée.")}};
 function load(){let raw=null;
@@ -426,8 +427,9 @@ function load(){let raw=null;
   S.sessions=(d.sessions||[]).map(x=>({metcons:[],entries:[],...x}));
   S.custom=d.custom||[];S.bar=d.bar??15;S.draft=d.draft||null;
   S.profile=d.profile||null;S.lastExport=d.lastExport||null;S.updatedAt=d.updatedAt||0;
-  S.theme=d.theme||"dark";S.tests=d.tests&&typeof d.tests==="object"?d.tests:{};
-  S.decl=d.decl&&typeof d.decl==="object"?d.decl:{}}catch(e){}
+  S.theme=d.theme||"dark";S.tests=migrateHistDict(d.tests);
+  S.decl=migrateHistDict(d.decl);
+  S.pin=Array.isArray(d.pin)?d.pin:[]}catch(e){}
  /* Réparation des profils écrits par une version antérieure défectueuse :
     sans âge ni poids valides, les barèmes ne veulent rien dire. */
  if(S.profile&&(!Number.isFinite(S.profile.age)||!Number.isFinite(S.profile.bw)))S.profile=null;
@@ -1883,7 +1885,8 @@ document.addEventListener("pointercancel",dragEnd);
 
 /* ══════════════════ MON NIVEAU CROSSFIT ══════════════════
    Deux référentiels distincts, volontairement séparés :
-   — MONROE : les 36 mouvements de la Table of Movement Progression,
+   — MONROE : les mouvements de la Table of Movement Progression (36 d'origine,
+     complétés par Single Unders et DB Snatch pour couvrir corde à sauter et haltères),
      répartis en 4 paliers. Situe le niveau global.
    — CHAINS : les chaînes d'acquisition, qui disent dans quel ordre
      apprendre. Sources : CrossFit L1 (strict avant kipping), BTWB,
@@ -1907,6 +1910,7 @@ const MONROE=[
  {p:1,id:"lunge",    n:"Lunge",         k:"pct",  u:"% PdC",    t:[75,100,125],c:"force",e:"Squat"},
  {p:1,id:"row",      n:"Row",           k:"test", u:"cal",      t:[8,13,18],  c:"cardio",e:"Machines",d:"Calories par minute, en moyenne sur l'effort"},
  {p:1,id:"deadlift", n:"Deadlift",      k:"bwrep",u:"reps PdC", t:[1,11,25],  c:"force", e:"Soulevé"},
+ {p:1,id:"su",       n:"Single Unders", k:"best", u:"enchaînées",t:[30,80,150],c:"cardio",e:"Corde à sauter"},
  {p:1,id:"du",       n:"Double Under",  k:"best", u:"reps",     t:[1,30,50],  c:"cardio",e:"Corde à sauter"},
  {p:1,id:"box-jump", n:"Box Jump",      k:"test", u:"reps",     t:[8,13,18],  c:"cardio",e:"Course",d:"Répétitions en 1 minute · box 61 cm (H) / 51 cm (F)"},
  {p:1,id:"push-up",  n:"Push-Up",       k:"test", u:"reps",     t:[1,21,36],  c:"gym",   e:"Poussée",d:"Répétitions en 1 minute"},
@@ -1918,6 +1922,7 @@ const MONROE=[
  {p:2,id:"strict-press",n:"Strict Press",k:"pct", u:"% PdC",    t:[50,75,100],c:"force", e:"Développé"},
  {p:2,id:"back-squat",n:"Back Squat",   k:"bwrep",u:"reps PdC", t:[5,11,21],  c:"force", e:"Squat"},
  {p:2,id:"kb-swing", n:"KB Swing",      k:"best", u:"reps",     t:[5,11,21],  c:"force", e:"Soulevé"},
+ {p:2,id:"db-snatch",n:"DB Snatch",     k:"best", u:"reps",     t:[3,8,15],   c:"force", e:"Soulevé"},
  {p:2,id:"wall-ball",n:"Wall Ball",     k:"best", u:"reps",     t:[5,11,21],  c:"gym",   e:"Unilatéral"},
  {p:2,id:"hs-hold",  n:"Freestanding Handstand",k:"test", u:"s",        t:[1,4,8],    c:"gym",   e:"Poussée",d:"Tenue en équilibre sur les mains, sans appui au mur"},
  {p:2,id:"t2b",      n:"Toes-to-Bar",   k:"best", u:"reps",     t:[1,6,21],   c:"gym",   e:"Gainage"},
@@ -2030,7 +2035,7 @@ function monroeValue(m,bw){
  if(m.k==="pct"){const v=bestOf(m.id);return v&&bw?v/bw*100:null}
  if(m.k==="best")return bestSetAt(m.id,m.sl);
  if(m.k==="bwrep")return bw?bestRepsAtBW(m.id,bw):null;
- if(m.k==="test"){const v=(S.tests||{})[m.id];return Number.isFinite(v)&&v>0?v:null}
+ if(m.k==="test")return bestHist((S.tests||{})[m.id]);
  return null}
 
 /* 0 sous le premier seuil, puis 1, 2, 3. Escalier strict, aucune zone morte. */
@@ -2045,8 +2050,8 @@ function monroeScore(v,t){
    — par déclaration : le nombre de répétitions par série que l'on sait tenir,
      utile quand le mouvement se travaille ailleurs que dans les séances notées. */
 function stepState(st,ck,i){
- const dk=ck+":"+i, dv=(S.decl||{})[dk];
- const declare=Number.isFinite(dv)&&dv>0?dv:null;
+ const dk=ck+":"+i;
+ const declare=bestHist((S.decl||{})[dk]);
  if(st.hold){
   const v=declare;
   return{ok:v!=null&&v>=st.r,vu:v,need:st.r,hold:true,declare};}
@@ -2068,12 +2073,87 @@ function stepState(st,ck,i){
  const ok=bestSets>=st.s||(declare!=null&&declare>=st.r);
  return{ok,best:bestSets,bestRep,repEff,need:st.s,declare,hold:false}}
 
+/* Épinglage libre : « c|chainId|index » pour une étape de chaîne,
+   « t|id » pour un test Monroe. Sert à garder sous les yeux ce qu'on
+   travaille en ce moment, sans dérouler chaque chaîne à chaque fois. */
+const isPinned=k=>(S.pin||[]).includes(k);
+const starSvg=on=>`<svg viewBox="0 0 24 24" width="15" height="15" fill="${on?"currentColor":"none"}" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8L3.5 9.7l5.9-.8z"/></svg>`;
+function pinBtn(key,label){return`<button data-act="pin" data-v="${key}" aria-label="${isPinned(key)?"Désépingler":"Épingler"} ${esc(label)}"
+ style="flex:none;padding:2px;color:${isPinned(key)?"var(--melon)":"var(--mute)"}">${starSvg(isPinned(key))}</button>`}
+
+/* ── Historique daté des tests et déclarations ──
+   S.tests[id] et S.decl[clé] sont des tableaux [{d:"AAAA-MM-JJ"|null, v:nombre}],
+   triés du plus ancien au plus récent. d:null marque une valeur reprise telle
+   quelle d'avant cette mise à jour, sans date d'origine connue. */
+function bestHist(arr){if(!arr||!arr.length)return null;let b=null;
+ arr.forEach(e=>{if(e.v>0&&(b==null||e.v>b))b=e.v});return b}
+const fmtN=v=>(Math.round(v*10)/10).toString().replace(".",",");
+/* Reprend un dictionnaire d'avant cette version (valeurs scalaires) sans rien
+   perdre : chaque nombre devient une entrée unique, sans date connue. */
+function migrateHistDict(obj){
+ const src=(obj&&typeof obj==="object")?obj:{},out={};
+ for(const k in src){const v=src[k];
+  if(Array.isArray(v))out[k]=v;else if(Number.isFinite(v))out[k]=[{d:null,v}]}
+ return out}
+/* Fusionne deux dictionnaires d'historique (local et distant) sans dupliquer :
+   une entrée est la même des deux côtés si sa date et sa valeur coïncident. */
+function mergeHist(a,b){
+ const out={},keys=new Set([...Object.keys(a||{}),...Object.keys(b||{})]);
+ keys.forEach(k=>{const seen=new Set(),arr=[];
+  [...(a&&a[k]||[]),...(b&&b[k]||[])].forEach(e=>{const sig=e.d+"|"+e.v;
+   if(!seen.has(sig)){seen.add(sig);arr.push(e)}});
+  arr.sort((x,y)=>(x.d||"").localeCompare(y.d||""));out[k]=arr});
+ return out}
+function sparkSvg(arr){
+ const W=260,H=46,P=4,vals=arr.map(e=>e.v),top=Math.max(...vals),low=Math.min(...vals,0),
+  x=i=>P+(i*(W-2*P))/(arr.length-1),y=v=>H-P-((v-low)/((top-low)||1))*(H-2*P),last=arr.length-1;
+ return`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:46px;display:block" aria-label="Évolution des tests">
+  <polyline points="${arr.map((e,i)=>`${x(i).toFixed(1)},${y(e.v).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--aqua)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+  <circle cx="${x(last).toFixed(1)}" cy="${y(arr[last].v).toFixed(1)}" r="3" fill="var(--aqua)"/></svg>`}
+/* Bloc pliable : sparkline + liste datée + suppression du dernier test.
+   kind vaut "tests" ou "decl" — désigne le dictionnaire concerné. */
+function histBlock(kind,key,unit){
+ const arr=(S[kind]||{})[key]||[],open=S.histOpen===kind+"|"+key,hkey=kind+"|"+key;
+ let h=`<button data-act="histt" data-v="${hkey}"
+  style="background:none;border:0;padding:0;margin-top:7px;font-size:12px;color:var(--mute);text-decoration:underline;text-underline-offset:3px">${
+   open?"Masquer l'historique":"Historique"+(arr.length?` (${arr.length})`:"")}</button>`;
+ if(open){
+  h+=`<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)">`;
+  if(arr.length>1)h+=sparkSvg(arr);
+  if(arr.length){
+   h+=`<ol style="list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:2px;max-height:120px;overflow:auto">`+
+    arr.slice().reverse().map(e=>`<li style="display:flex;justify-content:space-between;font-size:12px;color:var(--mute)">
+     <span>${e.d?fSh(e.d):"reprise de l'ancienne version"}</span><span>${fmtN(e.v)} ${esc(unit)}</span></li>`).join("")+`</ol>
+    <button data-act="unlog" data-v="${key}" data-k="${kind}"
+     style="align-self:flex-start;background:none;border:1px solid var(--line);border-radius:4px;padding:3px 8px;font-size:11.5px;color:var(--mute);margin-top:8px">Supprimer le dernier test</button>`
+  }else h+=`<span style="font-size:12px;color:var(--mute)">Aucun test pour l'instant.</span>`;
+  h+=`</div>`}
+ return h}
+
+/* Une ligne de test Monroe (mouvement chronométré ou déclaratif), réutilisée
+   dans « Tests à renseigner » et dans « Focus ». */
+function testRow(m,pinnable){
+ const key="t|"+m.id,arr=(S.tests||{})[m.id]||[],best=bestHist(arr);
+ return`<div style="padding:9px 0;border-top:1px solid var(--line)">
+  <div style="display:flex;align-items:center;gap:10px">
+  ${pinnable?pinBtn(key,m.n):""}
+  <span style="flex:1;min-width:0"><span style="font-size:13.5px;display:block">${esc(m.n)}${
+    best!=null?` · <b style="color:var(--aqua)">${fmtN(best)} ${esc(m.u)}</b>`:""}</span>
+  ${m.d?`<span style="font-size:11.5px;color:var(--mute);display:block;line-height:1.45;margin-top:2px">${esc(m.d)}</span>`:""}
+  <span style="font-size:11px;color:var(--mute);display:block;margin-top:2px">repère ${m.t[0]} / ${m.t[1]} / ${m.t[2]} ${esc(m.u)}</span></span>
+  </div>
+  <div style="display:flex;gap:6px;margin-top:8px">
+  <input class="sin" style="flex:1;min-width:0" type="number" inputmode="numeric"
+   id="in-${m.id}" placeholder="Nouveau test (${esc(m.u)})">
+  <button class="chip" style="padding:8px 14px;flex:none" data-act="log" data-v="${m.id}" data-k="tests">Noter</button></div>
+  ${histBlock("tests",m.id,m.u)}</div>`}
+
 function niveau(){
  const bw=S.profile&&Number.isFinite(S.profile.bw)?S.profile.bw:null;
  const key=[S.updatedAt||0,bw,S.profile&&S.profile.sex,JSON.stringify(S.tests||{}),JSON.stringify(S.decl||{})].join("|");
  if(nivCache&&nivKey===key)return nivCache;
 
- /* ── Les 36 mouvements ── */
+ /* ── Les mouvements Monroe ── */
  const mv36=MONROE.map(m=>{const v=monroeValue(m,bw);
   return{...m,v,sc:monroeScore(v,m.t)}});
 
@@ -2125,6 +2205,27 @@ function vNiveau(){
   <div style="font-size:22px;color:var(--aqua);font-weight:600;margin-top:6px">${P.l} · ${P.pct} %</div></div>
   <div class="pane">`;
 
+ /* ── Synthèse globale ── */
+ {const total=N.mv36.length,rx=N.mv36.filter(m=>m.sc===3).length,
+   mid=N.mv36.filter(m=>m.sc===1||m.sc===2).length,
+   bas=total-rx-mid;
+  h+=`<div class="card" style="padding:18px 20px">
+   <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <b class="dsp" style="font-size:32px">${rx}<span style="font-size:17px;color:var(--mute);font-weight:600"> / ${total}</span></b>
+    <span class="eyebrow">mouvements au niveau Rx</span></div>
+   <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--track)">
+    ${bas?`<span style="width:${bas/total*100}%;height:100%;background:#3E6B62"></span>`:""}
+    ${mid?`<span style="width:${mid/total*100}%;height:100%;background:var(--aqua)"></span>`:""}
+    ${rx?`<span style="width:${rx/total*100}%;height:100%;background:var(--melon)"></span>`:""}
+   </div>
+   <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:var(--mute);font-weight:500;flex-wrap:wrap">
+    <span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#3E6B62;margin-right:5px;vertical-align:-1px"></i>À développer ${bas}</span>
+    <span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--aqua);margin-right:5px;vertical-align:-1px"></i>En cours ${mid}</span>
+    <span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--melon);margin-right:5px;vertical-align:-1px"></i>Rx ${rx}</span>
+   </div></div>`}
+
+ h+=pinnedItemsHTML(N)+nextUpHTML(N);
+
  /* ── Paliers ── */
  h+=`<div class="card"><div class="eyebrow" style="margin-bottom:16px">Progression par palier</div>`;
  N.paliers.forEach(x=>{
@@ -2155,20 +2256,17 @@ function vNiveau(){
   if(ouvert)h+=chainSteps(ch);
   h+=`</div>`});
 
- /* ── Tests déclaratifs ── */
- const manquants=N.mv36.filter(m=>m.k==="test"&&m.sc==null);
+ /* ── Tests déclaratifs ──
+    Toujours visibles, même déjà renseignés : ce sont des tests chronométrés
+    qu'on refait de temps en temps, pas une case qu'on ne coche qu'une fois. */
+ const testMoves=N.mv36.filter(m=>m.k==="test");
+ const restants=testMoves.filter(m=>m.sc==null).length;
  h+=`<div class="card flat" style="margin-top:6px">
   <div class="eyebrow" style="margin-bottom:10px">Tests à renseigner</div>
-  <div style="font-size:12.5px;color:var(--mute);line-height:1.65;margin-bottom:${manquants.length?"14px":"0"}">
-  ${N.mv36.filter(m=>m.sc!=null).length} mouvements sur 36 sont renseignés depuis tes séances.
-  ${manquants.length?"Les suivants sont des tests chronométrés, à faire quand tu veux.":"Tout est complet."}</div>`;
- manquants.forEach(m=>{
-  h+=`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)">
-   <span style="flex:1;min-width:0"><span style="font-size:13.5px;display:block">${esc(m.n)}</span>
-   ${m.d?`<span style="font-size:11.5px;color:var(--mute);display:block;line-height:1.45;margin-top:2px">${esc(m.d)}</span>`:""}
-   <span style="font-size:11px;color:var(--mute);display:block;margin-top:2px">repère ${m.t[0]} / ${m.t[1]} / ${m.t[2]} ${esc(m.u)}</span></span>
-   <input class="sin" style="width:82px;flex:none" type="number" inputmode="numeric"
-    id="tst-${m.id}" data-tst="${m.id}" value="" placeholder="—"></div>`});
+  <div style="font-size:12.5px;color:var(--mute);line-height:1.65;margin-bottom:14px">
+  ${N.mv36.filter(m=>m.sc!=null).length} mouvements sur ${N.mv36.length} sont renseignés depuis tes séances.
+  ${restants?"Les suivants sont des tests chronométrés, à faire quand tu veux.":"Ce sont des tests chronométrés : refais-les quand tu veux pour suivre ta progression."}</div>`;
+ testMoves.forEach(m=>{h+=testRow(m,true)});
  h+=`</div>`;
 
  h+=`<div class="card flat"><div style="font-size:12px;color:var(--mute);line-height:1.7">
@@ -2177,51 +2275,101 @@ function vNiveau(){
   pas une interdiction : un mouvement réalisé hors ordre est enregistré normalement.</div></div>`;
  return h+`<div style="height:26px"></div></div>`}
 
+/* Contenu d'une étape de chaîne — nom, cible, statut, saisie manuelle,
+   charge max éventuelle. Isolé pour être réutilisé dans le détail d'une
+   chaîne et dans la section Focus (voir plus bas). */
+function stepInner(ch,st,i,pinnable){
+ const col=st.etat==="acquis"?ch.col:st.etat==="encours"?"var(--aqua)":"var(--line)";
+ const txt=st.etat==="verrou"?"var(--mute)":"var(--ink)";
+ const unite=st.u||"reps";
+ const cible=st.hold?`${st.r} ${unite}`:st.s>1?`${st.s} × ${st.r}`:`${st.r} ${unite}`;
+ const fait=st.hold?st.vu:st.repEff;
+ const key="c|"+ch.id+"|"+i;
+ let h=`<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+   <span style="font-size:14.5px;font-weight:${st.etat==="encours"?600:500};color:${txt};display:flex;align-items:center;gap:6px">
+    ${pinnable?pinBtn(key,st.n):""}<span>${esc(st.n)}</span></span>
+   <span style="font-size:12px;font-weight:600;color:${st.etat==="verrou"?"var(--mute)":col};white-space:nowrap">${cible}</span></div>`;
+ /* Où j'en suis, et de quelle source vient l'information */
+ if(st.etat!=="verrou"){
+  const src=st.declare!=null&&st.declare>=(st.bestRep||0)?"déclaré":"depuis tes séances";
+  h+=`<div style="font-size:11.5px;color:var(--mute);margin-top:4px">${
+    fait?`${st.hold?fait+" "+unite:st.s+" × "+fait} sur ${cible} · ${src}`:"pas encore renseigné"}</div>`;
+  if(fait&&!st.ok)h+=`<div style="height:6px;border-radius:3px;background:var(--track);margin-top:6px;overflow:hidden">
+    <div style="width:${Math.min(100,Math.round(fait/st.r*100))}%;height:100%;border-radius:3px;background:var(--aqua)"></div></div>`;
+ }else h+=`<div style="font-size:11.5px;color:var(--mute);margin-top:4px">ordre conseillé — après ${esc(ch.steps[i-1].n)}</div>`;
+ /* Déclaration manuelle, toujours accessible même sur une étape verrouillée */
+ {const dclKey=ch.id+":"+i;
+  h+=`<div style="display:flex;align-items:center;gap:7px;margin-top:8px">
+   <span style="font-size:11.5px;color:var(--mute);flex:none">${st.hold?"Je tiens":"Je fais "+st.s+" ×"}</span>
+   <input class="sin" style="width:64px;flex:none;padding:8px 4px;font-size:14px" type="number" inputmode="numeric"
+    id="in-${dclKey}" placeholder="—">
+   <span style="font-size:11.5px;color:var(--mute);flex:none">${unite}</span>
+   <button class="chip" style="padding:7px 11px;font-size:11.5px;margin-left:auto" data-act="log" data-v="${dclKey}" data-k="decl">Noter</button></div>
+   ${histBlock("decl",dclKey,unite)}`}
+ if(st.ld){
+  const rmKey="rm:"+st.ld,rm=bestOf(st.ld),dr=bestHist((S.decl||{})[rmKey]);
+  const val=Math.max(rm||0,dr||0);
+  h+=`<div style="display:flex;align-items:center;gap:7px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">
+   <span style="font-size:11.5px;color:var(--mute);flex:1">Charge max${val?` · ${val.toFixed(val%1?1:0)} kg${rm&&val===rm?" estimée":""}`:""}</span>
+   <input class="sin" style="width:64px;flex:none;padding:8px 4px;font-size:14px" type="number" inputmode="decimal"
+    id="in-${rmKey}" placeholder="—">
+   <button class="chip" style="padding:7px 11px;font-size:11.5px" data-act="log" data-v="${rmKey}" data-k="decl">Noter</button></div>
+   ${histBlock("decl",rmKey,"kg")}`}
+ if(st.src&&st.etat!=="verrou")h+=`<div style="font-size:10.5px;color:var(--mute);margin-top:5px;opacity:.8">${st.src}</div>`;
+ return h}
+
 /* Détail d'une chaîne. Chaque étape peut se valider depuis l'historique
    ou se déclarer à la main, pour ce qui se travaille hors séances notées. */
 function chainSteps(ch){
  let h=`<div style="margin-top:14px;padding-top:6px;border-top:1px solid var(--line)">`;
  ch.steps.forEach((st,i)=>{
   const dernier=i===ch.steps.length-1;
-  const col=st.etat==="acquis"?ch.col:st.etat==="encours"?"var(--aqua)":"var(--line)";
-  const txt=st.etat==="verrou"?"var(--mute)":"var(--ink)";
-  const unite=st.u||"reps";
-  const cible=st.hold?`${st.r} ${unite}`:st.s>1?`${st.s} × ${st.r}`:`${st.r} ${unite}`;
-  const fait=st.hold?st.vu:st.repEff;
   h+=`<div style="display:flex;gap:13px;padding:10px 0">
    <div style="flex:0 0 26px;display:flex;flex-direction:column;align-items:center">
     <div style="width:22px;height:22px;border-radius:50%;flex:none;
      ${st.etat==="acquis"?`background:${ch.col}`:st.etat==="encours"?`border:3px solid var(--aqua)`:`background:var(--sunk);border:2px solid var(--line)`}"></div>
     ${!dernier?`<div style="width:2px;flex:1;min-height:34px;background:${st.etat==="acquis"?ch.col:"var(--line)"};margin-top:4px"></div>`:""}
    </div>
-   <div style="flex:1;min-width:0;padding-bottom:4px">
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
-     <span style="font-size:14.5px;font-weight:${st.etat==="encours"?600:500};color:${txt}">${esc(st.n)}</span>
-     <span style="font-size:12px;font-weight:600;color:${st.etat==="verrou"?"var(--mute)":col};white-space:nowrap">${cible}</span></div>`;
-  /* Où j'en suis, et de quelle source vient l'information */
-  if(st.etat!=="verrou"){
-   const src=st.declare!=null&&st.declare>=(st.bestRep||0)?"déclaré":"depuis tes séances";
-   h+=`<div style="font-size:11.5px;color:var(--mute);margin-top:4px">${
-     fait?`${st.hold?fait+" "+unite:st.s+" × "+fait} sur ${cible} · ${src}`:"pas encore renseigné"}</div>`;
-   if(fait&&!st.ok)h+=`<div style="height:6px;border-radius:3px;background:var(--track);margin-top:6px;overflow:hidden">
-     <div style="width:${Math.min(100,Math.round(fait/st.r*100))}%;height:100%;border-radius:3px;background:var(--aqua)"></div></div>`;
-  }else h+=`<div style="font-size:11.5px;color:var(--mute);margin-top:4px">ordre conseillé — après ${esc(ch.steps[i-1].n)}</div>`;
-  /* Déclaration manuelle, toujours accessible même sur une étape verrouillée */
-  h+=`<div style="display:flex;align-items:center;gap:9px;margin-top:8px">
-    <span style="font-size:11.5px;color:var(--mute);flex:1">${st.hold?"Je tiens":"Je fais "+st.s+" ×"}</span>
-    <input class="sin" style="width:74px;flex:none;padding:8px 4px;font-size:14px" type="number" inputmode="numeric"
-     id="dcl-${ch.id}-${i}" data-dcl="${ch.id}:${i}" value="${st.declare!=null?st.declare:""}" placeholder="—">
-    <span style="font-size:11.5px;color:var(--mute);flex:none;min-width:34px">${unite}</span></div>`;
-  if(st.ld){
-   const rm=bestOf(st.ld),dr=(S.decl||{})["rm:"+st.ld];
-   const val=Math.max(rm||0,Number.isFinite(dr)?dr:0);
-   h+=`<div style="display:flex;align-items:center;gap:9px;margin-top:6px">
-    <span style="font-size:11.5px;color:var(--mute);flex:1">Charge max${val?` · ${val.toFixed(val%1?1:0)} kg${rm&&val===rm?" estimée":""}`:""}</span>
-    <input class="sin" style="width:74px;flex:none;padding:8px 4px;font-size:14px" type="number" inputmode="decimal"
-     id="rm-${st.ld}" data-dcl="rm:${st.ld}" value="${Number.isFinite(dr)?dr:""}" placeholder="—">
-    <span style="font-size:11.5px;color:var(--mute);flex:none;min-width:34px">kg</span></div>`}
-  if(st.src&&st.etat!=="verrou")h+=`<div style="font-size:10.5px;color:var(--mute);margin-top:5px;opacity:.8">${st.src}</div>`;
-  h+=`</div></div>`});
+   <div style="flex:1;min-width:0;padding-bottom:4px">${stepInner(ch,st,i,true)}</div></div>`});
+ return h+`</div>`}
+
+/* Étapes de chaîne et tests Monroe épinglés à la main : une vue condensée
+   de ce qu'on travaille en ce moment, sans dérouler chaque chaîne. */
+function pinnedItemsHTML(N){
+ const rows=[];
+ (S.pin||[]).forEach(k=>{
+  if(k.startsWith("t|")){
+   const m=N.mv36.find(x=>x.id===k.slice(2));if(m)rows.push({t:"t",m})
+  }else{
+   const p=k.split("|"),ch=N.chains.find(c=>c.id===p[1]),i=+p[2];
+   if(ch&&ch.steps[i])rows.push({t:"c",ch,i,st:ch.steps[i]})
+  }});
+ if(!rows.length)return"";
+ let h=`<div class="eyebrow" style="margin:22px 0 12px">Focus</div><div class="card" style="padding:16px">`;
+ rows.forEach((r,idx)=>{
+  h+=`<div style="${idx?"margin-top:14px;padding-top:14px;border-top:1px solid var(--line)":""}">`;
+  h+=r.t==="c"?`<div style="font-size:10.5px;color:var(--mute);margin-bottom:4px">${esc(r.ch.n)}</div>${stepInner(r.ch,r.st,r.i,true)}`:testRow(r.m,true);
+  h+=`</div>`});
+ return h+`</div>`}
+
+/* Suggestions : la première étape non acquise de chaque chaîne, et les tests
+   Monroe pas encore renseignés — ce qu'il y a de plus utile à attaquer maintenant. */
+function nextUpHTML(N){
+ const sugg=[];
+ N.chains.forEach(ch=>{
+  if(!ch.encours)return;
+  const i=ch.steps.indexOf(ch.encours),key="c|"+ch.id+"|"+i;
+  if(!isPinned(key))sugg.push({key,label:ch.encours.n,sub:ch.n})});
+ N.mv36.filter(m=>m.k==="test"&&m.sc==null).forEach(m=>{
+  const key="t|"+m.id;
+  if(!isPinned(key))sugg.push({key,label:m.n,sub:"Test à renseigner"})});
+ if(!sugg.length)return"";
+ let h=`<div class="eyebrow" style="margin:22px 0 12px">À attaquer ensuite</div><div class="card" style="padding:6px 16px">`;
+ sugg.slice(0,8).forEach((s,idx)=>{
+  h+=`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;${idx?"border-top:1px solid var(--line)":""}">
+   <span style="flex:1;min-width:0"><span style="font-size:13.5px;display:block">${esc(s.label)}</span>
+   <span style="font-size:11.5px;color:var(--mute)">${esc(s.sub)}</span></span>
+   <button class="chip" style="padding:6px 12px;font-size:12px" data-act="pin" data-v="${s.key}">Épingler</button></div>`});
  return h+`</div>`}
 
 /* ══════════ RENDU ══════════ */
@@ -2310,6 +2458,17 @@ document.addEventListener("click",ev=>{
   case"msort":S.msort=v;pendingAnchor="movblock";break;
   case"fiche":S.fiche=v;break;
   case"nchain":S.nchain=S.nchain===v?null:v;pendingAnchor=null;break;
+  case"pin":{if(!S.pin)S.pin=[];const i=S.pin.indexOf(v);
+    if(i>=0)S.pin.splice(i,1);else S.pin.push(v);break}
+  case"histt":S.histOpen=S.histOpen===v?null:v;break;
+  case"log":{const dict=b.dataset.k==="tests"?S.tests:S.decl;
+    const inp=document.getElementById("in-"+v);
+    const val=parseFloat(String(inp&&inp.value||"").replace(",","."));
+    if(!(val>0)){alert("Indique une valeur supérieure à zéro.");return}
+    if(!dict[v])dict[v]=[];dict[v].push({d:TODAY,v:val});
+    if(inp)inp.value="";break}
+  case"unlog":{const dict=b.dataset.k==="tests"?S.tests:S.decl;
+    if(dict&&dict[v]&&dict[v].length)dict[v].pop();break}
   case"hv":S.hv=v;S.day=null;pendingAnchor="calblock";break;
   case"moff":{S.moff=Math.min(0,(S.moff||0)+(+v));S.day=null;pendingAnchor="calblock";break}
   case"day":S.day=S.day===v?null:v;pendingAnchor="calblock";break;
@@ -2522,20 +2681,6 @@ document.addEventListener("input",ev=>{const t=ev.target;
   const r=new FileReader();
   r.onload=()=>{S.sharePhoto=r.result;render()};
   r.readAsDataURL(f);return}
- if(t.dataset.dcl){
-  /* Déclaration manuelle : une valeur vide efface la déclaration. */
-  if(!S.decl)S.decl={};
-  const v=parseFloat(String(t.value).replace(",","."));
-  if(t.value===""||!Number.isFinite(v)||v<=0)delete S.decl[t.dataset.dcl];
-  else S.decl[t.dataset.dcl]=v;
-  save();render();return}
- if(t.dataset.tst){
-  /* Test chronométré déclaré : une valeur vide efface la déclaration. */
-  if(!S.tests)S.tests={};
-  const v=parseFloat(String(t.value).replace(",","."));
-  if(t.value===""||!Number.isFinite(v)||v<=0)delete S.tests[t.dataset.tst];
-  else S.tests[t.dataset.tst]=v;
-  save();return}
  if(t.id==="mq"){S.mq=t.value;pendingAnchor="movblock";render();return}
  if(t.id==="mail"){S.email=t.value;return}
  if(t.id==="pw"){S.pw=t.value;return}
@@ -2614,8 +2759,9 @@ function applyRemote(rec){
  const rp=d.profile&&Number.isFinite(d.profile.age)&&Number.isFinite(d.profile.bw)?d.profile:null;
  S.profile=rp||S.profile||null;
  S.lastExport=d.lastExport||S.lastExport||null;
- S.tests=Object.assign({},S.tests||{},d.tests||{});
- S.decl=Object.assign({},S.decl||{},d.decl||{});
+ S.tests=mergeHist(S.tests,migrateHistDict(d.tests));
+ S.decl=mergeHist(S.decl,migrateHistDict(d.decl));
+ S.pin=[...new Set([...(S.pin||[]),...(d.pin||[])])];
  if(d.theme){S.theme=d.theme;applyTheme()}
  /* Mouvements personnalisés : on réunit les deux côtés plutôt que d'en choisir un. */
  const seen=new Set(),merged=[];
