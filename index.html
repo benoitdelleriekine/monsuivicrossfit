@@ -24,38 +24,40 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Raleway:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 button,input,textarea,label,.chip,.tab,.gtab button,.step-btn{touch-action:manipulation}
 .grip{touch-action:none}
-:root{ /* « Mon Suivi CrossFit » — thème sombre par défaut */
+:root{ /* « Mon Suivi CrossFit » — thème sombre par défaut
+  Palette « disques de compétition » : bleu 20 kg, jaune 15 kg, rouge 25 kg, vert 10 kg.
+  --orchid porte désormais le vert (nom historique conservé pour ne rien casser ailleurs). */
   --cloud:#0D0F12;--card:#1A1F26;--sunk:#12161B;--ink:#FFFFFF;--mute:#96A2AE;--line:#2A313A;
-  --aqua:#33D6B0;--orchid:#8B7BD8;--melon:#F2C14E;--alex:#33D6B0;--lava:#E4614F;
+  --aqua:#6D9CEB;--orchid:#5DBF7A;--melon:#E9BC3F;--alex:#6D9CEB;--lava:#F0685F;
   --track:#242B34;--seg0:#4A5560;--barbar:#7C8894;--onacc:#0B1013;
   --sh:0 1px 0 rgba(255,255,255,.03),0 14px 34px -20px rgba(0,0,0,.9);
   --sh-lo:0 1px 0 rgba(255,255,255,.02),0 8px 20px -16px rgba(0,0,0,.8);
 }
 :root[data-theme="light"]{ --cloud:#F4F5F6;--card:#FFFFFF;--sunk:#EEF0F2;--ink:#12161B;--mute:#5E6B76;--line:#DFE3E7;
-  --aqua:#0B7C64;--orchid:#6D5BB5;--melon:#9A6A12;--alex:#0B7C64;--lava:#B93B2A;
+  --aqua:#1F5FC4;--orchid:#2A7B44;--melon:#85650C;--alex:#1F5FC4;--lava:#C8322B;
   --track:#E2E6EA;--seg0:#C3CAD1;--barbar:#98A3AD;--onacc:#FFFFFF;
   --sh:0 1px 2px rgba(18,22,27,.05),0 12px 30px -18px rgba(18,22,27,.28);
   --sh-lo:0 1px 2px rgba(18,22,27,.04),0 6px 16px -14px rgba(18,22,27,.22); }
 @media (prefers-color-scheme:light){ :root[data-theme="auto"]{ --cloud:#F4F5F6;--card:#FFFFFF;--sunk:#EEF0F2;--ink:#12161B;--mute:#5E6B76;--line:#DFE3E7;
-  --aqua:#0B7C64;--orchid:#6D5BB5;--melon:#9A6A12;--alex:#0B7C64;--lava:#B93B2A;
+  --aqua:#1F5FC4;--orchid:#2A7B44;--melon:#85650C;--alex:#1F5FC4;--lava:#C8322B;
   --track:#E2E6EA;--seg0:#C3CAD1;--barbar:#98A3AD;--onacc:#FFFFFF;
   --sh:0 1px 2px rgba(18,22,27,.05),0 12px 30px -18px rgba(18,22,27,.28);
   --sh-lo:0 1px 2px rgba(18,22,27,.04),0 6px 16px -14px rgba(18,22,27,.22); } }
-::selection{background:rgba(51,214,176,.3)}
+::selection{background:rgba(109,156,235,.3)}
 html,body{background:var(--cloud)}
-body{font-family:Raleway,system-ui,-apple-system,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+body{font-family:Barlow,system-ui,-apple-system,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
 #app{max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:calc(98px + env(safe-area-inset-bottom))}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;text-align:left}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px solid var(--aqua);outline-offset:2px}
-.dsp{font-family:Montserrat,Raleway,sans-serif;font-weight:700;letter-spacing:-.015em;line-height:1.02}
+.dsp{font-family:"Barlow Condensed",Barlow,sans-serif;font-weight:700;letter-spacing:-.015em;line-height:1.02}
 .eyebrow{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--mute);font-weight:600}
 .head{padding:calc(30px + env(safe-area-inset-top)) 22px 10px}
-.head h1{font-family:Montserrat,sans-serif;font-weight:700;font-size:38px;letter-spacing:-.032em;line-height:.94;margin-top:5px}
+.head h1{font-family:"Barlow Condensed",sans-serif;font-weight:700;text-transform:uppercase;font-size:44px;letter-spacing:.006em;line-height:.9;margin-top:5px}
 .pane{padding:0 22px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:14px;box-shadow:var(--sh)}
 .card.flat{box-shadow:none;background:var(--sunk);border:1px solid var(--line)}
@@ -85,18 +87,18 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .stats{display:flex;gap:10px;margin-bottom:14px}
 .stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 6px;text-align:center}
-.stat b{display:block;font-family:Montserrat,sans-serif;font-weight:700;font-size:29px;letter-spacing:-.03em}
+.stat b{display:block;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:29px;letter-spacing:-.03em}
 .stat span{font-size:10.5px;color:var(--mute);font-weight:500;line-height:1.3;display:block;margin-top:4px}
 .scroll{display:flex;gap:11px;overflow-x:auto;padding:4px 22px 8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
 .scroll::-webkit-scrollbar{display:none}
 .ms-card{flex:none;width:178px;border-radius:19px;padding:16px;scroll-snap-align:start;color:var(--onacc);box-shadow:var(--sh)}
-.ms-card b{display:block;font-family:Montserrat,sans-serif;font-weight:700;font-size:15.5px;line-height:1.18;margin:10px 0 7px;letter-spacing:-.015em}
+.ms-card b{display:block;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:15.5px;line-height:1.18;margin:10px 0 7px;letter-spacing:-.015em}
 .ms-card small{font-size:11px;opacity:.85;font-weight:500}
 .tag{display:inline-block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:4px 9px;border-radius:999px;background:rgba(127,127,127,.22)}
 .rung{display:flex;align-items:center;gap:13px;padding:7px 0;position:relative}
 .rdot{width:15px;height:15px;border-radius:50%;border:2px solid var(--line);background:var(--sunk);flex:none;z-index:1}
 .rung.done .rdot{background:var(--aqua);border-color:var(--aqua)}
-.rung.now .rdot{background:var(--melon);border-color:var(--melon);box-shadow:0 0 0 5px rgba(242,193,78,.22)}
+.rung.now .rdot{background:var(--melon);border-color:var(--melon);box-shadow:0 0 0 5px rgba(233,188,63,.22)}
 .rline{position:absolute;left:6.5px;top:8px;bottom:8px;width:2px;background:var(--line)}
 .rung span{font-size:13.5px;color:var(--mute)}
 .rung.done span{color:var(--ink)}
@@ -107,7 +109,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .step-btn:active{background:var(--card)}
 .step-val{flex:1;text-align:center;min-width:0}
 .step-val input{width:100%;min-width:0;background:none;border:none;text-align:center;color:var(--ink);
-  font-family:Montserrat,sans-serif;font-weight:700;font-size:44px;letter-spacing:-.035em}
+  font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:44px;letter-spacing:-.035em}
 .step.sm{gap:7px}
 .step.sm .step-btn{width:46px;height:46px;border-radius:14px;font-size:20px}
 .step.sm .step-val input{font-size:clamp(22px,7.5vw,32px)}
@@ -120,7 +122,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .sunit{font-size:11px;color:var(--mute);font-weight:500;flex:none}
 .sdiff{padding:8px 9px;border-radius:999px;border:1px solid var(--line);font-size:10.5px;
   font-weight:600;color:var(--mute);background:var(--sunk);flex:none;white-space:nowrap}
-.se1{font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;color:var(--mute);
+.se1{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:14px;color:var(--mute);
   flex:none;min-width:38px;text-align:right}
 .se1.best{color:var(--melon)}
 .step-val input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -159,7 +161,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .lvseg{flex:1;height:10px;border-radius:5px;background:var(--track)}
 .lvnames{display:flex;justify-content:space-between;font-size:10px;color:var(--mute);font-weight:500}
 .lvnames span{flex:1;text-align:center}
-.hero-n{font-family:Montserrat,sans-serif;font-weight:700;font-size:44px;letter-spacing:-.04em;line-height:.86}
+.hero-n{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:48px;letter-spacing:-.02em;line-height:.86}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* Tablette et ordinateur : colonne plus large, navigation en haut */
 @media (min-width:820px){
@@ -168,7 +170,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
   padding:10px 18px;border-radius:0 0 20px 20px}
  #overlay .sheet{align-items:center}
  .head{padding-top:26px}
- .head h1{font-size:44px}
+ .head h1{font-size:50px}
  .scroll{padding-left:22px;padding-right:22px}
  .sheet-in{border-radius:24px;margin-bottom:6vh;max-width:560px}
  .sheet{align-items:center}
@@ -548,7 +550,7 @@ function vProgres(){
     <button class="btn btn-go" style="flex:1;padding:13px;font-size:14px" data-act="new">Noter une séance</button>
     ${st>0?`<div style="flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
       padding:0 15px;border:1px solid var(--line);border-radius:16px">
-      <b style="font-size:19px;font-family:Montserrat,sans-serif">${st}</b>
+      <b style="font-size:19px;font-family:'Barlow Condensed',sans-serif">${st}</b>
       <span style="font-size:9.5px;color:var(--mute);font-weight:600;letter-spacing:.04em">SEM.</span></div>`:""}
    </div></div>`;
 
@@ -579,11 +581,11 @@ function vProgres(){
    <div class="legend" style="margin-top:11px"><span><i style="background:var(--aqua)"></i>séance</span>
     <span><i style="background:var(--melon)"></i>première fois</span></div>
     <div style="display:flex;gap:6px;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)">
-    <div style="flex:1;text-align:center"><b style="font-family:Montserrat,sans-serif;font-size:18px">${sm.n}</b>
+    <div style="flex:1;text-align:center"><b style="font-family:'Barlow Condensed',sans-serif;font-size:18px">${sm.n}</b>
      <div style="font-size:10px;color:var(--mute);font-weight:600;margin-top:2px">SÉANCES</div></div>
-    <div style="flex:1;text-align:center"><b style="font-family:Montserrat,sans-serif;font-size:18px">${sm.vol.toLocaleString("fr-FR")}</b>
+    <div style="flex:1;text-align:center"><b style="font-family:'Barlow Condensed',sans-serif;font-size:18px">${sm.vol.toLocaleString("fr-FR")}</b>
      <div style="font-size:10px;color:var(--mute);font-weight:600;margin-top:2px">MOUVEMENTS</div></div>
-    <div style="flex:1;text-align:center"><b style="font-family:Montserrat,sans-serif;font-size:18px">${sm.ms}</b>
+    <div style="flex:1;text-align:center"><b style="font-family:'Barlow Condensed',sans-serif;font-size:18px">${sm.ms}</b>
      <div style="font-size:10px;color:var(--mute);font-weight:600;margin-top:2px">PREMIÈRES FOIS</div></div></div>`;
   }
 
@@ -1030,16 +1032,16 @@ function chart(pts,key,unit,isTime){
   let g=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;overflow:visible" role="img" aria-label="Évolution">`;
   [0,.5,1].forEach(f=>{const y=P.t+(H-P.t-P.b)*f;
    g+=`<line x1="${P.l}" y1="${y}" x2="${W-P.r}" y2="${y}" style="stroke:var(--line)" stroke-width="1.2"/>
-       <text x="${P.l-8}" y="${y+4}" style="fill:var(--mute)" font-size="9.5" font-weight="500" text-anchor="end" font-family="Raleway">${fmt(isTime?mn+(mx-mn)*f:mx-(mx-mn)*f)}</text>`});
+       <text x="${P.l-8}" y="${y+4}" style="fill:var(--mute)" font-size="9.5" font-weight="500" text-anchor="end" font-family="Barlow">${fmt(isTime?mn+(mx-mn)*f:mx-(mx-mn)*f)}</text>`});
   const pl=pts.map((p,i)=>X(i)+","+Y(p[key])).join(" ");
   g+=`<polygon points="${P.l},${H-P.b} ${pl} ${W-P.r},${H-P.b}" style="fill:var(--aqua)" opacity=".14"/>
       <polyline fill="none" style="stroke:var(--aqua)" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round" points="${pl}"/>`;
   pts.forEach((p,i)=>{g+=`<circle cx="${X(i)}" cy="${Y(p[key])}" r="4" style="fill:var(--card);stroke:var(--aqua)" stroke-width="2.6"/>`});
   const L=pts[pts.length-1];
-  g+=`<text x="${X(pts.length-1)}" y="${Y(L[key])-13}" style="fill:var(--ink)" font-size="12" font-weight="600" text-anchor="end" font-family="Raleway">${fmt(L[key])}${unit}</text>`;
+  g+=`<text x="${X(pts.length-1)}" y="${Y(L[key])-13}" style="fill:var(--ink)" font-size="12" font-weight="600" text-anchor="end" font-family="Barlow">${fmt(L[key])}${unit}</text>`;
   const sk=Math.ceil(pts.length/5);
   pts.forEach((p,i)=>{if(i%sk===0||i===pts.length-1)
-   g+=`<text x="${X(i)}" y="${H-6}" style="fill:var(--mute)" font-size="9.5" font-weight="500" text-anchor="middle" font-family="Raleway">${p.label}</text>`});
+   g+=`<text x="${X(i)}" y="${H-6}" style="fill:var(--mute)" font-size="9.5" font-weight="500" text-anchor="middle" font-family="Barlow">${p.label}</text>`});
   return g+`</svg>`}
 
 /* ══════════ VUE : NOTER ══════════ */
@@ -1202,7 +1204,7 @@ function vMetcon(mc,idx){
    if(seqm)h+=`<div style="display:flex;align-items:center;gap:12px">
     <span style="font-size:13.5px;color:var(--mute);flex:1">Nombre de passages</span>
     <button class="step-btn sm" data-act="mcpass" data-v="-1" style="width:44px;height:44px;border-radius:13px">−</button>
-    <b style="font-family:Montserrat,sans-serif;font-size:20px;min-width:26px;text-align:center">${Math.max(1,mc.rounds||1)}</b>
+    <b style="font-family:'Barlow Condensed',sans-serif;font-size:20px;min-width:26px;text-align:center">${Math.max(1,mc.rounds||1)}</b>
     <button class="step-btn sm" data-act="mcpass" data-v="1" style="width:44px;height:44px;border-radius:13px">+</button></div>
     <div style="font-size:12px;color:var(--mute);margin-top:10px;line-height:1.55">Chaque mouvement reçoit ses propres répétitions, passage par passage.</div>`;
    else if(!sch)h+=`<div style="display:flex;align-items:center;gap:12px">
@@ -1525,8 +1527,11 @@ function vPicker(){
    Un calque dessiné dans un canvas, exporté en PNG. Trois fonds possibles :
    une photo de la bibliothèque, un aplat sombre, ou rien (calque transparent
    à poser soi-même dans Photos ou Instagram). */
-const SHCOL={aqua:"#33D6B0",gold:"#F2C14E",violet:"#8B7BD8",blanc:"#FFFFFF"};
-const SHCOLN={aqua:"Menthe",gold:"Or",violet:"Violet",blanc:"Blanc"};
+/* Clés internes (aqua/gold/violet) conservées telles quelles (référencées dans le code
+   plus bas) ; seules les teintes et les étiquettes changent pour suivre la palette
+   « disques de compétition ». */
+const SHCOL={aqua:"#6D9CEB",gold:"#E9BC3F",violet:"#5DBF7A",blanc:"#FFFFFF"};
+const SHCOLN={aqua:"Bleu",gold:"Jaune",violet:"Vert",blanc:"Blanc"};
 const SHFMT={"45":{w:1080,h:1350,l:"Publication 4:5"},"916":{w:1080,h:1920,l:"Story 9:16"}};
 
 function shareData(){
@@ -1684,8 +1689,8 @@ async function paintShare(){
   gr.addColorStop(1,"rgba(9,11,14,.94)");
   g.fillStyle=gr;g.fillRect(0,H*0.32,W,H*0.68);}
 
- const MO=(w,s)=>`${w} ${s}px Montserrat, sans-serif`;
- const RA=(w,s)=>`${w} ${s}px Raleway, sans-serif`;
+ const MO=(w,s)=>`${w} ${s}px "Barlow Condensed", sans-serif`;
+ const RA=(w,s)=>`${w} ${s}px Barlow, sans-serif`;
  const blanc="#FFFFFF",mute="rgba(214,222,230,.86)";
  let y=BAS;
 
@@ -1788,8 +1793,8 @@ let shFonts=null;
 function shReady(){
  if(shFonts)return shFonts;
  shFonts=(document.fonts&&document.fonts.load)
-  ?Promise.all(["800 100px Montserrat","700 40px Montserrat","600 30px Montserrat",
-    "600 30px Raleway","500 30px Raleway"].map(f=>document.fonts.load(f))).catch(()=>{})
+  ?Promise.all(['800 100px "Barlow Condensed"','700 40px "Barlow Condensed"','600 30px "Barlow Condensed"',
+    "600 30px Barlow","500 30px Barlow"].map(f=>document.fonts.load(f))).catch(()=>{})
   :Promise.resolve();
  return shFonts}
 
@@ -2214,12 +2219,12 @@ function vNiveau(){
     <b class="dsp" style="font-size:32px">${rx}<span style="font-size:17px;color:var(--mute);font-weight:600"> / ${total}</span></b>
     <span class="eyebrow">mouvements au niveau Rx</span></div>
    <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--track)">
-    ${bas?`<span style="width:${bas/total*100}%;height:100%;background:#3E6B62"></span>`:""}
+    ${bas?`<span style="width:${bas/total*100}%;height:100%;background:var(--seg0)"></span>`:""}
     ${mid?`<span style="width:${mid/total*100}%;height:100%;background:var(--aqua)"></span>`:""}
     ${rx?`<span style="width:${rx/total*100}%;height:100%;background:var(--melon)"></span>`:""}
    </div>
    <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:var(--mute);font-weight:500;flex-wrap:wrap">
-    <span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#3E6B62;margin-right:5px;vertical-align:-1px"></i>À développer ${bas}</span>
+    <span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--seg0);margin-right:5px;vertical-align:-1px"></i>À développer ${bas}</span>
     <span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--aqua);margin-right:5px;vertical-align:-1px"></i>En cours ${mid}</span>
     <span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--melon);margin-right:5px;vertical-align:-1px"></i>Rx ${rx}</span>
    </div></div>`}
@@ -2233,9 +2238,9 @@ function vNiveau(){
   h+=`<div style="margin-bottom:16px">
    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px">
    <span style="font-size:${on?"16.5px":"15px"};font-weight:${on?700:500};color:${on?"var(--ink)":"var(--mute)"}">${x.n}. ${x.l}</span>
-   <b style="font-family:Montserrat,sans-serif;font-size:16px;color:${on?"var(--aqua)":"var(--mute)"}">${x.pct} %</b></div>
+   <b style="font-family:'Barlow Condensed',sans-serif;font-size:16px;color:${on?"var(--aqua)":"var(--mute)"}">${x.pct} %</b></div>
    <div style="height:10px;border-radius:5px;background:var(--track);overflow:hidden">
-    <div style="width:${x.pct}%;height:100%;border-radius:5px;background:${on?"var(--aqua)":"#3E6B62"}"></div></div>
+    <div style="width:${x.pct}%;height:100%;border-radius:5px;background:${on?"var(--aqua)":"var(--seg0)"}"></div></div>
    <div style="font-size:11.5px;color:var(--mute);margin-top:5px">${x.testes} / ${x.total} mouvements renseignés${x.acquis?" · acquis":""}</div>
   </div>`});
  h+=`<div style="font-size:12px;color:var(--mute);line-height:1.6;padding-top:12px;border-top:1px solid var(--line)">
