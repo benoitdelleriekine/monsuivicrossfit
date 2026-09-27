@@ -455,7 +455,19 @@ const entryOf=()=>S.draft&&S.draft.entries.find(e=>e.id===S.focus);
 const blank=()=>({id:uid(),date:TODAY,entries:[],metcons:[],feel:3,note:""});
 const unitLabel=u=>u==="sec"?"secondes":u==="m"?"mètres":"répétitions";
 
-function milestones(ss){const out=[],seen=new Set(),mx={},rm={},rp={};
+/* Recalculée à chaque appel, cette fonction parcourt tout l'historique —
+   coûteux dès plusieurs centaines de séances, et appelée jusqu'à 12 fois
+   par affichage de la vue Année (via statsRange). Mémoïsée sur l'horodatage
+   des données ; retombe sur le calcul complet si on lui passe autre chose
+   que S.sessions (aucun appel actuel ne le fait, gardé par prudence). */
+let msCache=null,msKey=null;
+function milestones(ss){
+ if(ss===S.sessions){
+  const key=S.updatedAt||0;
+  if(msCache&&msKey===key)return msCache;
+  const r=milestonesCalc(ss);msKey=key;msCache=r;return r}
+ return milestonesCalc(ss)}
+function milestonesCalc(ss){const out=[],seen=new Set(),mx={},rm={},rp={};
  [...ss].sort((a,b)=>a.date.localeCompare(b.date)).forEach(s=>(s.entries||[]).forEach(e=>{
   const m=mv(e.movementId);
   if(!seen.has(m.id)){seen.add(m.id);out.push({date:s.date,t:"Découvert",v:m.n,id:m.id})}
@@ -961,9 +973,10 @@ function weekLoad(){
 /* Répartition des patterns : informatif, sans recommandation */
 function patternCard(){
   if(S.sessions.length<6)return"";
-  const rows=patternShare(56).filter(r=>r.v>0);
+  const ps=patternShare(56);
+  const rows=ps.filter(r=>r.v>0);
   if(rows.length<3)return"";
-  const absent=patternShare(56).filter(r=>!r.v).map(r=>r.n);
+  const absent=ps.filter(r=>!r.v).map(r=>r.n);
   return`<div class="pane"><div class="card flat">
    <button style="width:100%;display:flex;justify-content:space-between;align-items:center" data-act="pat">
    <span class="eyebrow">Ce que tu travailles</span>
@@ -1086,7 +1099,14 @@ function mcTotals(mc){
  return out}
 
 /* ══════════ VOLUME AGRÉGÉ (travail spécifique + metcon) ══════════ */
+/* Même logique que milestones() : un petit cache par nombre de jours
+   demandé (30 et 56 sont les seules valeurs utilisées dans l'app). */
+let volCache={};
 function volumeSince(days){
+ const key=days+":"+(S.updatedAt||0);
+ if(volCache[key])return volCache[key];
+ const r=volumeSinceCalc(days);volCache[key]=r;return r}
+function volumeSinceCalc(days){
  const lim=new Date();lim.setDate(lim.getDate()-days);const from=iso(lim);
  const by={};
  const add=(id,f,v,src)=>{if(!v)return;const o=by[id]=by[id]||{reps:0,dist:0,cal:0,ton:0,mcReps:0,mcDist:0};
@@ -1114,12 +1134,16 @@ const PATTERNS=[
  ["Monostructurel",["row","bike","ski","assault","run","shuttle","du","burpee","bfb"]],
  ["Port de charge",["farmer","sled"]]
 ];
+let patCache={};
 function patternShare(days){
+ const key=days+":"+(S.updatedAt||0);
+ if(patCache[key])return patCache[key];
  const by=volumeSince(days),tot={};
  PATTERNS.forEach(([n,ids])=>{tot[n]=0;
   ids.forEach(id=>{const o=by[id];if(o)tot[n]+=o.reps+Math.round(o.dist/50)+o.cal})});
  const max=Math.max(1,...Object.values(tot));
- return PATTERNS.map(([n])=>({n,v:tot[n],pct:tot[n]/max}))}
+ const r=PATTERNS.map(([n])=>({n,v:tot[n],pct:tot[n]/max}));
+ patCache[key]=r;return r}
 
 function itemLabel(it,st){const m=mv(it.movementId);
  if(it.cal)return`${it.cal} cal ${esc(m.n)}`;
@@ -2422,8 +2446,19 @@ document.addEventListener("click",ev=>{
       MC.items.push({movementId:v,reps:null,weight:null,dist:null,cal:null,seq:null});
       S.picker=false;S.q=""}
     else addMove(v);break}
-  case"create":{const id=createMove(S.q);if(id)addMove(id);break}
-  case"createAsk":{const id=createMove(prompt("Nom du mouvement ?"));if(id)addMove(id);break}
+  /* Un mouvement fraîchement créé doit rejoindre la même destination que le
+     sélecteur visait déjà — exactement la même règle que "add" ci-dessus.
+     Avant ce correctif, la création court-circuitait cette vérification et
+     un mouvement créé depuis un metcon atterrissait quand même dans le
+     travail spécifique. */
+  case"create":{const id=createMove(S.q);if(!id)break;
+    if(S.pickFor==="metcon"&&MC){MC.items.push({movementId:id,reps:null,weight:null,dist:null,cal:null,seq:null});
+      S.picker=false;S.q=""}
+    else addMove(id);break}
+  case"createAsk":{const id=createMove(prompt("Nom du mouvement ?"));if(!id)break;
+    if(S.pickFor==="metcon"&&MC){MC.items.push({movementId:id,reps:null,weight:null,dist:null,cal:null,seq:null});
+      S.picker=false;S.q=""}
+    else addMove(id);break}
   case"focus":{S.focus=b.dataset.id;const e=S.draft.entries.find(x=>x.id===S.focus);if(e)seed(e.movementId);break}
   case"unfocus":S.focus=null;break;
   case"rm":S.draft.entries=S.draft.entries.filter(e=>e.id!==b.dataset.id);break;
@@ -2557,11 +2592,20 @@ function pushSoon(){
  if(!S.cloud||!S.cloud.user||!window.CLOUD)return;
  S.cloud.status="pending";clearTimeout(syncTimer);
  syncTimer=setTimeout(async()=>{
-  try{await window.CLOUD.push(payload());S.cloud.status="ok"}
+  try{
+   /* Verrou optimiste : on ne pousse que si personne n'a écrit sur le compte
+      depuis notre dernière lecture. Si quelqu'un l'a fait entre-temps, on ne
+      l'écrase pas en silence — on relance une synchro complète pour arbitrer. */
+   const r=await window.CLOUD.push(payload(),S.cloud.serverUpdatedAt);
+   if(r&&r.conflict){S.cloud.status="pending";render();await cloudSync();return}
+   if(r&&r.serverUpdatedAt)S.cloud.serverUpdatedAt=r.serverUpdatedAt;
+   S.cloud.status="ok"}
   catch(e){S.cloud.status="err"}
   render()},1200)}
 
-function applyRemote(d){
+function applyRemote(rec){
+ const d=rec&&rec.payload?rec.payload:(rec||{});
+ if(rec&&rec.serverUpdatedAt)S.cloud.serverUpdatedAt=rec.serverUpdatedAt;
  S.sessions=(d.sessions||[]).map(x=>({metcons:[],entries:[],...x}));
  /* Les séances viennent du cloud, mais les réglages ne sont écrasés que si la
     version distante en possède un : une ligne poussée avant la création du profil
@@ -2578,7 +2622,7 @@ function applyRemote(d){
  [...(d.custom||[]),...(S.custom||[])].forEach(c=>{if(c&&!seen.has(c.id)){seen.add(c.id);merged.push(c)}});
  const grew=merged.length!==(d.custom||[]).length;
  S.custom=merged;
- S.updatedAt=d.updatedAt||Date.now();
+ S.updatedAt=Date.now();
  seedProfil();
  try{localStorage.setItem(KEY,JSON.stringify(payload(true)))}catch(e){}
  /* Ce que le cloud ne connaissait pas lui est renvoyé. */
@@ -2589,16 +2633,27 @@ async function cloudSync(){
  S.cloud.busy=true;S.cloud.status="pending";render();
  try{
   const r=await window.CLOUD.pull();
-  const localHas=S.sessions.length>0,remoteHas=r&&(r.sessions||[]).length>0;
-  if(!r||!remoteHas){await window.CLOUD.push(payload())}
-  else if(!localHas||(r.updatedAt||0)>=(S.updatedAt||0)){applyRemote(r)}
-  else{
-   /* Les deux côtés ont des données et le local est plus récent : on demande. */
-   const keepLocal=confirm(
-    "Ton compte contient déjà "+(r.sessions||[]).length+" séance(s), et ce téléphone en a "+
-    S.sessions.length+" plus récentes.\n\nOK = garder celles de ce téléphone et écraser le compte.\n"+
-    "Annuler = récupérer celles du compte.");
-   if(keepLocal)await window.CLOUD.push(payload());else applyRemote(r)}
+  const remote=r&&r.payload?r.payload:null;
+  const localHas=S.sessions.length>0,remoteHas=remote&&(remote.sessions||[]).length>0;
+  if(!r||!remoteHas){
+   const res=await window.CLOUD.push(payload());
+   if(res&&res.serverUpdatedAt)S.cloud.serverUpdatedAt=res.serverUpdatedAt}
+  else if(r.serverUpdatedAt)S.cloud.serverUpdatedAt=r.serverUpdatedAt;
+  /* L'arbitrage compare désormais l'horodatage posé par le serveur Postgres
+     (fiable, immun à l'horloge d'un téléphone mal réglé) plutôt qu'un
+     horodatage écrit par le client lui-même dans le JSON. */
+  const serverTime=r&&r.serverUpdatedAt?new Date(r.serverUpdatedAt).getTime():0;
+  if(remoteHas){
+   if(!localHas||serverTime>=(S.updatedAt||0)){applyRemote(r)}
+   else{
+    /* Les deux côtés ont des données et le local est plus récent : on demande. */
+    const keepLocal=confirm(
+     "Ton compte contient déjà "+(remote.sessions||[]).length+" séance(s), et ce téléphone en a "+
+     S.sessions.length+" plus récentes.\n\nOK = garder celles de ce téléphone et écraser le compte.\n"+
+     "Annuler = récupérer celles du compte.");
+    if(keepLocal){const res=await window.CLOUD.push(payload());
+     if(res&&res.serverUpdatedAt)S.cloud.serverUpdatedAt=res.serverUpdatedAt}
+    else applyRemote(r)}}
   S.cloud.status="ok"}
  catch(e){S.cloud.status="err"}
  S.cloud.busy=false;render()}
@@ -2661,19 +2716,38 @@ if (configured) {
       if (error) throw error;
     };
 
+    /* Renvoie le contenu ET l'horodatage posé par Postgres (colonne updated_at,
+       maintenue par un déclencheur côté base — voir supabase.sql). C'est ce
+       repère, pas un horodatage écrit par le client, qui sert à l'arbitrage. */
     CLOUD.pull = async () => {
-      const { data, error } = await sb.from("app_state").select("data").maybeSingle();
+      const { data, error } = await sb.from("app_state").select("data, updated_at").maybeSingle();
       if (error) throw error;
-      return data ? data.data : null;
+      return data ? { payload: data.data, serverUpdatedAt: data.updated_at } : null;
     };
 
-    CLOUD.push = async (payload) => {
+    /* Verrou optimiste : si on connaît la version qu'on a lue en dernier
+       (knownUpdatedAt), on n'écrase que si elle n'a pas changé depuis —
+       sinon quelqu'un d'autre a écrit entre-temps, et on le signale au lieu
+       d'écraser son travail en silence. Sans repère connu (première synchro
+       d'un appareil), on fait un upsert classique : rien à protéger encore. */
+    CLOUD.push = async (payload, knownUpdatedAt) => {
       const { data: { user } } = await sb.auth.getUser();
-      if (!user) return;
-      const { error } = await sb.from("app_state")
-        .upsert({ user_id: user.id, data: payload, updated_at: new Date().toISOString() },
-                { onConflict: "user_id" });
+      if (!user) return { ok: false };
+      if (knownUpdatedAt) {
+        const { data, error } = await sb.from("app_state")
+          .update({ data: payload })
+          .eq("user_id", user.id)
+          .eq("updated_at", knownUpdatedAt)
+          .select("updated_at");
+        if (error) throw error;
+        if (data && data.length) return { ok: true, serverUpdatedAt: data[0].updated_at };
+        return { ok: false, conflict: true };
+      }
+      const { data, error } = await sb.from("app_state")
+        .upsert({ user_id: user.id, data: payload }, { onConflict: "user_id" })
+        .select("updated_at");
       if (error) throw error;
+      return { ok: true, serverUpdatedAt: data && data[0] ? data[0].updated_at : null };
     };
 
     sb.auth.onAuthStateChange((_e, session) => {
