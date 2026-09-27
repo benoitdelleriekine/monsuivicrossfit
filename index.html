@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta http-equiv="Content-Security-Policy" content="
  default-src 'self';
@@ -2773,7 +2773,13 @@ function applyRemote(rec){
  [...(d.custom||[]),...(S.custom||[])].forEach(c=>{if(c&&!seen.has(c.id)){seen.add(c.id);merged.push(c)}});
  const grew=merged.length!==(d.custom||[]).length;
  S.custom=merged;
- S.updatedAt=Date.now();
+ /* Important : ne PAS estampiller avec Date.now() ici. On vient de recevoir
+    l'état du serveur, donc le repère local doit désormais correspondre à
+    l'horodatage serveur (et non à "maintenant"), sinon toute ouverture de
+    l'app sans la moindre modification locale ferait paraître ce téléphone
+    "plus récent" que le compte au prochain lancement, et ferait ressurgir
+    à tort la question de conflit. */
+ S.updatedAt=(rec&&rec.serverUpdatedAt)?new Date(rec.serverUpdatedAt).getTime():Date.now();
  seedProfil();
  try{localStorage.setItem(KEY,JSON.stringify(payload(true)))}catch(e){}
  /* Ce que le cloud ne connaissait pas lui est renvoyé. */
