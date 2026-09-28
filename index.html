@@ -412,7 +412,7 @@ function weeksGrid(n){const rows=[],m=new Date();m.setDate(m.getDate()-((m.getDa
 
 /* ══════════ ÉTAT ══════════ */
 let S={sessions:[],custom:[],bar:15,tab:"progres",draft:null,focus:null,picker:false,q:"",prog:null,open:null,
- profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},pin:[],histOpen:null,nchain:null,share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
+ profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},pin:[],histOpen:null,nchain:null,nfilt:"tout",share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
  updatedAt:0,cloud:{enabled:false,user:null,status:"",busy:false,sent:false},email:"",otp:"",
  d:{w:0,reps:5,diff:"juste",level:0,dist:500,min:2,sec:0,age:30,bw:60}};
 /* Instantané des données, avec horodatage pour arbitrer la synchronisation */
@@ -1094,13 +1094,31 @@ function mcTotals(mc){
      et sur le nombre de tours : elle décrit déjà tous ses passages. */
   const propre=!car&&it.seq&&it.seq.length?it.seq:null;
   const follows=!propre&&st.sch&&it.lad!==false&&!car;
+  /* Un mouvement cardio peut lui aussi suivre le schéma commun (distance
+     ou calories, selon it.ladU) plutôt que de répéter la même valeur
+     à chaque tour. */
+  const followsCar=car&&st.sch&&it.lad!==false;
+  const ladU=it.ladU==="m"?"m":"cal";
   const reps=car?0:propre?propre.reduce((a,b)=>a+b,0)
    :(follows?st.sch.reduce((a,b)=>a+b,0):(it.reps||0)*st.n);
-  const dist=(it.dist||0)*st.n,cal=(it.cal||0)*st.n;
+  const dist=(followsCar&&ladU==="m")?st.sch.reduce((a,b)=>a+b,0):(it.dist||0)*st.n;
+  const cal=(followsCar&&ladU==="cal")?st.sch.reduce((a,b)=>a+b,0):(it.cal||0)*st.n;
   if(!reps&&!dist&&!cal)return;
   out.push({id:m.id,n:m.n,reps,dist,cal,ton:reps*(it.weight||0),
    txt:cal?cal+" cal":dist?dist+" m":reps+" "+(m.u==="sec"?"s":m.u==="m"?"m":"reps")})});
  return out}
+
+/* Même volume, mais un mouvement répété sur plusieurs lignes (une par tour,
+   faute de mieux avant que les mouvements cardio suivent le schéma commun)
+   n'affiche plus qu'un seul total au lieu d'autant de lignes que de lignes
+   saisies. */
+function mcTotalsMerged(mc){
+ const by={};
+ mcTotals(mc).forEach(t=>{
+  const o=by[t.id]=by[t.id]||{id:t.id,n:t.n,reps:0,dist:0,cal:0,ton:0};
+  o.reps+=t.reps;o.dist+=t.dist;o.cal+=t.cal;o.ton+=t.ton});
+ return Object.values(by).map(o=>{const m=mv(o.id);
+  return{...o,txt:o.cal?o.cal+" cal":o.dist?o.dist+" m":o.reps+" "+(m.u==="sec"?"s":m.u==="m"?"m":"reps")}})}
 
 /* ══════════ VOLUME AGRÉGÉ (travail spécifique + metcon) ══════════ */
 /* Même logique que milestones() : un petit cache par nombre de jours
@@ -1149,7 +1167,8 @@ function patternShare(days){
  const r=PATTERNS.map(([n])=>({n,v:tot[n],pct:tot[n]/max}));
  patCache[key]=r;return r}
 
-function itemLabel(it,st){const m=mv(it.movementId);
+function itemLabel(it,st){const m=mv(it.movementId),car=m.k==="cardio";
+ if(car&&st&&st.sch&&it.lad!==false)return`${st.label} ${it.ladU==="m"?"m":"cal"} ${esc(m.n)}`;
  if(it.cal)return`${it.cal} cal ${esc(m.n)}`;
  if(it.dist)return`${it.dist} m ${esc(m.n)}`;
  if(it.seq&&it.seq.length)return`${it.seq.join("-")} ${esc(m.n)}${it.weight?" @ "+it.weight+" kg":""}`;
@@ -1242,10 +1261,20 @@ function vMetcon(mc,idx){
      <button data-act="mcitemdel" data-i="${i}" aria-label="Retirer" style="color:var(--mute);font-size:19px">×</button>
     </span></span>`+
     (car
-     ?`<div style="flex:1;min-width:0"><input class="sin" type="number" inputmode="numeric" id="mi-${i}-dist"
-        data-mi="${i}" data-f="dist" value="${it.dist||""}" placeholder="—" aria-label="Distance"></div><span class="sunit">m</span>
-       <div style="flex:1;min-width:0"><input class="sin" type="number" inputmode="numeric" id="mi-${i}-cal"
-        data-mi="${i}" data-f="cal" value="${it.cal||""}" placeholder="—" aria-label="Calories"></div><span class="sunit">cal</span>`
+     ?(follows
+       ?`<div style="flex:1;min-width:0"><button class="chip on-a" style="width:100%;text-align:center;box-shadow:none"
+           data-act="mclad" data-i="${i}">${ST.label} ${it.ladU==="m"?"m":"cal"}</button></div>
+         <div class="chips" style="flex:none;gap:4px">
+          <button class="chip" style="padding:8px 11px;font-size:11.5px${it.ladU!=="m"?";background:var(--ink);color:var(--onacc);border-color:var(--ink);font-weight:700":""}"
+           data-act="mcladu" data-i="${i}" data-v="cal">cal</button>
+          <button class="chip" style="padding:8px 11px;font-size:11.5px${it.ladU==="m"?";background:var(--ink);color:var(--onacc);border-color:var(--ink);font-weight:700":""}"
+           data-act="mcladu" data-i="${i}" data-v="m">m</button></div>`
+       :`<div style="flex:1;min-width:0"><input class="sin" type="number" inputmode="numeric" id="mi-${i}-dist"
+          data-mi="${i}" data-f="dist" value="${it.dist||""}" placeholder="—" aria-label="Distance"></div><span class="sunit">m</span>
+         <div style="flex:1;min-width:0"><input class="sin" type="number" inputmode="numeric" id="mi-${i}-cal"
+          data-mi="${i}" data-f="cal" value="${it.cal||""}" placeholder="—" aria-label="Calories"></div><span class="sunit">cal</span>
+         ${ST.sch?`<button class="sdiff" data-act="mclad" data-i="${i}">suit</button>`:""}
+         ${ST.seq?`<div style="flex:1 0 100%;font-size:11px;color:var(--mute);margin-top:5px;line-height:1.5">Pour un mouvement cardio qui change à chaque passage (75-55-35 cal…), utilise plutôt « Schéma dégressif ».</div>`:""}`)
      :(follows
       ?`<div style="flex:1;min-width:0"><button class="chip on-a" style="width:100%;text-align:center;box-shadow:none"
           data-act="mclad" data-i="${i}">${ST.label}</button></div><span class="sunit">reps</span>`
@@ -1273,7 +1302,7 @@ function vMetcon(mc,idx){
    <div class="chips">`+rec.map(id=>`<button class="chip" style="padding:8px 13px;font-size:12.5px"
     data-act="mcquick" data-v="${id}">${esc(mv(id).n)}</button>`).join("")+`</div>`;
   h+=`<button class="btn btn-quiet" style="margin-top:12px;padding:13px;font-size:13.5px" data-act="mcpick">+ Ajouter un mouvement</button>`;
-  const tot=mcTotals(mc);
+  const tot=mcTotalsMerged(mc);
   if(tot.length&&(ST.sch||ST.n>1||mc.items.some(x=>x.seq)))h+=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
    <div class="eyebrow" style="margin-bottom:8px">Volume total</div>`+
    tot.map(t=>`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13.5px">
@@ -2195,7 +2224,158 @@ function niveau(){
  nivKey=key;nivCache=r;return r}
 
 
-/* ══════════ ÉCRAN NIVEAU ══════════ */
+/* ══════════ ÉCRAN NIVEAU ══════════
+   Catalogue unifié : chaque mouvement Monroe et chaque étape de chaîne
+   devient une carte de même forme (statut, valeur/cible, critère,
+   prérequis), regroupées par compartiment (le vocabulaire commun à
+   MONROE.e et CHAINS.z) et filtrables par statut. Rien dans les données
+   n'est modifié : on ne fait que recomposer l'affichage de niveau(). */
+
+/* Couleur d'un compartiment ; retombe sur un gris neutre si absent */
+const catCol=z=>ZCOL[z]||"var(--seg0)";
+
+/* Statut à 4 états, commun aux deux systèmes.
+   — Monroe : jamais verrouillé (philosophie « hors ordre » de l'appli) :
+     pas encore testé = à débloquer côté affichage seulement (« débloqué »),
+     une valeur sous le meilleur seuil = en cours, seuil du haut = Rx.
+   — Chaîne : verrou/en cours/acquis viennent déjà de niveau(). */
+const monroeStatus=sc=>sc===3?"rx":sc==null?"ready":"progress";
+const chainStepStatus=etat=>etat==="acquis"?"rx":etat==="encours"?"progress":"locked";
+const STATUS_V={
+ locked:{label:"À débloquer",bg:"transparent",bd:"var(--line)",col:"var(--mute)"},
+ ready:{label:"Débloqué",bg:"var(--sunk)",bd:"var(--line)",col:"var(--ink)"},
+ progress:{label:"En cours",bg:"var(--aqua)",bd:"var(--aqua)",col:"var(--onacc)"},
+ rx:{label:"Rx",bg:"var(--melon)",bd:"var(--melon)",col:"var(--onacc)"}};
+
+/* Corps de carte pour un mouvement Monroe : valeur/cible, barre, critère,
+   saisie de test et historique — repris de l'ancien testRow(). */
+function monRowBody(m){
+ const goal=m.t[2],val=m.v;
+ const pct=val!=null?Math.min(100,Math.round(val/goal*100)):0;
+ const crit=(m.d?esc(m.d)+" · ":"")+`repère ${m.t[0]} / ${m.t[1]} / ${m.t[2]} ${esc(m.u)}`;
+ return`<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:2px 0 6px">
+   <span class="dsp" style="font-size:26px">${val!=null?fmtN(val):"—"}<span style="font-size:15px;color:var(--mute);font-weight:600"> / ${fmtN(goal)} ${esc(m.u)}</span></span></div>
+  <div style="height:8px;border-radius:4px;background:var(--sunk);overflow:hidden;margin-bottom:10px">
+   <div style="width:${pct}%;height:100%;border-radius:4px;background:${m.sc===3?"var(--melon)":"var(--aqua)"}"></div></div>
+  <div style="font-size:12.5px;color:var(--mute);line-height:1.5;margin-bottom:10px">${crit}</div>
+  <div style="display:flex;gap:7px;margin-bottom:4px">
+   <input class="sin" style="flex:1;min-width:0" type="number" inputmode="numeric"
+    id="in-${m.id}" placeholder="Nouveau test (${esc(m.u)})">
+   <button class="chip" style="padding:10px 16px;flex:none" data-act="log" data-v="${m.id}" data-k="tests">Noter</button></div>
+  ${histBlock("tests",m.id,m.u)}`}
+
+/* Corps de carte pour une étape de chaîne : valeur/cible, barre, où-j'en-suis,
+   prérequis (l'étape précédente), déclaration manuelle et charge max
+   éventuelle — repris de l'ancien stepInner(). */
+function chainRowBody(ch,st,i){
+ const unite=st.u||"reps";
+ const cible=st.hold?`${st.r} ${unite}`:st.s>1?`${st.s} × ${st.r}`:`${st.r} ${unite}`;
+ const fait=st.hold?st.vu:st.repEff;
+ const pct=fait?Math.min(100,Math.round(fait/st.r*100)):0;
+ const src=st.declare!=null&&st.declare>=(st.bestRep||0)?"déclaré":"depuis tes séances";
+ const sub=st.etat==="verrou"?`ordre conseillé — après ${esc(ch.steps[i-1].n)}`
+  :(fait?`${st.hold?fait+" "+unite:st.s+" × "+fait} sur ${cible} · ${src}`:"pas encore renseigné");
+ let h=`<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:2px 0 4px">
+   <span class="dsp" style="font-size:26px">${fait?fmtN(fait):"—"}<span style="font-size:15px;color:var(--mute);font-weight:600"> / ${esc(cible)}</span></span></div>`;
+ if(fait)h+=`<div style="height:8px;border-radius:4px;background:var(--sunk);overflow:hidden;margin-bottom:8px">
+   <div style="width:${pct}%;height:100%;border-radius:4px;background:${st.etat==="acquis"?"var(--melon)":"var(--aqua)"}"></div></div>`;
+ h+=`<div style="font-size:12.5px;color:var(--mute);line-height:1.5;margin-bottom:10px">${esc(sub)}</div>`;
+ if(i>0){const prev=ch.steps[i-1],ok=prev.etat==="acquis";
+  h+=`<div style="display:flex;align-items:center;gap:7px;font-size:12px;color:${ok?"var(--aqua)":"var(--mute)"};margin-bottom:10px">
+   <span>${ok?"●":"○"}</span><span>${esc(prev.n)}</span></div>`}
+ {const dclKey=ch.id+":"+i;
+  h+=`<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+   <span style="font-size:11.5px;color:var(--mute);flex:none">${st.hold?"Je tiens":"Je fais "+st.s+" ×"}</span>
+   <input class="sin" style="width:64px;flex:none;padding:10px 4px;font-size:14px" type="number" inputmode="numeric"
+    id="in-${dclKey}" placeholder="—">
+   <span style="font-size:11.5px;color:var(--mute);flex:none">${esc(unite)}</span>
+   <button class="chip" style="padding:9px 13px;font-size:12px;margin-left:auto" data-act="log" data-v="${dclKey}" data-k="decl">Noter</button></div>
+   ${histBlock("decl",dclKey,unite)}`}
+ if(st.ld){
+  const rmKey="rm:"+st.ld,rm=bestOf(st.ld),dr=bestHist((S.decl||{})[rmKey]);
+  const val=Math.max(rm||0,dr||0);
+  h+=`<div style="display:flex;align-items:center;gap:7px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">
+   <span style="font-size:11.5px;color:var(--mute);flex:1">Charge max${val?` · ${val.toFixed(val%1?1:0)} kg${rm&&val===rm?" estimée":""}`:""}</span>
+   <input class="sin" style="width:64px;flex:none;padding:10px 4px;font-size:14px" type="number" inputmode="decimal"
+    id="in-${rmKey}" placeholder="—">
+   <button class="chip" style="padding:9px 13px;font-size:12px" data-act="log" data-v="${rmKey}" data-k="decl">Noter</button></div>
+   ${histBlock("decl",rmKey,"kg")}`}
+ if(st.src&&st.etat!=="verrou")h+=`<div style="font-size:10.5px;color:var(--mute);margin-top:6px;opacity:.8">${esc(st.src)}</div>`;
+ return h}
+
+/* Coquille commune à toute carte : bandeau catégorie, épingle, nom,
+   étiquette palier/chaîne · compartiment, et statut (tampon Rx ou pastille). */
+function cardShell(o){
+ const isRx=o.status==="rx",locked=o.status==="locked",v=STATUS_V[o.status];
+ return`<div style="background:${locked?"transparent":"var(--card)"};
+   border:${locked?"1px dashed var(--line)":isRx?"1px solid var(--melon)":"1px solid var(--line)"};
+   border-radius:20px;padding:16px 18px;margin-bottom:12px;opacity:${locked?.62:1}">
+  <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:10px">
+   ${pinBtn(o.key,o.name)}
+   <span style="flex:0 0 5px;height:36px;border-radius:3px;background:${catCol(o.zone)};margin-top:1px"></span>
+   <span style="flex:1;min-width:0">
+    <span class="dsp" style="display:block;font-weight:700;font-size:18px;text-transform:uppercase;line-height:1.05;
+     color:${locked?"var(--mute)":"var(--ink)"}">${esc(o.name)}</span>
+    <span style="display:block;font-size:11.5px;color:var(--mute);margin-top:2px">${o.tier===o.zone?esc(o.tier):esc(o.tier)+" · "+esc(o.zone)}</span></span>
+   ${isRx?`<span class="dsp" style="width:38px;height:38px;flex:none;border:2px solid var(--melon);border-radius:50%;
+     color:var(--melon);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;transform:rotate(-8deg)">RX</span>`
+    :`<span class="dsp" style="font-weight:700;font-size:11.5px;padding:4px 10px;border-radius:999px;background:${v.bg};
+     color:${v.col};border:1px solid ${v.bd};white-space:nowrap;flex:none;margin-top:3px">${v.label}</span>`}
+  </div>
+  ${o.body}</div>`}
+
+/* Aplatit MONROE (jamais verrouillé) et les étapes de CHAINS (verrou/en
+   cours/acquis déjà calculés) en une seule liste de cartes normalisées. */
+function catalogue(N){
+ const rows=[];
+ N.mv36.forEach(m=>rows.push({key:"t|"+m.id,zone:m.e,tier:"Palier "+m.p,name:m.n,
+  status:monroeStatus(m.sc),body:monRowBody(m)}));
+ N.chains.forEach(ch=>ch.steps.forEach((st,i)=>rows.push({key:"c|"+ch.id+"|"+i,zone:ch.z,tier:ch.n,name:st.n,
+  status:chainStepStatus(st.etat),body:chainRowBody(ch,st,i)})));
+ return rows}
+
+const NFILTS=[["tout","Tout"],["progress","En cours"],["ready","Débloqués"],["locked","À débloquer"],["rx","Rx"]];
+
+/* Puces de filtre par statut, avec leur nombre — sur la liste complète,
+   pas sur ce qui est déjà filtré, pour que les autres puces restent cliquables. */
+function filterChipsHTML(rows){
+ const c={tout:rows.length,progress:0,ready:0,locked:0,rx:0};
+ rows.forEach(r=>c[r.status]++);
+ return`<div class="chips" style="margin:14px 0 4px">`+NFILTS.map(([k,l])=>
+   `<button class="chip ${((S.nfilt||"tout")===k)?"on":""}" data-act="nfilt" data-v="${k}">${l} <span style="opacity:.7">${c[k]}</span></button>`)
+  .join("")+`</div>`}
+
+/* Le catalogue filtré, groupé par compartiment (ordre de CATZ), chaque
+   section n'apparaissant que si elle contient au moins une carte visible. */
+function catalogHTML(N){
+ const rows=catalogue(N),filt=S.nfilt||"tout";
+ let h=filterChipsHTML(rows);
+ const shown=filt==="tout"?rows:rows.filter(r=>r.status===filt);
+ if(!shown.length)return h+`<div class="card" style="margin-top:12px"><div style="font-size:13.5px;color:var(--mute)">
+  Aucun mouvement dans ce filtre pour l'instant.</div></div>`;
+ const zones=[].concat(...Object.values(CATZ));
+ zones.forEach(z=>{
+  const inZ=shown.filter(r=>r.zone===z);
+  if(!inZ.length)return;
+  h+=`<div class="eyebrow" style="margin:20px 0 10px;display:flex;align-items:center;gap:8px">
+   <span style="width:9px;height:9px;border-radius:2px;background:${catCol(z)}"></span>${esc(z)}</div>`;
+  inZ.forEach(r=>h+=cardShell(r))});
+ return h}
+
+/* En-tête « Par catégorie » : reprend tel quel le pourcentage par
+   compartiment déjà calculé dans niveau(), sans nouveau calcul. */
+function catBarsHTML(N){
+ const zones=N.cats.flatMap(x=>x.zones);
+ if(!zones.length)return"";
+ return`<div class="card"><div class="eyebrow" style="margin-bottom:14px">Par catégorie</div>
+  <div style="display:flex;flex-direction:column;gap:11px">`+
+  zones.map(z=>`<div style="display:flex;align-items:center;gap:10px">
+   <span style="width:98px;flex:none;font-size:12px;font-weight:600;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(z.z)}</span>
+   <div style="flex:1;height:7px;border-radius:4px;background:var(--track);overflow:hidden">
+    <div style="width:${z.pct}%;height:100%;border-radius:4px;background:${catCol(z.z)}"></div></div>
+   <span style="width:34px;flex:none;text-align:right;font-size:11.5px;color:var(--mute)">${z.pct} %</span></div>`).join("")+
+  `</div></div>`}
+
 function vNiveau(){
  const N=niveau();
  if(!N.bw)return`<div class="head"><div class="eyebrow">Mon niveau CrossFit</div><h1>Niveau</h1></div>
@@ -2247,34 +2427,17 @@ function vNiveau(){
   Repères d'après la Table of Movement Progression de Monroe Miller. Un palier est
   considéré acquis à 70 %.</div></div>`;
 
- /* ── Chaînes ── */
- h+=`<div class="eyebrow" style="margin:22px 0 12px">Chaînes de progression</div>`;
- N.chains.forEach(ch=>{
-  const ouvert=S.nchain===ch.id;
-  h+=`<div class="card" style="padding:16px">
-   <button style="width:100%;display:flex;align-items:center;gap:12px;text-align:left" data-act="nchain" data-v="${ch.id}">
-   <span style="flex:0 0 6px;height:34px;border-radius:3px;background:${ch.col}"></span>
-   <span style="flex:1;min-width:0">
-    <span style="display:block;font-weight:600;font-size:15px">${ch.n}</span>
-    <span style="display:block;font-size:12px;color:var(--mute);margin-top:3px">${ch.faits} / ${ch.total} étapes${ch.encours?" · "+esc(ch.encours.n):""}</span></span>
-   <span style="color:var(--mute);font-size:17px">${ouvert?"−":"+"}</span></button>`;
-  if(ouvert)h+=chainSteps(ch);
-  h+=`</div>`});
+ /* ── Par catégorie ── */
+ h+=catBarsHTML(N);
 
- /* ── Tests déclaratifs ──
-    Toujours visibles, même déjà renseignés : ce sont des tests chronométrés
-    qu'on refait de temps en temps, pas une case qu'on ne coche qu'une fois. */
- const testMoves=N.mv36.filter(m=>m.k==="test");
- const restants=testMoves.filter(m=>m.sc==null).length;
- h+=`<div class="card flat" style="margin-top:6px">
-  <div class="eyebrow" style="margin-bottom:10px">Tests à renseigner</div>
-  <div style="font-size:12.5px;color:var(--mute);line-height:1.65;margin-bottom:14px">
-  ${N.mv36.filter(m=>m.sc!=null).length} mouvements sur ${N.mv36.length} sont renseignés depuis tes séances.
-  ${restants?"Les suivants sont des tests chronométrés, à faire quand tu veux.":"Ce sont des tests chronométrés : refais-les quand tu veux pour suivre ta progression."}</div>`;
- testMoves.forEach(m=>{h+=testRow(m,true)});
- h+=`</div>`;
+ /* ── Catalogue unifié (fusion des tests Monroe et des étapes de chaînes) ── */
+ h+=`<div class="eyebrow" style="margin:22px 0 2px">Tous les mouvements</div>
+  <div style="font-size:12px;color:var(--mute);line-height:1.6;margin-bottom:2px">
+  Chaque mouvement — y compris ceux qui étaient enfouis dans les chaînes de progression —
+  a sa propre carte, avec son statut et ce qu'il reste à faire pour passer au niveau suivant.</div>`;
+ h+=catalogHTML(N);
 
- h+=`<div class="card flat"><div style="font-size:12px;color:var(--mute);line-height:1.7">
+ h+=`<div class="card flat" style="margin-top:6px"><div style="font-size:12px;color:var(--mute);line-height:1.7">
   Ces repères viennent de coachs — Monroe Miller, CrossFit, BTWB, P. Gagnon,
   C. Stroud, S. Low — et non d'études. Ils indiquent un ordre conseillé,
   pas une interdiction : un mouvement réalisé hors ordre est enregistré normalement.</div></div>`;
@@ -2322,21 +2485,6 @@ function stepInner(ch,st,i,pinnable){
    ${histBlock("decl",rmKey,"kg")}`}
  if(st.src&&st.etat!=="verrou")h+=`<div style="font-size:10.5px;color:var(--mute);margin-top:5px;opacity:.8">${st.src}</div>`;
  return h}
-
-/* Détail d'une chaîne. Chaque étape peut se valider depuis l'historique
-   ou se déclarer à la main, pour ce qui se travaille hors séances notées. */
-function chainSteps(ch){
- let h=`<div style="margin-top:14px;padding-top:6px;border-top:1px solid var(--line)">`;
- ch.steps.forEach((st,i)=>{
-  const dernier=i===ch.steps.length-1;
-  h+=`<div style="display:flex;gap:13px;padding:10px 0">
-   <div style="flex:0 0 26px;display:flex;flex-direction:column;align-items:center">
-    <div style="width:22px;height:22px;border-radius:50%;flex:none;
-     ${st.etat==="acquis"?`background:${ch.col}`:st.etat==="encours"?`border:3px solid var(--aqua)`:`background:var(--sunk);border:2px solid var(--line)`}"></div>
-    ${!dernier?`<div style="width:2px;flex:1;min-height:34px;background:${st.etat==="acquis"?ch.col:"var(--line)"};margin-top:4px"></div>`:""}
-   </div>
-   <div style="flex:1;min-width:0;padding-bottom:4px">${stepInner(ch,st,i,true)}</div></div>`});
- return h+`</div>`}
 
 /* Étapes de chaîne et tests Monroe épinglés à la main : une vue condensée
    de ce qu'on travaille en ce moment, sans dérouler chaque chaîne. */
@@ -2452,7 +2600,7 @@ document.addEventListener("click",ev=>{
     (séance abandonnée, metcon supprimé) : on l'ignore au lieu de planter. */
  if(/^(date|feel|focus|rm|saveS|drop|pick|mcpick|mcadd|mcopen|mcdel)$/.test(a)&&!S.draft)return;
  const MC=S.draft&&S.mc!=null?(S.draft.metcons||[])[S.mc]:null;
- if(/^(mcname|mcfmt|mcres|mcdone|mcrx|mcitemdel|mcstruct|mclad|mcdup|mcquick|mcmove|mcpass)$/.test(a)&&!MC)return;
+ if(/^(mcname|mcfmt|mcres|mcdone|mcrx|mcitemdel|mcstruct|mclad|mcladu|mcdup|mcquick|mcmove|mcpass)$/.test(a)&&!MC)return;
  if(/^(shtype|shfmt|shbg|shcol|shlogo|shsave|shcopy|shpick)$/.test(a)&&!S.share)return;
  if(/^(push|pop|sadd|scycle)$/.test(a)&&!en)return;
  if(a==="add"&&!S.draft)return;
@@ -2463,6 +2611,7 @@ document.addEventListener("click",ev=>{
   case"msort":S.msort=v;pendingAnchor="movblock";break;
   case"fiche":S.fiche=v;break;
   case"nchain":S.nchain=S.nchain===v?null:v;pendingAnchor=null;break;
+  case"nfilt":S.nfilt=v;pendingAnchor=null;break;
   case"pin":{if(!S.pin)S.pin=[];const i=S.pin.indexOf(v);
     if(i>=0)S.pin.splice(i,1);else S.pin.push(v);break}
   case"histt":S.histOpen=S.histOpen===v?null:v;break;
@@ -2582,7 +2731,7 @@ document.addEventListener("click",ev=>{
     pendingAnchor="mcwork";break}
   case"mcdup":{const it=MC.items[+b.dataset.i];if(!it)return;
     MC.items.splice(+b.dataset.i+1,0,{...it,seq:it.seq?[...it.seq]:null});break}
-  case"mcquick":{MC.items.push({movementId:v,reps:null,weight:null,dist:null,cal:null,seq:null});break}
+  case"mcquick":{MC.items.push({movementId:v,reps:null,weight:null,dist:null,cal:null,seq:null,lad:null,ladU:null});break}
   case"mcpass":{const n=Math.max(1,Math.min(20,(MC.rounds||1)+(+v)));
     MC.rounds=n;
     MC.items.forEach(it=>{const q=(it.seq||[]).slice(0,n);
@@ -2602,6 +2751,7 @@ document.addEventListener("click",ev=>{
       else{mc.scheme="";if(!mc.rounds)mc.rounds=1}}
     break}
   case"mclad":{const it=MC.items[+b.dataset.i];if(it)it.lad=it.lad===false;break}
+  case"mcladu":{const it=MC.items[+b.dataset.i];if(it)it.ladU=v;break}
   case"closepick":S.picker=false;break;
   case"add":{
     /* Si le metcon visé n'existe plus, le mouvement rejoint le travail spécifique
@@ -2785,6 +2935,19 @@ function applyRemote(rec){
  /* Ce que le cloud ne connaissait pas lui est renvoyé. */
  if((!rp&&S.profile)||grew)pushSoon();}
 
+/* Signature stable d'un instantané synchronisable : indépendante de l'ordre
+   d'insertion des séances, des dictionnaires de tests/déclarations ou des
+   épingles, pour ne pas confondre « rangé différemment » et « différent ».
+   updatedAt est volontairement exclu : seul le contenu compte ici. */
+function syncSig(p){
+ if(!p)return"";
+ const byId=a=>[...(a||[])].sort((x,y)=>(x&&x.id||"").localeCompare(y&&y.id||""));
+ const sortDict=d=>{const o=d||{},out={};Object.keys(o).sort().forEach(k=>out[k]=o[k]);return out};
+ return JSON.stringify({
+  sessions:byId(p.sessions),custom:byId(p.custom),bar:p.bar??null,profile:p.profile||null,
+  lastExport:p.lastExport||null,theme:p.theme||null,
+  tests:sortDict(p.tests),decl:sortDict(p.decl),pin:[...(p.pin||[])].sort()})}
+
 async function cloudSync(){
  if(!window.CLOUD||!S.cloud.user)return;
  S.cloud.busy=true;S.cloud.status="pending";render();
@@ -2801,9 +2964,15 @@ async function cloudSync(){
      horodatage écrit par le client lui-même dans le JSON. */
   const serverTime=r&&r.serverUpdatedAt?new Date(r.serverUpdatedAt).getTime():0;
   if(remoteHas){
-   if(!localHas||serverTime>=(S.updatedAt||0)){applyRemote(r)}
+   /* Ouvrir un onglet, épingler un mouvement ou changer de filtre déclenche
+      la même sauvegarde locale qu'une vraie séance notée, et avance donc
+      S.updatedAt même sans rien changer au contenu synchronisé. Comparer
+      aussi le CONTENU évite de demander un arbitrage quand les deux côtés
+      ont en réalité les mêmes données — seul le repère de temps a couru. */
+   const same=localHas&&syncSig(payload())===syncSig(remote);
+   if(!localHas||same||serverTime>=(S.updatedAt||0)){applyRemote(r)}
    else{
-    /* Les deux côtés ont des données et le local est plus récent : on demande. */
+    /* Les deux côtés ont des données différentes et le local est plus récent : on demande. */
     const keepLocal=confirm(
      "Ton compte contient déjà "+(remote.sessions||[]).length+" séance(s), et ce téléphone en a "+
      S.sessions.length+" plus récentes.\n\nOK = garder celles de ce téléphone et écraser le compte.\n"+
