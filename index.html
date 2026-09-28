@@ -2903,11 +2903,26 @@ function pushSoon(){
   catch(e){S.cloud.status="err"}
   render()},1200)}
 
+/* Réunit deux listes de séances sans rien perdre : chaque id présent d'un
+   côté ou de l'autre est conservé une seule fois. « primaire » l'emporte
+   quand le même id existe des deux côtés (cas rare — une séance éditée
+   avant que l'autre côté ait reçu le changement). Il n'y a donc plus jamais
+   à choisir entre « ce téléphone » et « le compte » : les deux sont réunis. */
+function mergeSessions(primaire,secondaire){
+ const byId={};
+ (secondaire||[]).forEach(s=>{if(s&&s.id)byId[s.id]=s});
+ (primaire||[]).forEach(s=>{if(s&&s.id)byId[s.id]=s});
+ return Object.values(byId)}
+
 function applyRemote(rec){
  const d=rec&&rec.payload?rec.payload:(rec||{});
  if(rec&&rec.serverUpdatedAt)S.cloud.serverUpdatedAt=rec.serverUpdatedAt;
- S.sessions=(d.sessions||[]).map(x=>({metcons:[],entries:[],...x}));
- /* Les séances viennent du cloud, mais les réglages ne sont écrasés que si la
+ const remoteSessions=(d.sessions||[]).map(x=>({metcons:[],entries:[],...x}));
+ /* Une séance qui n'existait que sur ce téléphone (pas encore poussée)
+    doit survivre à la fusion : on la renvoie ensuite vers le compte. */
+ const localSeules=(S.sessions||[]).some(s=>s&&!remoteSessions.some(r=>r&&r.id===s.id));
+ S.sessions=mergeSessions(remoteSessions,S.sessions);
+ /* Les autres réglages viennent du cloud, mais ne sont écrasés que si la
     version distante en possède un : une ligne poussée avant la création du profil
     ne doit pas effacer celui saisi sur l'appareil. */
  S.bar=d.bar??S.bar??15;
@@ -2927,26 +2942,12 @@ function applyRemote(rec){
     l'état du serveur, donc le repère local doit désormais correspondre à
     l'horodatage serveur (et non à "maintenant"), sinon toute ouverture de
     l'app sans la moindre modification locale ferait paraître ce téléphone
-    "plus récent" que le compte au prochain lancement, et ferait ressurgir
-    à tort la question de conflit. */
+    "plus récent" que le compte au prochain lancement. */
  S.updatedAt=(rec&&rec.serverUpdatedAt)?new Date(rec.serverUpdatedAt).getTime():Date.now();
  seedProfil();
  try{localStorage.setItem(KEY,JSON.stringify(payload(true)))}catch(e){}
  /* Ce que le cloud ne connaissait pas lui est renvoyé. */
- if((!rp&&S.profile)||grew)pushSoon();}
-
-/* Signature stable d'un instantané synchronisable : indépendante de l'ordre
-   d'insertion des séances, des dictionnaires de tests/déclarations ou des
-   épingles, pour ne pas confondre « rangé différemment » et « différent ».
-   updatedAt est volontairement exclu : seul le contenu compte ici. */
-function syncSig(p){
- if(!p)return"";
- const byId=a=>[...(a||[])].sort((x,y)=>(x&&x.id||"").localeCompare(y&&y.id||""));
- const sortDict=d=>{const o=d||{},out={};Object.keys(o).sort().forEach(k=>out[k]=o[k]);return out};
- return JSON.stringify({
-  sessions:byId(p.sessions),custom:byId(p.custom),bar:p.bar??null,profile:p.profile||null,
-  lastExport:p.lastExport||null,theme:p.theme||null,
-  tests:sortDict(p.tests),decl:sortDict(p.decl),pin:[...(p.pin||[])].sort()})}
+ if((!rp&&S.profile)||grew||localSeules)pushSoon();}
 
 async function cloudSync(){
  if(!window.CLOUD||!S.cloud.user)return;
@@ -2954,32 +2955,20 @@ async function cloudSync(){
  try{
   const r=await window.CLOUD.pull();
   const remote=r&&r.payload?r.payload:null;
-  const localHas=S.sessions.length>0,remoteHas=remote&&(remote.sessions||[]).length>0;
+  const remoteHas=remote&&(remote.sessions||[]).length>0;
   if(!r||!remoteHas){
    const res=await window.CLOUD.push(payload());
    if(res&&res.serverUpdatedAt)S.cloud.serverUpdatedAt=res.serverUpdatedAt}
-  else if(r.serverUpdatedAt)S.cloud.serverUpdatedAt=r.serverUpdatedAt;
-  /* L'arbitrage compare désormais l'horodatage posé par le serveur Postgres
-     (fiable, immun à l'horloge d'un téléphone mal réglé) plutôt qu'un
-     horodatage écrit par le client lui-même dans le JSON. */
-  const serverTime=r&&r.serverUpdatedAt?new Date(r.serverUpdatedAt).getTime():0;
-  if(remoteHas){
-   /* Ouvrir un onglet, épingler un mouvement ou changer de filtre déclenche
-      la même sauvegarde locale qu'une vraie séance notée, et avance donc
-      S.updatedAt même sans rien changer au contenu synchronisé. Comparer
-      aussi le CONTENU évite de demander un arbitrage quand les deux côtés
-      ont en réalité les mêmes données — seul le repère de temps a couru. */
-   const same=localHas&&syncSig(payload())===syncSig(remote);
-   if(!localHas||same||serverTime>=(S.updatedAt||0)){applyRemote(r)}
-   else{
-    /* Les deux côtés ont des données différentes et le local est plus récent : on demande. */
-    const keepLocal=confirm(
-     "Ton compte contient déjà "+(remote.sessions||[]).length+" séance(s), et ce téléphone en a "+
-     S.sessions.length+" plus récentes.\n\nOK = garder celles de ce téléphone et écraser le compte.\n"+
-     "Annuler = récupérer celles du compte.");
-    if(keepLocal){const res=await window.CLOUD.push(payload());
-     if(res&&res.serverUpdatedAt)S.cloud.serverUpdatedAt=res.serverUpdatedAt}
-    else applyRemote(r)}}
+  else{
+   if(r.serverUpdatedAt)S.cloud.serverUpdatedAt=r.serverUpdatedAt;
+   /* Fusion sans perte, toujours silencieuse : chaque séance, déclaration,
+      test ou épinglage connu d'un côté ou de l'autre est conservé, qu'il
+      vienne de ce téléphone ou du compte. Il n'y a donc plus jamais besoin
+      de demander lequel garder — l'ancienne question ("écraser le compte ?")
+      pouvait resurgir à chaque lancement pour la moindre broutille (un
+      onglet ouvert, un mouvement épinglé) et risquait, à force, de faire
+      appuyer sur "écraser" par réflexe et perdre de vraies séances. */
+   applyRemote(r)}
   S.cloud.status="ok"}
  catch(e){S.cloud.status="err"}
  S.cloud.busy=false;render()}
