@@ -2995,7 +2995,22 @@ if(window.matchMedia)window.matchMedia("(prefers-color-scheme:dark)")
 load();
 if(!S.profile)openProfil();
 render();
-if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+/* Mise à jour du "service worker" : sur iPhone, une appli ajoutée à l'écran
+   d'accueil ne revérifie une nouvelle version qu'à la relance, et ne
+   l'affiche qu'une fois qu'elle a pris la main — sans rien de plus, il
+   fallait donc fermer puis rouvrir l'appli deux fois de suite pour voir un
+   changement. On revérifie nous-mêmes à chaque retour au premier plan, et
+   on recharge la page tout seul dès qu'une version plus récente est prête. */
+if("serviceWorker" in navigator){
+ navigator.serviceWorker.register("sw.js").then(reg=>{
+  document.addEventListener("visibilitychange",()=>{
+   if(document.visibilityState==="visible")reg.update().catch(()=>{})});
+  window.addEventListener("focus",()=>{reg.update().catch(()=>{})});
+ }).catch(()=>{});
+ let refreshed=false;
+ navigator.serviceWorker.addEventListener("controllerchange",()=>{
+  if(refreshed)return;refreshed=true;window.location.reload()});
+}
 </script>
 <script type="module">
 /* ═══════════ CONNEXION AU CLOUD (Supabase) ═══════════
