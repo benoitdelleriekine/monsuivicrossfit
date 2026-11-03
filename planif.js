@@ -131,6 +131,7 @@
   var sessList = function (p) { return p.kind === 'muscu' ? (p.sessions || []) : (p.kind === 'course' ? (p.runs || []) : (p.fixed || [])); };
 
   var muscuSpec = function (p, w) {
+    if (!(w >= 1)) return null;
     var acc = 0, seen = {}, blocks = p.blocks || [];
     for (var bi = 0; bi < blocks.length; bi++) {
       var b = blocks[bi], n = Math.max(1, num(b.weeks, 1) | 0), G = GOALS[b.goal] || GOALS.force;
@@ -183,6 +184,15 @@
     return res;
   };
   var AUTO_ALPHA = 0.5, AUTO_CAP = 0.05;
+  // Première semaine à prendre en compte : S1, ou plus tôt si une séance a été ajoutée avant le cycle
+  var firstWeek = function (p) { var k0 = 1; (p.extras || []).forEach(function (e) { var k = extraW(p, e); if (k < k0) k0 = k; }); return k0; };
+  var horsPlan = function (sp, sess) { return !sp || sp.deload || (sp.test && sess && sess.extra); };
+  // Semaine de travail la plus proche (la précédente en priorité) : sert de repère aux séances hors plan
+  var refSpec = function (p, k) {
+    var best = null, bd = 1e9, L = progLen(p);
+    for (var j = 1; j <= L; j++) { var sj = muscuSpec(p, j); if (!sj || sj.deload || sj.test) continue; var dd = Math.abs(j - k) + (j > k ? 0.5 : 0); if (dd < bd) { bd = dd; best = sj; } }
+    return best;
+  };
   /* 1RM de travail : la référence est recalée après chaque séance notée, à partir
      de l'écart entre ce que tu as fait et ce que le plan attendait (charge, reps et
      RPE convertis en 1RM estimé). Lissage à 50 % et ±5 % maximum par séance pour ne
@@ -192,14 +202,23 @@
     var f = 1, steps = [];
     if (ex.mode !== 'pct' || num(ex.offset, 0) !== 0 || ex.noAuto || !(num(ex.orm, 0) > 0)) return { f: 1, steps: steps };
     var orm = num(ex.orm);
-    for (var k = 1; k < w; k++) {
-      var sp = muscuSpec(p, k); if (!sp || sp.deload) continue;
+    for (var k = firstWeek(p); k < w; k++) {
+      var sp = muscuSpec(p, k);
       logsFor(p, ex, k).forEach(function (lg) {
         if (lg.raw.plan || lg.raw.noAdj || lg.raw.skipped) return;
         var r = flat(lg.raw); if (!(num(r.kg) > 0 && num(r.reps) > 0)) return;
         var ov = (p.overrides || {})[k + '|' + lg.sess.id + '|' + ex.id] || {};
         var before = f, L, reps, rpe;
-        if (sp.test) { L = rstep(orm * f * 1.025, ex); var e = e1rm(r.kg, r.reps, r.rpe || 10); f = Math.max(f * 0.85, Math.min(f * 1.15, e / orm)); }
+        if (horsPlan(sp, lg.sess)) {
+          // Séance sans repère de plan (avant/après le cycle, décharge, séance ajoutée en semaine test) :
+          // comparée au plan de la semaine de travail la plus proche, si le RPE noté est fiable (7 ou plus)
+          if (!(num(r.rpe) >= 7)) return;
+          var rs = refSpec(p, k); if (!rs) return;
+          var pr0 = pctParams(rs, ex), Lr = orm * f * pr0.pp / 100, rr = rpeNum(rs.rpe);
+          var t0 = f * e1rm(r.kg, r.reps, r.rpe) / e1rm(Lr, pr0.r, rr);
+          f = Math.max(f * (1 - AUTO_CAP), Math.min(f * (1 + AUTO_CAP), f + AUTO_ALPHA * (t0 - f)));
+        }
+        else if (sp.test) { L = rstep(orm * f * 1.025, ex); var e = e1rm(r.kg, r.reps, r.rpe || 10); f = Math.max(f * 0.85, Math.min(f * 1.15, e / orm)); }
         else {
           var pr = pctParams(sp, ex); L = ov.kg != null ? num(ov.kg) : rstep(orm * f * pr.pp / 100, ex); reps = ov.reps != null ? num(ov.reps) : pr.r; rpe = ov.rpe != null ? num(ov.rpe) : rpeNum(sp.rpe);
           var target = f * e1rm(r.kg, r.reps, r.rpe || rpe) / e1rm(L, reps, rpe);
@@ -217,12 +236,11 @@
   var kgShift = function (p, ex, w, planFn) {
     var d = 0;
     if (ex.mode !== 'kg' || ex.keep || ex.noAuto) return 0;
-    for (var k = 1; k < w; k++) {
-      var sp = muscuSpec(p, k); if (!sp || sp.deload || sp.test) continue;
+    for (var k = firstWeek(p); k < w; k++) {
       logsFor(p, ex, k).forEach(function (lg) {
         if (lg.raw.plan || lg.raw.noAdj || lg.raw.skipped) return;
         var r = flat(lg.raw); if (!(num(r.kg) > 0)) return;
-        var pl = planFn(k, d); if (!pl.L) { d += num(r.kg) - 0; return; }
+        var pl = planFn(Math.max(1, k), d); if (!pl.L) { d += num(r.kg) - 0; return; }
         var diff = num(r.kg) - pl.L, okReps = num(r.reps) >= pl.reps - 1, okRpe = !r.rpe || num(r.rpe) <= 9;
         d += (okReps && okRpe) ? diff : Math.min(0, diff);
       });
@@ -310,7 +328,10 @@
       var base = null;
       if (xe.ref) {
         (p.sessions || []).forEach(function (s) { if (base || !(s.exercises || []).some(function (z) { return z.id === xe.ref; })) return; var g0 = genMuscu(p, s, w); if (g0) base = g0.items.filter(function (z) { return z.id === xe.ref; })[0] || null; });
-        if (!base) { var e0 = findEx(p, xe.ref); if (e0) base = { id: xe.ref, name: e0.name, mode: e0.mode === 'reps' ? 'reps' : 'kg', sets: num(e0.sets, 3) || 3, reps: num(e0.reps, 8) || 8, loadNum: e0.mode === 'kg' && num(e0.startKg, 0) ? num(e0.startKg) : null, rpePlan: 8, rpeTxt: '8', rest: e0.rest || '2 min', note: e0.note || '' }; }
+        if (!base) { var e0 = findEx(p, xe.ref); var rs0 = e0 && e0.mode === 'pct' ? refSpec(p, w) : null;
+          if (rs0) { var pr1 = pctParams(rs0, e0), tf = tmTrace(p, e0, w).f, o1 = num(e0.orm, 0), L1 = o1 ? rstep(o1 * tf * pr1.pp / 100, e0) : null;
+            base = { id: xe.ref, name: e0.name, mode: 'pct', main: num(e0.offset, 0) === 0, orm: o1, sets: pr1.s, reps: pr1.r, repsPlan: pr1.r, loadNum: L1, rpePlan: rpeNum(rs0.rpe), rpeTxt: String(rs0.rpe), rest: e0.rest || rs0.rest || '2–3 min', note: e0.note || '', info: 'Hors cycle : repère = semaine de travail la plus proche' + (o1 ? ' · 1RM de travail ' + kg(Math.round(o1 * tf * 2) / 2) : '') + ' · note un RPE de 7 ou plus pour recaler ton 1RM' }; } }
+        if (!base && e0) { if (e0) base = { id: xe.ref, name: e0.name, mode: e0.mode === 'reps' ? 'reps' : 'kg', sets: num(e0.sets, 3) || 3, reps: num(e0.reps, 8) || 8, loadNum: e0.mode === 'kg' && num(e0.startKg, 0) ? num(e0.startKg) : null, rpePlan: 8, rpeTxt: '8', rest: e0.rest || '2 min', note: e0.note || '' }; }
       }
       if (!base) base = { id: xe.id, name: xe.name || 'Exercice', mode: 'kg', sets: 3, reps: 10, loadNum: null, rpePlan: 8, rpeTxt: '8', rest: '2 min', note: '' };
       var it = clone(base); it.repsPlan = it.repsPlan || it.reps; it.scheme = it.sets + '×' + it.reps; it.load = it.loadNum ? kg(it.loadNum) : '';
@@ -538,13 +559,14 @@
     if (r.plan) return '';
     var raw0 = ((x.log || {}).ex || {})[it.id] || {};
     var ign = '<button class="btn sm ghost" data-a="noadj" data-key="' + esc(x.key) + '" data-ex="' + esc(it.id) + '">' + (raw0.noAdj ? 'En tenir compte' : 'Ne pas en tenir compte') + '</button>';
-    if (it.mode === 'pct' && it.main && r.kg && r.reps && !x.g.spec.deload) {
-      var exo = findEx(x.p, it.id), now = tmTrace(x.p, exo, x.w).f, nxt = tmTrace(x.p, exo, x.w + 1).f, o0 = num(exo.orm);
+    if (it.mode === 'pct' && it.main && r.kg && r.reps) {
+      var exo = findEx(x.p, it.id), now = tmTrace(x.p, exo, x.w).f, nxt = tmTrace(x.p, exo, x.w + 1).f, o0 = num(exo.orm), hp = horsPlan(muscuSpec(x.p, x.w), x.s);
       if (raw0.noAdj) h += '<div class="lgres"><span>Séance ignorée pour l’ajustement.</span>' + ign + '</div>';
+      else if (o0 && hp && !(num(r.rpe) >= 7)) h += '<div class="lgres"><span>Pour que cette séance recale ton 1RM, note le RPE de ta meilleure série (7 ou plus : en dessous, l’estimation n’est pas fiable).</span></div>';
       else if (o0) { var dp = (nxt / now - 1) * 100;
-        h += '<div class="lgres"><span>' + (Math.abs(dp) < 0.3 ? 'Conforme au plan : la suite ne change pas.' : '1RM de travail ' + kg(Math.round(o0 * now * 2) / 2) + ' → <b>' + kg(Math.round(o0 * nxt * 2) / 2) + '</b> (' + (dp > 0 ? '+' : '') + fmtN(dp) + ' %) : les charges des semaines suivantes s’ajustent.') + '</span>' + (Math.abs(dp) >= 0.3 ? ign : '') + '</div>'; }
+        h += '<div class="lgres"><span>' + (Math.abs(dp) < 0.3 ? (hp ? 'Comparée à ta semaine de travail la plus proche : ton 1RM de travail ne change pas.' : 'Conforme au plan : la suite ne change pas.') : '1RM de travail ' + kg(Math.round(o0 * now * 2) / 2) + ' → <b>' + kg(Math.round(o0 * nxt * 2) / 2) + '</b> (' + (dp > 0 ? '+' : '') + fmtN(dp) + ' %) : les charges des semaines suivantes s’ajustent.') + '</span>' + (Math.abs(dp) >= 0.3 ? ign : '') + '</div>'; }
     }
-    if (it.mode === 'kg' && r.kg && !x.g.spec.deload && !x.g.spec.test) {
+    if (it.mode === 'kg' && r.kg) {
       var exk = findEx(x.p, it.id);
       if (raw0.noAdj) h += '<div class="lgres"><span>Séance ignorée pour l’ajustement.</span>' + ign + '</div>';
       else if (it.loadNum == null || Math.abs(num(r.kg) - it.loadNum) >= 0.5) h += '<div class="lgres"><span>' + (it.loadNum ? 'Prévu ' + kg(it.loadNum) + ', fait ' + kg(num(r.kg)) : 'Fait ' + kg(num(r.kg))) + ' : la suite repart de ta charge réelle.</span>' + ign + '</div>';
