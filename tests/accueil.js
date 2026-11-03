@@ -56,8 +56,8 @@ for(const v of ['mois','semaines','annee']){
  const h=H();
  console.log(`  ${v.padEnd(9)} rendu ${String(h.length).padStart(5)} car · ${
   v==='mois'?(h.match(/data-act="day"/g)||[]).length+' jours cliquables'
-  :v==='semaines'?'8 barres '+((h.match(/height:\d+px;border-radius:5px/g)||[]).length===8?'✓':'✗')
-  :'12 mois '+((h.match(/height:\d+px;border-radius:4px/g)||[]).length===12?'✓':'✗')}`);
+  :v==='semaines'?'8 barres '+((h.match(/class="hbar"/g)||[]).length===8?'✓':'✗')
+  :'12 mois '+((h.match(/class="hbar"/g)||[]).length===12?'✓':'✗')}`);
 }
 
 console.log('\n═══ Interaction sur un jour ═══');
