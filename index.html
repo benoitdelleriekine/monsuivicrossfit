@@ -417,7 +417,7 @@ function weeksGrid(n){const rows=[],m=new Date();m.setDate(m.getDate()-((m.getDa
 
 /* ══════════ ÉTAT ══════════ */
 let S={sessions:[],custom:[],planif:{programs:[],deleted:[]},bar:15,tab:"progres",draft:null,focus:null,picker:false,q:"",prog:null,open:null,
- profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},pin:[],tabsOff:[],histOpen:null,nchain:null,nfilt:"tout",share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
+ profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},pin:[],tabsOff:["niveau"],histOpen:null,nchain:null,nfilt:"tout",share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
  updatedAt:0,cloud:{enabled:false,user:null,status:"",busy:false,sent:false},email:"",otp:"",
  d:{w:0,reps:5,diff:"juste",level:0,dist:500,min:2,sec:0,age:30,bw:60}};
 /* Instantané des données, avec horodatage pour arbitrer la synchronisation */
@@ -437,7 +437,8 @@ function load(){let raw=null;
   S.theme=d.theme||"dark";S.tests=migrateHistDict(d.tests);
   S.decl=migrateHistDict(d.decl);
   S.pin=Array.isArray(d.pin)?d.pin:[];
-  S.tabsOff=Array.isArray(d.tabsOff)?d.tabsOff:[];
+  /* L'onglet Niveau est masqué par défaut ; il se réactive dans Profil. */
+  S.tabsOff=Array.isArray(d.tabsOff)?d.tabsOff:["niveau"];
   S.planif=normPlanif(d.planif)}catch(e){}
  /* Réparation des profils écrits par une version antérieure défectueuse :
     sans âge ni poids valides, les barèmes ne veulent rien dire. */
