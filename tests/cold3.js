@@ -14,6 +14,7 @@ function boot(){
  global.navigator={vibrate(){}};
  global.localStorage={getItem:k=>store[k]===undefined?null:store[k],setItem:(k,v)=>store[k]=v,removeItem:k=>delete store[k]};
  global.alert=()=>{};global.confirm=()=>true;
+ /* CLOUD.pull renvoie désormais { payload, serverUpdatedAt } (voir cloudSync). */
  const R=new Function(code+"\n;return {S,render,load,save,payload,applyRemote,cloudSync,openProfil,seedProfil};")();
  return {...R,nodes,L};
 }
@@ -33,14 +34,14 @@ V('local intact, hors ligne — formulaire '+F(a), a.S.psex==='m'&&a.S.d.age===3
 
 // 2. local vidé, cloud avec profil
 store={};a=boot();
-global.window.CLOUD={enabled:true,user:{email:'x'},pull:async()=>({sessions:SESS,profile:{...P},custom:[],bar:15,updatedAt:Date.now()}),push:async()=>{},signOut(){},wipe:async()=>{}};
+global.window.CLOUD={enabled:true,user:{email:'x'},pull:async()=>({payload:{sessions:SESS,profile:{...P},custom:[],bar:15,updatedAt:Date.now()},serverUpdatedAt:new Date().toISOString()}),push:async()=>{},signOut(){},wipe:async()=>{}};
 a.load();if(!a.S.profile)a.openProfil();a.S.cloud.user={email:'x'};await a.cloudSync();
 V('local vidé, cloud avec profil — formulaire '+F(a), a.S.psex==='m'&&a.S.d.age===36&&a.S.d.bw===80);
 
 // 3. local intact, cloud SANS profil et plus récent
 store={};a=boot();a.S.profile={...P};a.S.sessions=SESS;a.save();
 a=boot();
-global.window.CLOUD={enabled:true,user:{email:'x'},pull:async()=>({sessions:SESS,custom:[],bar:15,updatedAt:Date.now()+9e5}),push:async()=>{},signOut(){},wipe:async()=>{}};
+global.window.CLOUD={enabled:true,user:{email:'x'},pull:async()=>({payload:{sessions:SESS,custom:[],bar:15,updatedAt:Date.now()+9e5},serverUpdatedAt:new Date().toISOString()}),push:async()=>{},signOut(){},wipe:async()=>{}};
 a.load();if(!a.S.profile)a.openProfil();a.S.cloud.user={email:'x'};await a.cloudSync();
 V('cloud sans profil ne l\'écrase pas — formulaire '+F(a), a.S.psex==='m'&&a.S.d.age===36&&a.S.d.bw===80);
 
@@ -53,7 +54,7 @@ V('aucune donnée — valeurs par défaut proposées '+F(a), a.S.psex==='f'&&a.S
 // 5. profil corrompu en local, cloud sain
 store={};store['cf-progres']=JSON.stringify({sessions:SESS,profile:{sex:'m',age:null,bw:undefined,name:'B'},bar:15});
 a=boot();
-global.window.CLOUD={enabled:true,user:{email:'x'},pull:async()=>({sessions:SESS,profile:{...P},custom:[],bar:15,updatedAt:Date.now()}),push:async()=>{},signOut(){},wipe:async()=>{}};
+global.window.CLOUD={enabled:true,user:{email:'x'},pull:async()=>({payload:{sessions:SESS,profile:{...P},custom:[],bar:15,updatedAt:Date.now()},serverUpdatedAt:new Date().toISOString()}),push:async()=>{},signOut(){},wipe:async()=>{}};
 a.load();if(!a.S.profile)a.openProfil();a.S.cloud.user={email:'x'};await a.cloudSync();
 V('profil corrompu réparé par le cloud — '+F(a), a.S.psex==='m'&&a.S.d.age===36&&a.S.d.bw===80);
 

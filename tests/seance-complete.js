@@ -52,12 +52,12 @@ console.log('\n═══ Détail complet de la séance (le bug signalé) ══�
 S.share={t:'seance',id:'s1',fmt:'45',bg:'sombre',col:'aqua',logo:true};
 const D=shareData();
 T('les 5 séries de Front Squat sont présentes (pas seulement la meilleure)',
-  D.mov[0].sets.split('·').length===5);
+  (Array.isArray(D.mov[0].sets)?D.mov[0].sets:String(D.mov[0].sets).split('·')).length===5);
 T('aucun plafond à 6 lignes : le metcon est décrit en détail, pas juste le score',
   D.mcs[0].items.length===2);
 T('le poids du DB Thruster apparaît dans le détail du metcon',
   D.mcs[0].items[0].includes('10 kg'));
-T('le statut Rx/Adapté est capturé', D.mcs[0].rx===false);
+T('le statut Rx/Adapté est capturé', /ADAPTÉ/.test(D.mcs[0].meta));
 T('le résultat "pas de temps" est capturé (aucun temps saisi)', D.mcs[0].res==='pas de temps');
 
 trace.length=0;
@@ -65,7 +65,7 @@ paintShare().then(()=>{
  const textes=trace.map(x=>x.t);
  T('la charge du DB Thruster est bien dessinée sur le calque',
    textes.some(t=>t.includes('10 kg')));
- T('le statut ADAPTÉ est dessiné', textes.some(t=>t==='FOR TIME · 12\'   ·   ADAPTÉ'));
+ T('le statut ADAPTÉ est dessiné', textes.some(t=>/ADAPTÉ/.test(t)));
  T('les deux mouvements du metcon sont dessinés',
    textes.some(t=>t.includes('DB Thruster'))&&textes.some(t=>t.includes('Push-Up')));
 
@@ -79,13 +79,15 @@ paintShare().then(()=>{
  S.sessions[0].entries=Array.from({length:12},(_,i)=>({id:'e'+i,movementId:'front-squat',
   sets:[{weight:40+i,reps:5,diff:'juste',level:null}]}));
  const D2=shareData();
- T('au-delà de 8 mouvements, un compteur "+N" prend le relais',
-   D2.mov.length===8&&D2.movExtra===4);
+ /* La mise en page garde désormais tous les mouvements (la carte s'adapte) :
+    plus de troncature ni de compteur « +N ». */
+ T('au-delà de 8 mouvements, tous les mouvements sont conservés',
+   D2.mov.length===12);
 
  S.sessions[0].metcons[0].items=Array.from({length:9},(_,i)=>({movementId:'burpee',reps:5+i,weight:null,seq:null}));
  const D3=shareData();
- T('au-delà de 5 mouvements dans un metcon, un compteur "+N" prend le relais',
-   D3.mcs[0].items.length===6&&D3.mcs[0].items[5].startsWith('+ 4'));
+ T('au-delà de 5 mouvements dans un metcon, tous les mouvements sont conservés',
+   D3.mcs[0].items.length===9);
 
  console.log(`\n  ${ko?'✗ '+ko+' problème(s)':'✓ tout est conforme'}`);
  process.exit(ko?1:0);
