@@ -54,8 +54,8 @@
     hyp: { label: 'Hypertrophie', sh: 'Hyp.', color: '#FFC37A', rest: '2–3 min', desc: '8–10 reps · 62,5 → 72,5 % du 1RM', week: function (k) { return { s: 4, r: [10, 9, 8, 8, 8, 8, 8, 8, 8][k] || 8, p: 62.5 + 2.5 * k, rpe: k < 2 ? '7' : (k < 3 ? '7–8' : '8') }; } },
     force: { label: 'Force', sh: 'Force', color: '#FF8A4C', rest: '3 min', desc: '5 → 3 reps · 75 → 85 % du 1RM', week: function (k) { return { s: 5, r: [5, 5, 4, 3, 3, 3, 3, 3, 3][k] || 3, p: 75 + 2.5 * k, rpe: ['7', '7–8', '8', '8–9'][k] || '9' }; } },
     max: { label: 'Force max', sh: 'Max', color: '#F2555A', rest: '3–5 min', desc: '3 → 1 reps · 85 → 92,5 % du 1RM', week: function (k) { return { s: k < 2 ? 4 : 3, r: [3, 2, 2, 1, 1, 1, 1][k] || 1, p: Math.min(95, 85 + 2.5 * k), rpe: ['8', '8–9', '9', '9'][k] || '9' }; } },
-    endu: { label: 'Endurance de force', sh: 'Endu.', color: '#E8D36A', rest: '60–90 s', desc: '12–15 reps · 50 → 60 % du 1RM', week: function (k) { return { s: 3, r: [15, 15, 12, 12, 12, 12, 12][k] || 12, p: 50 + 2.5 * k, rpe: k < 1 ? '7' : (k < 2 ? '7–8' : '8') }; } },
-    puis: { label: 'Puissance', sh: 'Puiss.', color: '#F59BC0', rest: '2–3 min', desc: '2–3 reps explosives · 60 → 70 % du 1RM', week: function (k) { return { s: k < 2 ? 6 : 5, r: k < 3 ? 3 : 2, p: Math.min(75, 60 + 2.5 * k), rpe: k < 2 ? '6' : '7' }; } },
+    endu: { label: 'Endurance de force', sh: 'Endu.', color: '#E8D36A', rest: '60–90 s', desc: '15 → 12 reps · 55 → 67,5 % du 1RM', week: function (k) { return { s: 3, r: k < 2 ? 15 : 12, p: k < 2 ? 55 + 2.5 * k : Math.min(67.5, 62.5 + 2.5 * (k - 2)), rpe: k < 1 ? '7' : (k < 2 ? '7–8' : '8') }; } },
+    puis: { label: 'Puissance', sh: 'Puiss.', color: '#F59BC0', rest: '2–3 min', desc: '2–3 reps explosives · 60 → 70 % du 1RM', week: function (k) { return { s: k < 2 ? 6 : 5, r: k < 3 ? 3 : 2, p: Math.min(75, 60 + 2.5 * k), rpe: '5–6' }; } },
     perso: { label: 'Personnalisé', sh: 'Perso', color: '#9FB4C7', rest: 'à ta main', desc: 'Ton schéma de départ + ta progression', week: function (k, c) { return { s: c.s, r: c.r, p: c.p0 + c.inc * k, rpe: String(c.rpe) }; } }
   };
   var GOAL_ORDER = ['hyp', 'force', 'max', 'endu', 'puis', 'perso'];
@@ -209,6 +209,7 @@
         var r = flat(lg.raw); if (!(num(r.kg) > 0 && num(r.reps) > 0)) return;
         var ov = (p.overrides || {})[k + '|' + lg.sess.id + '|' + ex.id] || {};
         var before = f, L, reps, rpe;
+        if (sp && sp.goal === 'puis' && !sp.deload && !sp.test) return; // puissance : charges volontairement légères, pas un repère de force
         if (horsPlan(sp, lg.sess)) {
           // Séance sans repère de plan (avant/après le cycle, décharge, séance ajoutée en semaine test) :
           // comparée au plan de la semaine de travail la plus proche, si le RPE noté est fiable (7 ou plus)
@@ -286,8 +287,13 @@
         var dlInfo = sp.deload ? 'Semaine allégée : 1 série en moins' : '';
         it.scheme = s3 + '×' + Math.max(1, r3); it.load = 'Poids du corps'; it.loadNum = r3; it.repsPlan = Math.max(1, r3); it.rpePlan = 8; it.sets = s3; it.reps = Math.max(1, r3); it.rpeTxt = '8'; it.rest = '2 min'; it.info = num(ex.incReps, 0) ? 'Reps qui augmentent au fil des semaines' + (num(ex.maxReps, 0) ? ' (jusqu’à ' + num(ex.maxReps) + ')' : '') : '';
         if (dlInfo) it.info = dlInfo + (it.info ? ' · ' + it.info : '');
+        if (sp.test && (ex.testMax === true || num(ex.testMax, 0) > 0)) {
+          it.testMax = true; it.sets = 1; it.reps = 'Max'; it.scheme = '1×max'; it.repsPlan = Math.max(1, r3); it.rpePlan = 10; it.rpeTxt = '9–10'; it.rest = '2–3 min';
+          it.info = 'Test du max de reps unbroken';
+          it.note = 'Échauffement : 2 séries courtes faciles · Une seule série, au max, technique stricte · Arrête dès que la technique casse · Coude qui tire : arrête la série';
+        }
       } else { it.scheme = ex.text || ''; }
-      if (ex.rest) it.rest = ex.rest;
+      if (ex.rest && !it.testMax) it.rest = ex.rest;
       return it;
     });
     var dur = sp.deload ? Math.round(num(sess.dur, 60) * 0.8) : num(sess.dur, 60);
@@ -553,8 +559,20 @@
   var getSets = function (r) { if (!r) return []; if (Array.isArray(r.sets)) return r.sets; return (r.kg != null || r.reps != null) ? [{ kg: r.kg, reps: r.reps, rpe: r.rpe }] : []; };
   var flat = function (r) {
     var ss = getSets(r); if (!ss.length) return {};
-    var best = null, bv = -1;
-    ss.forEach(function (z) { var v = z.kg && z.reps ? e1rm(z.kg, z.reps, z.rpe) : (num(z.kg) * 100 + num(z.reps)); if (v > bv) { bv = v; best = z; } });
+    /* Série retenue : la plus lourde ; à charge égale, la plus dure (RPE le plus haut,
+       puis le moins de reps). Le RPE prévu correspond à la dernière série, la plus dure :
+       retenir la première, plus fraîche, ferait croire à un 1RM trop haut. Sans charge
+       (poids du corps), on garde la série avec le plus de reps. */
+    var best = null;
+    ss.forEach(function (z) {
+      if (!best) { best = z; return; }
+      var kz = num(z.kg, 0), kb = num(best.kg, 0);
+      if (kz > kb) best = z;
+      else if (kz === kb) {
+        if (kz > 0) { var rz = num(z.rpe, 0), rb = num(best.rpe, 0); if (rz > rb || (rz === rb && num(z.reps, 0) < num(best.reps, 0))) best = z; }
+        else if (num(z.reps, 0) > num(best.reps, 0)) best = z;
+      }
+    });
     return { kg: best.kg, reps: best.reps, rpe: best.rpe, plan: r.plan, n: ss.length };
   };
   var realResults = function (x, it, r) {
@@ -574,7 +592,8 @@
       if (raw0.noAdj) h += '<div class="lgres"><span>Séance ignorée pour l’ajustement.</span>' + ign + '</div>';
       else if (it.loadNum == null || Math.abs(num(r.kg) - it.loadNum) >= 0.5) h += '<div class="lgres"><span>' + (it.loadNum ? 'Prévu ' + kg(it.loadNum) + ', fait ' + kg(num(r.kg)) : 'Fait ' + kg(num(r.kg))) + ' : la suite repart de ta charge réelle.</span>' + ign + '</div>';
     }
-    if (it.mode === 'reps' && r.reps && it.repsPlan && num(r.reps) > it.repsPlan) h += '<div class="lgres"><span>' + num(r.reps) + ' reps faites pour ' + it.repsPlan + ' prévues</span><button class="btn sm" data-a="reps-set" data-key="' + esc(x.key) + '" data-ex="' + esc(it.id) + '" data-v="' + num(r.reps) + '">Repartir de ' + num(r.reps) + ' reps</button></div>';
+    if (it.testMax && r.reps) h += '<div class="lgres"><span>Test : <b>' + num(r.reps) + ' reps unbroken</b>.</span></div>';
+    else if (it.mode === 'reps' && r.reps && it.repsPlan && num(r.reps) > it.repsPlan) h += '<div class="lgres"><span>' + num(r.reps) + ' reps faites pour ' + it.repsPlan + ' prévues</span><button class="btn sm" data-a="reps-set" data-key="' + esc(x.key) + '" data-ex="' + esc(it.id) + '" data-v="' + num(r.reps) + '">Repartir de ' + num(r.reps) + ' reps</button></div>';
     return h;
   };
   // Historique d'un exercice (par nom) dans un programme muscu
@@ -924,7 +943,7 @@
               var restF = fld('Repos (vide = auto)', pth + 'rest', e.rest, 'placeholder="ex. 3 min"');
               if (e.mode === 'pct') f = nfld('1RM (kg)', pth + 'orm', e.orm) + sel('Variante', pth + 'offset', opt([[0, 'Principale'], [-5, 'Secondaire −5 %'], [-10, 'Secondaire −10 %'], [-15, 'Secondaire −15 %']], e.offset || 0)) + nfld('Reps max (0 = selon bloc)', pth + 'repCap', e.repCap || 0) + nfld('Séries max (0 = selon bloc)', pth + 'setCap', e.setCap || 0) + nfld('Pas de charge (kg)', pth + 'step', e.step || 2.5) + fld('Note', pth + 'note', e.note);
               else if (e.mode === 'kg') f = nfld('Séries', pth + 'sets', e.sets) + nfld('Reps (min)', pth + 'reps', e.reps) + nfld('Reps max (double progression, 0 = non)', pth + 'repsMax', e.repsMax || 0) + nfld('Charge S1 (kg)', pth + 'startKg', e.startKg) + nfld(num(e.repsMax, 0) > num(e.reps, 0) ? '+ kg à chaque cycle de reps' : '+ kg / semaine', pth + 'incKg', e.incKg) + fld('Note', pth + 'note', e.note);
-              else if (e.mode === 'reps') f = nfld('Séries', pth + 'sets', e.sets) + nfld('Reps S1', pth + 'reps', e.reps) + nfld('+ reps / sem.', pth + 'incReps', e.incReps) + nfld('Reps max', pth + 'maxReps', e.maxReps) + fld('Note', pth + 'note', e.note);
+              else if (e.mode === 'reps') f = nfld('Séries', pth + 'sets', e.sets) + nfld('Reps S1', pth + 'reps', e.reps) + nfld('+ reps / sem.', pth + 'incReps', e.incReps) + nfld('Reps max', pth + 'maxReps', e.maxReps) + sel('Semaine test', pth + 'testMax', opt([[0, '1 série en moins'], [1, 'Test : max unbroken']], num(e.testMax, 0) > 0 || e.testMax === true ? 1 : 0)) + fld('Note', pth + 'note', e.note);
               else f = fld('Prescription', pth + 'text', e.text, 'placeholder="ex. 3×12 RPE 8"') + fld('Note', pth + 'note', e.note);
               if (e.mode !== 'libre') f += restF;
               return '<div class="exr"><div class="row between"><span class="small mu">Exercice ' + (j + 1) + '</span><button class="btn sm ghost icon" data-a="ed-del-ex" data-i="' + i + '" data-j="' + j + '" aria-label="Supprimer l’exercice">' + ICON.trash + '</button></div><div class="fgrid w2">' + fld('Nom', pth + 'name', e.name) + sel('Type', pth + 'mode', opt(EX_MODES, e.mode), true) + '</div><div class="fgrid">' + f + '</div></div>';
