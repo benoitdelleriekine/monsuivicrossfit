@@ -88,6 +88,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .ntype i{width:12px;height:12px;border-radius:50%;background:var(--c);margin-bottom:6px}
 .ntype b{font-size:17px}
 .ntype span{font-size:12.5px;color:var(--mute);line-height:1.4}
+.rpe1{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:2px;width:100%}
+.rpe1 button{position:relative;height:48px;padding:0;border:0;border-radius:3px;font-family:"Barlow Condensed",Barlow,sans-serif;font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center}
+.rpe1 button:first-child{border-radius:10px 3px 3px 10px}.rpe1 button:last-child{border-radius:3px 10px 10px 3px}
+.rpe1 button span{color:var(--ink)}
+.rpe1 button[style*="background:#"] span{color:#FFFFFF;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.rpe1 button.on{outline:3px solid var(--ink);outline-offset:1px;z-index:1;transform:scaleY(1.12)}
+.rpe1 button.on span{color:#0F1215;text-shadow:none}
+.rpe1-ends{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin-top:6px}
 .rpes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
 .rpes button{min-height:44px;padding:0;text-align:center;display:flex;align-items:center;justify-content:center;border-radius:8px;font-weight:700;font-size:14px;color:var(--ink);background:hsl(var(--h) 45% 50% / .16);border:1px solid transparent}
 .rpes button.on{background:hsl(var(--h) 60% 50%);color:#0F1215;border-color:var(--ink)}
@@ -307,7 +315,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v59";
+const APP_VERSION="msc-v60";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -1603,6 +1611,13 @@ function planNear(date){
   const fam=Object.values(x.heavyPats||{});
   lines.push(`<b>${l} au plan</b> : ${esc(x.heavy.join(", "))}.${fam.length?` ${n>0?"Évite le gros volume":"Vas-y mollo"} en ${esc(fam.join(", "))}.`:""}`)}));
  return lines.length?`<div class="card" style="margin-top:14px;border-color:var(--melon);font-size:13.5px;line-height:1.6">${lines.join("<br>")}</div>`:""}
+/* Échelle de RPE de 1 à 10 sur une ligne, identique à celle du plan :
+   dégradé du vert au rouge, cases remplies jusqu'à la valeur choisie. */
+const RPEC=["#3E7F73","#4E9A7F","#62AD84","#86B86F","#B5BE5E","#D9B44F","#E79A45","#EC7D43","#E8603F","#D9453B"];
+function rpeScale(val,act){val=+val||0;
+ return`<div class="rpe1" role="group" aria-label="RPE de 1 à 10">`+RPEC.map((c,i)=>{const n=i+1,on=val===n,fill=val&&n<=val;
+  return`<button class="${on?"on":""}" data-act="${act}" data-v="${n}" aria-pressed="${on}" aria-label="RPE ${n}" style="background:${fill?c:`color-mix(in srgb, ${c} 22%, transparent)`}"><span>${n}</span></button>`}).join("")+
+  `</div><div class="rpe1-ends"><span>Très facile</span><span>Maximal</span></div>`}
 function vNoter(){
   /* Muscu, course ou autre choisis depuis Noter : le plan s'affiche ici, l'onglet reste Noter */
   if(!S.draft&&S.notePlan&&typeof vPlan==="function")return`<div class="pane" style="padding-top:calc(18px + env(safe-area-inset-top))">
@@ -1647,7 +1662,7 @@ function vNoter(){
     <input class="inp" id="sdur" type="number" inputmode="numeric" min="5" max="300" value="${d.dur||""}" placeholder="60" style="width:90px;text-align:center">
     <span style="font-size:13.5px;color:var(--mute)">min</span></div>
    <div style="font-size:13.5px;color:var(--mute);margin-bottom:8px">RPE de la séance (effort global)${d.rpe?` : <b style="color:var(--ink)">${d.rpe}</b>`:""}</div>
-   <div class="rpes">`+[1,2,3,4,5,6,7,8,9,10].map(i=>`<button class="${d.rpe===i?"on":""}" data-act="srpe" data-v="${i}" aria-pressed="${d.rpe===i}" style="--h:${Math.round(150-i*14)}">${i}</button>`).join("")+`</div>
+   `+rpeScale(d.rpe,"srpe")+`
    <div style="font-size:12px;color:var(--mute);line-height:1.6;margin-top:8px">Durée × RPE = charge de la séance, comptée avec ton plan muscu et course.</div></div>
 `+((S.pain&&S.pain.zones||[]).length?`<div class="card" style="margin-top:14px"><div class="eyebrow">Douleur</div>`+
    S.pain.zones.map(z=>painChips(d.date,z,"seance",painZ(z)[1]+" pendant ou après")).join("")+`</div>`:"")+`
