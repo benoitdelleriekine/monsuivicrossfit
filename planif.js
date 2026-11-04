@@ -297,6 +297,8 @@
     if (/squat|fente|lunge|presse/.test(n)) return 'squat';
     return null;
   };
+  // Avant chaque action : repère de l'état du suivi (utilisé par l'app hôte pour dater chaque saisie)
+  var editBegin = function () {};
   var AUTO_ALPHA = 0.5, AUTO_CAP = 0.05;
   // Première semaine à prendre en compte : S1, ou plus tôt si une séance a été ajoutée avant le cycle
   var firstWeek = function (p) { var k0 = 1; (p.extras || []).forEach(function (e) { var k = extraW(p, e); if (k < k0) k0 = k; });
@@ -523,7 +525,17 @@
   // ---------- Stockage : délégué à l'app (localStorage + Supabase) ----------
   var store = { mode: 'app' };
   var sortProgs = function (a) { return a.slice().sort(function (x, y) { return (x.createdAt || 0) - (y.createdAt || 0); }); };
-  var persist = function (p) { p.updatedAt = Date.now(); P(); save(); };
+  /* Chaque entrée du suivi (séance notée, modification, déplacement, ordre, séance ajoutée)
+     est datée dans p.ts quand elle change : la synchro fusionne alors entrée par entrée. */
+  var MAPF = ['logs', 'overrides', 'moves', 'orders'], baseMaps = {};
+  var snapP = function (p) { var o = {}; MAPF.forEach(function (f) { var m = {}; Object.keys(p[f] || {}).forEach(function (k) { m[k] = JSON.stringify(p[f][k]); }); o[f] = m; }); var x = {}; (p.extras || []).forEach(function (e) { if (e && e.id) x[e.id] = JSON.stringify(e); }); o.extras = x; return o; };
+  editBegin = function () { baseMaps = {}; state.programs.forEach(function (p) { if (p && p.id) baseMaps[p.id] = snapP(p); }); };
+  var stampP = function (p) {
+    var now = Date.now(), old = baseMaps[p.id] || null, cur = snapP(p); p.ts = p.ts || {};
+    Object.keys(cur).forEach(function (f) { var a = old ? old[f] : {}, b = cur[f], ks = {}; Object.keys(a).forEach(function (k) { ks[k] = 1; }); Object.keys(b).forEach(function (k) { ks[k] = 1; }); Object.keys(ks).forEach(function (k) { if (a[k] !== b[k]) p.ts[f + '|' + k] = now; }); });
+    baseMaps[p.id] = cur;
+  };
+  var persist = function (p) { stampP(p); p.updatedAt = Date.now(); P(); save(); };
   var removeStored = function (id) { var d = P(); d.deleted = (d.deleted || []).filter(function (z) { return z.id !== id; }).concat([{ id: id, at: Date.now() }]); save(); };
   var saveLocal = function () { save(); };
 
@@ -1241,6 +1253,7 @@
   document.addEventListener('click', function (e) {
     var t0 = e.composedPath ? e.composedPath()[0] : e.target; if (!t0 || !t0.closest) return;
     var b = t0.closest('[data-a]'); if (!b) return;
+    editBegin();
     var a = b.getAttribute('data-a'), id = b.getAttribute('data-id'), key = b.getAttribute('data-key');
     var ae = activeIn();
     if (a !== 'ov-save' && ae && ae !== b && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA') && mainRoot && mainRoot.contains(ae)) ae.blur();
@@ -1425,6 +1438,7 @@
   });
   rootListen('change', function (e) {
     var t = e.target; if (!t.getAttribute) return;
+    editBegin();
     var xf2 = t.getAttribute('data-xf'); if (xf2 && ui.xf) { ui.xf[xf2] = t.value; if (xf2 === 'pid' || xf2 === 'date') { if (xf2 === 'pid') ui.xf.ex = ui.xf.ex.filter(function (z) { return !z.ref; }); setTimeout(render, 0); } return; }
     var k = t.getAttribute('data-note');
     if (k) { setLog(k, { note: t.value.trim() }); return; }
@@ -1524,7 +1538,7 @@
       return out;
     },
     /* Accès au moteur pour les tests automatiques (lecture seule, aucune interface ne s'en sert) */
-    engine: { gen: gen, tmTrace: tmTrace, kgShift: kgShift, findEx: findEx, findInst: findInst, muscuSpec: muscuSpec, logsFor: logsFor, cfIdOf: cfIdOf, exPattern: exPattern, libFind: libFind, LIB: LIB, progStart: progStart, instancesOn: instancesOn, weekStats: weekStats, parseISO: parseISO, iso: iso, addDays: addDays, rstep: rstep, e1rm: e1rm },
+    engine: { editBegin: function () { editBegin(); }, persist: function (p) { persist(p); }, gen: gen, tmTrace: tmTrace, kgShift: kgShift, findEx: findEx, findInst: findInst, muscuSpec: muscuSpec, logsFor: logsFor, cfIdOf: cfIdOf, exPattern: exPattern, libFind: libFind, LIB: LIB, progStart: progStart, instancesOn: instancesOn, weekStats: weekStats, parseISO: parseISO, iso: iso, addDays: addDays, rstep: rstep, e1rm: e1rm },
     library: function () { return LIB.map(function (l) { return { id: l[0], n: libName(l), k: l[2], g: l[3], pat: l[4], mode: l[5] }; }); },
     programs: function () { return state.programs.map(function (p) { return { id: p.id, name: p.name || KIND[p.kind].label, color: colorOf(p), kind: p.kind }; }); },
     open: function (key) { var x = findInst(key); if (!x) return; ui.view = 'semaine'; ui.weekStart = iso(mondayOf(x.date)); ui.day = dow(x.date); ui.sel = key; ui.xf = null; ui.edit = null; },

@@ -303,7 +303,7 @@ const PACE={row:500,ski:500,run:1000,bike:1000,assault:1000,shuttle:100,sled:10,
 const KEY="cf-progres";
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v56";
+const APP_VERSION="msc-v57";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -432,12 +432,12 @@ function weeksGrid(n){const rows=[],m=new Date();m.setDate(m.getDate()-((m.getDa
 
 /* ══════════ ÉTAT ══════════ */
 let S={sessions:[],custom:[],planif:{programs:[],deleted:[]},bar:15,tab:"progres",draft:null,focus:null,picker:false,q:"",prog:null,open:null,
- profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},pin:[],tabsOff:["niveau"],pain:{zones:[],log:{}},hf:"tout",histOpen:null,nchain:null,nfilt:"tout",share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
+ profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},pin:[],tabsOff:["niveau"],delSessions:[],pain:{zones:[],log:{}},hf:"tout",histOpen:null,nchain:null,nfilt:"tout",share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
  updatedAt:0,cloud:{enabled:false,user:null,status:"",busy:false,sent:false},email:"",otp:"",
  d:{w:0,reps:5,diff:"juste",level:0,dist:500,min:2,sec:0,age:30,bw:60}};
 /* Instantané des données, avec horodatage pour arbitrer la synchronisation */
 function payload(local){return{sessions:S.sessions,custom:S.custom,planif:S.planif,bar:S.bar,profile:S.profile,
- lastExport:S.lastExport,theme:S.theme,tests:S.tests,decl:S.decl,pin:S.pin,tabsOff:S.tabsOff,pain:S.pain,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
+ lastExport:S.lastExport,theme:S.theme,tests:S.tests,decl:S.decl,pin:S.pin,tabsOff:S.tabsOff,delSessions:S.delSessions,pain:S.pain,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
 const save=()=>{S.updatedAt=Date.now();pushSoon();try{localStorage.setItem(KEY,JSON.stringify(
  payload(true)))}catch(e){alert("Sauvegarde impossible : la mémoire du navigateur est pleine ou bloquée.")}};
 /* ══════════ SAUVEGARDE COMPLÈTE ══════════
@@ -445,12 +445,13 @@ const save=()=>{S.updatedAt=Date.now();pushSoon();try{localStorage.setItem(KEY,J
    douleur, tests et déclarations de niveau, épinglages, réglages. */
 function backupData(){const d=payload(false);
  return{v:2,app:APP_VERSION,exported:TODAY,profile:d.profile,sessions:d.sessions,custom:d.custom,
-  planif:d.planif,pain:d.pain,tests:d.tests,decl:d.decl,pin:d.pin,tabsOff:d.tabsOff,bar:d.bar,theme:d.theme}}
+  planif:d.planif,pain:d.pain,tests:d.tests,decl:d.decl,pin:d.pin,tabsOff:d.tabsOff,delSessions:d.delSessions,bar:d.bar,theme:d.theme}}
 /* Restaure un fichier v1 (séances seules) ou v2 (tout). Les programmes restaurés sont datés de
    maintenant pour primer sur une version plus ancienne restée sur le compte. */
 function restoreData(d){
  if(!d||!Array.isArray(d.sessions))throw new Error("format");
- S.sessions=d.sessions.map(x=>({metcons:[],entries:[],...x}));
+ const now=Date.now();
+ S.sessions=d.sessions.map(x=>({metcons:[],entries:[],...x,updatedAt:now}));
  S.custom=Array.isArray(d.custom)?d.custom:[];if(d.profile)S.profile=d.profile;
  if(d.v>=2){
   if(d.planif){const pl=normPlanif(d.planif),now=Date.now();pl.programs.forEach(p=>{p.updatedAt=now});S.planif=pl}
@@ -484,6 +485,7 @@ function load(){let raw=null;
   S.pin=Array.isArray(d.pin)?d.pin:[];
   /* L'onglet Niveau est masqué par défaut ; il se réactive dans Profil. */
   S.tabsOff=Array.isArray(d.tabsOff)?d.tabsOff:["niveau"];
+  S.delSessions=normTomb(d.delSessions);
   S.pain=normPain(d.pain);
   S.planif=normPlanif(d.planif)}catch(e){}
  /* Réparation des profils écrits par une version antérieure défectueuse :
@@ -3080,6 +3082,7 @@ document.addEventListener("click",ev=>{
   case"saveS":{const d=S.draft;d.entries=d.entries.filter(e=>e.sets.length);
     d.metcons=(d.metcons||[]).filter(x=>x.items.length||mcScore(x));S.mc=null;
     const before=new Set(milestones(S.sessions).map(x=>x.date+"|"+x.t+"|"+x.v));
+    d.updatedAt=Date.now();
     S.sessions=[...S.sessions.filter(x=>x.id!==d.id),d];
     const fresh=milestones(S.sessions).filter(x=>x.date===d.date&&!before.has(x.date+"|"+x.t+"|"+x.v));
     S.draft=null;S.focus=null;S.tab="progres";
@@ -3092,7 +3095,9 @@ document.addEventListener("click",ev=>{
     S.draft={...s,entries:s.entries.map(e=>({...e,sets:e.sets.map(x=>({...x}))})),
       metcons:(s.metcons||[]).map(x=>({...x,items:x.items.map(i=>({...i})),res:{...x.res}}))};
     S.tab="noter";S.focus=null;S.mc=null;break}
-  case"del":if(confirm("Supprimer définitivement cette séance ?"))S.sessions=S.sessions.filter(x=>x.id!==b.dataset.id);break;
+  case"del":if(confirm("Supprimer définitivement cette séance ?")){const id=b.dataset.id;
+    S.sessions=S.sessions.filter(x=>x.id!==id);
+    S.delSessions=mergeTomb(S.delSessions,[{id,at:Date.now()}])}break;
   case"export":{S.lastExport=TODAY;save();downloadJSON(backupData(),"mon-suivi-complet-"+TODAY+".json");return}
   case"bkdl":{const x=backups()[+v];if(x)downloadJSON(x.data,"mon-suivi-avant-"+String(x.ver).replace(/[^a-z0-9-]/gi,"")+"-"+x.at.slice(0,10)+".json");return}
   case"import":{const f=document.createElement("input");f.type="file";f.accept="application/json,.json";
@@ -3186,19 +3191,44 @@ function pushSoon(){
    quand le même id existe des deux côtés (cas rare — une séance éditée
    avant que l'autre côté ait reçu le changement). Il n'y a donc plus jamais
    à choisir entre « ce téléphone » et « le compte » : les deux sont réunis. */
-function mergeSessions(primaire,secondaire){
+/* Séances : pour une même séance, la version modifiée le plus récemment l'emporte
+   (à égalité, celle du compte, comme avant). Une séance supprimée après sa dernière
+   modification ne revient pas, d'où qu'elle vienne. */
+function normTomb(x){return Array.isArray(x)?x.filter(z=>z&&z.id).map(z=>({id:String(z.id),at:Number(z.at)||0})):[]}
+function mergeTomb(a,b){const m={};[...normTomb(a),...normTomb(b)].forEach(z=>{if(!m[z.id]||z.at>m[z.id])m[z.id]=z.at});
+ return Object.keys(m).map(id=>({id,at:m[id]}))}
+function mergeSessions(primaire,secondaire,tombes){
  const byId={};
- (secondaire||[]).forEach(s=>{if(s&&s.id)byId[s.id]=s});
  (primaire||[]).forEach(s=>{if(s&&s.id)byId[s.id]=s});
- return Object.values(byId)}
+ (secondaire||[]).forEach(s=>{if(!s||!s.id)return;const o=byId[s.id];if(!o||(s.updatedAt||0)>(o.updatedAt||0))byId[s.id]=s});
+ const del={};normTomb(tombes).forEach(z=>{del[z.id]=z.at});
+ return Object.values(byId).filter(s=>!(del[s.id]&&del[s.id]>=(s.updatedAt||0)))}
 
 /* Programmes du module Plan : réunion des deux côtés, la version la plus
    récente de chaque programme l'emporte, et une suppression faite sur un
    appareil n'est pas annulée par l'autre. */
 function normPlanif(x){return{programs:x&&Array.isArray(x.programs)?x.programs:[],deleted:x&&Array.isArray(x.deleted)?x.deleted:[]}}
+/* Un même programme modifié sur deux appareils : la structure (blocs, séances, exercices)
+   vient de la version la plus récente, mais le suivi est fusionné entrée par entrée
+   (séances notées, modifications, déplacements, ordres, séances ajoutées) grâce à la
+   date de chaque entrée (p.ts). Sans date des deux côtés, on garde l'ancien comportement. */
+const PL_MAPS=["logs","overrides","moves","orders"];
+function mergeProg(a,b){
+ const ta=a.ts||{},tb=b.ts||{},newer=(a.updatedAt||0)>=(b.updatedAt||0)?a:b;
+ const out={...newer},ts={...tb};
+ Object.keys(ta).forEach(k=>{if(!(k in ts)||ta[k]>ts[k])ts[k]=ta[k]});
+ const pick=(f,k,A,B,N)=>{const x=ta[f+"|"+k]||0,y=tb[f+"|"+k]||0;return x>y?A:y>x?B:N};
+ PL_MAPS.forEach(f=>{const A=a[f]||{},B=b[f]||{},N=newer[f]||{},R={};
+  new Set([...Object.keys(A),...Object.keys(B)]).forEach(k=>{const src=pick(f,k,A,B,N);if(Object.prototype.hasOwnProperty.call(src,k))R[k]=src[k]});
+  out[f]=R});
+ const ix=l=>{const m={};(l||[]).forEach(e=>{if(e&&e.id)m[e.id]=e});return m};
+ const XA=ix(a.extras),XB=ix(b.extras),XN=ix(newer.extras),XR=[];
+ new Set([...Object.keys(XA),...Object.keys(XB)]).forEach(id=>{const src=pick("extras",id,XA,XB,XN);if(src[id])XR.push(src[id])});
+ if(a.extras||b.extras)out.extras=XR;
+ out.ts=ts;out.updatedAt=Math.max(a.updatedAt||0,b.updatedAt||0);return out}
 function mergePlanif(a,b){a=normPlanif(a);b=normPlanif(b);
  const del={};[...a.deleted,...b.deleted].forEach(z=>{if(z&&z.id&&(!del[z.id]||z.at>del[z.id]))del[z.id]=z.at});
- const by={};[...b.programs,...a.programs].forEach(p=>{if(!p||!p.id)return;const o=by[p.id];if(!o||(p.updatedAt||0)>=(o.updatedAt||0))by[p.id]=p});
+ const by={};[...b.programs,...a.programs].forEach(p=>{if(!p||!p.id)return;const o=by[p.id];by[p.id]=o?mergeProg(p,o):p});
  const programs=Object.values(by).filter(p=>!(del[p.id]&&del[p.id]>=(p.updatedAt||0)))
   .sort((x,y)=>(x.createdAt||0)-(y.createdAt||0));
  return{programs,deleted:Object.keys(del).map(id=>({id,at:del[id]}))}}
@@ -3208,8 +3238,12 @@ function applyRemote(rec){
  const remoteSessions=(d.sessions||[]).map(x=>({metcons:[],entries:[],...x}));
  /* Une séance qui n'existait que sur ce téléphone (pas encore poussée)
     doit survivre à la fusion : on la renvoie ensuite vers le compte. */
- const localSeules=(S.sessions||[]).some(s=>s&&!remoteSessions.some(r=>r&&r.id===s.id));
- S.sessions=mergeSessions(remoteSessions,S.sessions);
+ const remTomb=normTomb(d.delSessions);
+ S.delSessions=mergeTomb(S.delSessions,remTomb);
+ S.sessions=mergeSessions(remoteSessions,S.sessions,S.delSessions);
+ const remById={};remoteSessions.forEach(r=>{if(r&&r.id)remById[r.id]=r});
+ const localSeules=S.sessions.some(s=>!remById[s.id]||(s.updatedAt||0)!==(remById[s.id].updatedAt||0))
+  ||S.sessions.length!==remoteSessions.length||S.delSessions.length!==remTomb.length;
  /* Les autres réglages viennent du cloud, mais ne sont écrasés que si la
     version distante en possède un : une ligne poussée avant la création du profil
     ne doit pas effacer celui saisi sur l'appareil. */
@@ -3231,8 +3265,8 @@ function applyRemote(rec){
  S.custom=merged;
  const remPl=normPlanif(d.planif);
  S.planif=mergePlanif(S.planif,remPl);
- const remU={};remPl.programs.forEach(p=>{if(p&&p.id)remU[p.id]=p.updatedAt||0});
- const plDiff=S.planif.programs.length!==remPl.programs.length||S.planif.programs.some(p=>remU[p.id]!==(p.updatedAt||0))||S.planif.deleted.length!==remPl.deleted.length;
+ const remJ={};remPl.programs.forEach(p=>{if(p&&p.id)remJ[p.id]=JSON.stringify(p)});
+ const plDiff=S.planif.programs.length!==remPl.programs.length||S.planif.programs.some(p=>remJ[p.id]!==JSON.stringify(p))||S.planif.deleted.length!==remPl.deleted.length;
  /* Important : ne PAS estampiller avec Date.now() ici. On vient de recevoir
     l'état du serveur, donc le repère local doit désormais correspondre à
     l'horodatage serveur (et non à "maintenant"), sinon toute ouverture de
