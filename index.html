@@ -262,7 +262,7 @@ const M=[
  ["ghd","GHD Sit-Up","gym","Gymnastique"],["hollow","Hollow Hold","gym","Gymnastique","","sec"],
  ["plank","Plank","gym","Gymnastique","","sec"],
  ["rope-climb","Rope Climb","gym","Gymnastique"],["du","Double Under","gym","Gymnastique"],
- ["su","Single Unders","gym","Gymnastique"],
+ ["su","Single Under","gym","Gymnastique"],
  ["box-jump","Box Jump","gym","Gymnastique"],["box-step","Box Step-Up","gym","Gymnastique"],
  ["burpee","Burpee","gym","Gymnastique"],["bfb","Bar-Facing Burpee","gym","Gymnastique"],
  ["wall-ball","Wall Ball","gym","Gymnastique"],["dball","D-Ball Over Shoulder","gym","Gymnastique"],
@@ -558,7 +558,7 @@ function accroche(){
    lendemain matin (« matin »). Repères : au-delà de 3/10 le matin, 6/10 pendant
    la séance, ou +2 d'un matin à l'autre, la zone est signalée et les exercices
    qui la sollicitent sont allégés dans le plan. */
-const PAIN_Z=[["coude","Coude",["pull"]],["epaule","Épaule",["pushV","pushH"]],["poignet","Poignet",["pushH","pushV"]],
+const PAIN_Z=[["coude","Coude",["pull","bras"]],["epaule","Épaule",["pushV","pushH"]],["poignet","Poignet",["pushH","pushV","bras"]],
  ["dos","Bas du dos",["hinge","squat"]],["hanche","Hanche",["squat","hinge"]],["genou","Genou",["squat"]],["achille","Tendon d'Achille",["course"]]];
 const painZ=id=>PAIN_Z.find(z=>z[0]===id);
 function normPain(x){const o={zones:[],log:{},zt:x&&Number(x.zt)||0};if(x&&Array.isArray(x.zones))o.zones=x.zones.filter(z=>painZ(z));
@@ -619,7 +619,7 @@ const PAT_CF={"back-squat":["squat"],"front-squat":["squat"],ohs:["squat","pushV
  "strict-press":["pushV"],"push-press":["pushV"],jerk:["pushV"],"push-jerk":["pushV"],"split-jerk":["pushV"],"db-press":["pushV"],
  hspu:["pushV"],"handstand-walk":["pushV"],"wall-walk":["pushV"],
  bench:["pushH"],"push-up":["pushH"],"ring-dip":["pushH"],burpee:["pushH"],bfb:["pushH"],
- "pull-up":["pull"],c2b:["pull"],"ring-row":["pull"],"bent-row":["pull"],bmu:["pull","pushH"],rmu:["pull","pushH"],"rope-climb":["pull"],t2b:["pull"],
+ "pull-up":["pull"],tgu:["pushV"],sled:["squat"],k2e:["pull"],c2b:["pull"],"ring-row":["pull"],"bent-row":["pull"],bmu:["pull","pushH"],rmu:["pull","pushH"],"rope-climb":["pull"],t2b:["pull"],
  fran:["squat","pushV","pull"],grace:["hinge","pushV"],isabel:["hinge","pushV"],diane:["hinge","pushV"],elizabeth:["hinge","pushH"],nancy:["squat","pushV"],
  helen:["hinge","pull"],jackie:["squat","pushV","pull"],karen:["squat","pushV"],cindy:["pull","pushH","squat"],angie:["pull","pushH","squat"],
  barbara:["pull","pushH","squat"],chelsea:["pull","pushH","squat"],mary:["pushV","squat","pull"],dt:["hinge","pushV"],murph:["pull","pushH","squat"],
@@ -1753,7 +1753,8 @@ function vHist(){
 function vPicker(){
   /* Les mouvements récents sont proposés avant la recherche : dans un metcon,
      on réutilise presque toujours ceux du tour précédent. */const q=S.q.toLowerCase().trim();
- const L=allMoves().filter(m=>m.k!=="wod"&&(m.n.toLowerCase().includes(q)||m.g.toLowerCase().includes(q)));
+ const nq=t=>String(t).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""),qq=nq(q);
+ const L=allMoves().filter(m=>m.k!=="wod"&&(nq(m.n).includes(qq)||nq(m.g).includes(qq)));
  const G=[...new Set(L.map(m=>m.g))];
  let h=`<div class="sheet" data-act="closepick"><div class="sheet-in" data-stop="1">
   <div style="padding:18px 22px 10px"><div style="width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 16px"></div>
@@ -2812,8 +2813,18 @@ function seed(mid){const m=mv(mid),p=lastFor(mid),s=p&&p.e.sets[0];
 function addMove(id){const e={id:uid(),movementId:id,sets:[]};
  S.draft.entries.push(e);S.focus=e.id;S.picker=false;S.q="";seed(id)}
 
+/* Un nom déjà connu (liste ou mouvement perso, accents et casse ignorés) renvoie
+   le mouvement existant au lieu d'en créer un doublon. Le poids reste saisissable. */
+const nkey=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"");
 function createMove(name){const n=(name||"").trim();if(!n)return null;
- const id="c-"+uid();S.custom.push({id,n,k:"gym",g:"Mes mouvements",d:"",u:"reps",lad:null});return id}
+ const ex=allMoves().find(m=>nkey(m.n)===nkey(n));if(ex)return ex.id;
+ const id="c-"+uid();S.custom.push({id,n,k:"db",g:"Mes mouvements",d:"",u:"reps",lad:null});return id}
+/* Bibliothèque de musculation fournie par le module Plan : ajoutée à la liste,
+   sauf si un mouvement perso porte déjà le même nom. */
+window.registerMoves=list=>{let n=0;(list||[]).forEach(x=>{if(!x||BASE[x.id])return;
+  const al=(x.al||[x.n]).map(nkey);if(S.custom.some(c=>al.includes(nkey(c.n))))return;
+  const m={id:x.id,n:x.n,k:x.k||"db",g:x.g||"Muscu",d:"",u:"reps",lad:null};M.push(m);BASE[x.id]=m;
+  if(x.pat&&!PAT_CF[x.id])PAT_CF[x.id]=[x.pat];n++});if(n)render()};
 
 document.addEventListener("click",ev=>{
  const b=ev.target.closest("[data-act]");if(!b)return;

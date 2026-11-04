@@ -206,9 +206,74 @@
   var painFlags = function (d) { var pa = painApi(); try { return (pa && pa.flags ? pa.flags(iso(d)) : null) || {}; } catch (e) { return {}; } };
   var CFP = { id: '__cf', name: 'CrossFit', kind: 'fixe', color: 'var(--aqua, #6E9BEA)' };
   var normTxt = function (t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
-  // Mouvement CrossFit correspondant à un exercice du plan (champ cf, sinon d'après le nom)
+
+  // ---------- Bibliothèque de mouvements de musculation ----------
+  // [identifiant, nom(s) séparés par |, type de charge (barbell/db/gym), groupe, famille, mode conseillé]
+  // Les identifiants sans « mu- » sont ceux du suivi CrossFit (même mouvement, pas de doublon).
+  var LIB = [
+    ['back-squat', 'Back squat|Squat', 'barbell', 'Jambes', 'squat', 'pct'], ['front-squat', 'Front squat', 'barbell', 'Jambes', 'squat', 'pct'],
+    ['mu-pause-squat', 'Squat pause', 'barbell', 'Jambes', 'squat', 'pct'], ['mu-box-squat', 'Box squat', 'barbell', 'Jambes', 'squat', 'kg'],
+    ['mu-zercher', 'Zercher squat', 'barbell', 'Jambes', 'squat', 'kg'], ['mu-ssb', 'Squat safety bar', 'barbell', 'Jambes', 'squat', 'kg'],
+    ['mu-goblet', 'Goblet squat', 'db', 'Jambes', 'squat', 'kg'], ['mu-hack', 'Hack squat', 'db', 'Jambes', 'squat', 'kg'],
+    ['mu-legpress', 'Presse à cuisses|Leg press', 'db', 'Jambes', 'squat', 'kg'], ['mu-bss', 'Fentes bulgares|Bulgarian split squat', 'db', 'Jambes', 'squat', 'kg'],
+    ['mu-split', 'Split squat', 'db', 'Jambes', 'squat', 'kg'], ['db-lunge', 'Fentes haltères', 'db', 'Jambes', 'squat', 'kg'],
+    ['mu-walk-lunge', 'Fentes marchées', 'db', 'Jambes', 'squat', 'kg'], ['front-lunge', 'Fentes barre', 'barbell', 'Jambes', 'squat', 'kg'],
+    ['mu-stepup', 'Step-up haltères', 'db', 'Jambes', 'squat', 'kg'], ['mu-legext', 'Leg extension', 'db', 'Jambes', 'squat', 'kg'],
+    ['mu-sissy', 'Sissy squat', 'gym', 'Jambes', 'squat', 'reps'], ['mu-adduct', 'Adduction machine|Adduction hanche machine', 'db', 'Jambes', null, 'kg'],
+    ['mu-abduct', 'Abduction machine|Abduction hanche machine', 'db', 'Jambes', null, 'kg'],
+    ['deadlift', 'Soulevé de terre|Deadlift', 'barbell', 'Ischios & fessiers', 'hinge', 'pct'], ['mu-sumo', 'Soulevé de terre sumo', 'barbell', 'Ischios & fessiers', 'hinge', 'pct'],
+    ['mu-trapbar', 'Soulevé de terre trap bar', 'barbell', 'Ischios & fessiers', 'hinge', 'kg'], ['mu-rdl', 'Soulevé de terre roumain|RDL', 'barbell', 'Ischios & fessiers', 'hinge', 'kg'],
+    ['mu-db-rdl', 'Soulevé de terre roumain haltères', 'db', 'Ischios & fessiers', 'hinge', 'kg'], ['mu-sldl', 'Soulevé de terre jambes tendues', 'barbell', 'Ischios & fessiers', 'hinge', 'kg'],
+    ['mu-deficit-dl', 'Soulevé de terre déficit', 'barbell', 'Ischios & fessiers', 'hinge', 'kg'], ['mu-rack-pull', 'Rack pull', 'barbell', 'Ischios & fessiers', 'hinge', 'kg'],
+    ['hip-thrust', 'Hip thrust', 'barbell', 'Ischios & fessiers', 'hinge', 'kg'], ['mu-glute-bridge', 'Pont fessier', 'barbell', 'Ischios & fessiers', 'hinge', 'kg'],
+    ['good-morning', 'Good morning', 'barbell', 'Ischios & fessiers', 'hinge', 'kg'], ['back-ext', 'Hyperextension lombaire|Extension lombaire', 'gym', 'Ischios & fessiers', 'hinge', 'reps'],
+    ['mu-legcurl-lying', 'Leg curl allongé|Leg curl allongé unilatéral', 'db', 'Ischios & fessiers', 'hinge', 'kg'], ['mu-legcurl-seated', 'Leg curl assis', 'db', 'Ischios & fessiers', 'hinge', 'kg'],
+    ['mu-nordic', 'Nordic hamstring curl', 'gym', 'Ischios & fessiers', 'hinge', 'reps'], ['kb-swing', 'Kettlebell swing', 'db', 'Ischios & fessiers', 'hinge', 'kg'],
+    ['mu-pullthrough', 'Pull-through poulie', 'db', 'Ischios & fessiers', 'hinge', 'kg'], ['mu-revhyper', 'Reverse hyper', 'db', 'Ischios & fessiers', 'hinge', 'kg'],
+    ['bench', 'Développé couché|Bench press', 'barbell', 'Pectoraux', 'pushH', 'pct'], ['mu-bench-pause', 'Développé couché pause', 'barbell', 'Pectoraux', 'pushH', 'pct'],
+    ['mu-closegrip', 'Développé couché prise serrée', 'barbell', 'Pectoraux', 'pushH', 'kg'], ['mu-incline-bb', 'Développé incliné barre', 'barbell', 'Pectoraux', 'pushH', 'kg'],
+    ['mu-decline', 'Développé décliné', 'barbell', 'Pectoraux', 'pushH', 'kg'], ['mu-floor', 'Floor press', 'barbell', 'Pectoraux', 'pushH', 'kg'],
+    ['mu-db-bench', 'Développé couché haltères', 'db', 'Pectoraux', 'pushH', 'kg'], ['mu-db-incline', 'Développé incliné haltères', 'db', 'Pectoraux', 'pushH', 'kg'],
+    ['mu-chestpress', 'Chest press machine', 'db', 'Pectoraux', 'pushH', 'kg'], ['mu-flyes', 'Écarté haltères', 'db', 'Pectoraux', 'pushH', 'kg'],
+    ['mu-cablefly', 'Écarté poulie', 'db', 'Pectoraux', 'pushH', 'kg'], ['mu-pecdeck', 'Pec deck', 'db', 'Pectoraux', 'pushH', 'kg'],
+    ['push-up', 'Pompes', 'gym', 'Pectoraux', 'pushH', 'reps'], ['mu-dips', 'Dips barres|Dips', 'gym', 'Pectoraux', 'pushH', 'reps'], ['ring-dip', 'Dips anneaux', 'gym', 'Pectoraux', 'pushH', 'reps'],
+    ['strict-press', 'Strict press|Développé militaire barre', 'barbell', 'Épaules', 'pushV', 'pct'], ['push-press', 'Push press', 'barbell', 'Épaules', 'pushV', 'kg'],
+    ['mu-db-ohp', 'Développé militaire haltères', 'db', 'Épaules', 'pushV', 'kg'], ['mu-db-seated', 'Développé épaules assis haltères', 'db', 'Épaules', 'pushV', 'kg'],
+    ['mu-arnold', 'Développé Arnold', 'db', 'Épaules', 'pushV', 'kg'], ['mu-landmine', 'Landmine press', 'barbell', 'Épaules', 'pushV', 'kg'],
+    ['mu-zpress', 'Z press', 'barbell', 'Épaules', 'pushV', 'kg'], ['mu-lateral', 'Élévations latérales', 'db', 'Épaules', null, 'kg'],
+    ['mu-front-raise', 'Élévations frontales', 'db', 'Épaules', null, 'kg'], ['mu-reardelt', 'Oiseau|Deltoïde postérieur', 'db', 'Épaules', 'pull', 'kg'],
+    ['mu-facepull', 'Face pull', 'db', 'Épaules', 'pull', 'kg'], ['mu-upright', 'Tirage menton', 'barbell', 'Épaules', 'pull', 'kg'], ['mu-shrug', 'Shrugs', 'barbell', 'Épaules', null, 'kg'],
+    ['pull-up', 'Tractions strictes|Tractions', 'gym', 'Dos', 'pull', 'reps'], ['mu-pullup-w', 'Tractions lestées', 'db', 'Dos', 'pull', 'kg'],
+    ['mu-chinup', 'Tractions supination|Chin-up', 'gym', 'Dos', 'pull', 'reps'], ['mu-neg-pullup', 'Tractions négatives|Tractions négatives lentes', 'gym', 'Dos', 'pull', 'reps'],
+    ['mu-latpull', 'Tirage vertical poulie|Lat pulldown', 'db', 'Dos', 'pull', 'kg'], ['mu-seated-row', 'Tirage horizontal poulie', 'db', 'Dos', 'pull', 'kg'],
+    ['bent-row', 'Rowing barre', 'barbell', 'Dos', 'pull', 'kg'], ['mu-pendlay', 'Rowing Pendlay', 'barbell', 'Dos', 'pull', 'kg'],
+    ['mu-db-row', 'Rowing haltère un bras', 'db', 'Dos', 'pull', 'kg'], ['mu-chest-row', 'Rowing poitrine appuyée|Rowing poitrine appuyée (haltères)', 'db', 'Dos', 'pull', 'kg'],
+    ['mu-tbar', 'Rowing T-bar', 'barbell', 'Dos', 'pull', 'kg'], ['mu-machine-row', 'Rowing machine', 'db', 'Dos', 'pull', 'kg'],
+    ['mu-pullover', 'Pull-over', 'db', 'Dos', 'pull', 'kg'], ['mu-straight-pd', 'Tirage bras tendus poulie', 'db', 'Dos', 'pull', 'kg'],
+    ['mu-inverted', 'Rowing inversé', 'gym', 'Dos', 'pull', 'reps'],
+    ['mu-curl-bb', 'Curl barre', 'barbell', 'Bras', 'bras', 'kg'], ['mu-curl-db', 'Curl haltères', 'db', 'Bras', 'bras', 'kg'], ['mu-hammer', 'Curl marteau', 'db', 'Bras', 'bras', 'kg'],
+    ['mu-curl-cable', 'Curl poulie', 'db', 'Bras', 'bras', 'kg'], ['mu-preacher', 'Curl pupitre', 'db', 'Bras', 'bras', 'kg'], ['mu-rev-curl', 'Curl prise inversée', 'db', 'Bras', 'bras', 'kg'],
+    ['mu-wrist-curl', 'Curl poignet', 'db', 'Bras', 'bras', 'kg'], ['mu-wrist-ext', 'Extension poignet', 'db', 'Bras', 'bras', 'kg'],
+    ['mu-skull', 'Barre au front', 'barbell', 'Bras', 'bras', 'kg'], ['mu-tri-pd', 'Extension triceps poulie', 'db', 'Bras', 'bras', 'kg'],
+    ['mu-tri-oh', 'Extension triceps au-dessus de la tête', 'db', 'Bras', 'bras', 'kg'], ['mu-bench-dips', 'Dips sur banc', 'gym', 'Bras', 'bras', 'reps'],
+    ['mu-calf-stand', 'Mollets debout|Calf raise debout', 'db', 'Mollets', null, 'kg'], ['mu-calf-seated', 'Mollets assis|Seated calf raise|Seated calf raise (machine)', 'db', 'Mollets', null, 'kg'],
+    ['mu-calf-single', 'Mollet unilatéral debout|Mollet debout unilatéral|Mollet debout unilatéral (barre)', 'db', 'Mollets', null, 'kg'],
+    ['mu-tibialis', 'Releveurs (tibial antérieur)', 'db', 'Mollets', null, 'kg'],
+    ['mu-crunch', 'Crunch', 'gym', 'Abdos & gainage', null, 'reps'], ['mu-decl-crunch', 'Crunch décliné', 'gym', 'Abdos & gainage', null, 'reps'],
+    ['mu-cable-crunch', 'Crunch poulie', 'db', 'Abdos & gainage', null, 'kg'], ['mu-hang-leg', 'Relevés de jambes suspendu', 'gym', 'Abdos & gainage', 'pull', 'reps'],
+    ['mu-abwheel', 'Roulette abdominale', 'gym', 'Abdos & gainage', null, 'reps'], ['mu-pallof', 'Pallof press', 'db', 'Abdos & gainage', null, 'kg'],
+    ['plank', 'Gainage|Planche', 'gym', 'Abdos & gainage', null, 'reps'], ['mu-side-plank', 'Gainage latéral', 'gym', 'Abdos & gainage', null, 'reps'],
+    ['hollow', 'Hollow hold', 'gym', 'Abdos & gainage', null, 'reps'], ['mu-russian', 'Russian twist', 'db', 'Abdos & gainage', null, 'kg'],
+    ['mu-deadbug', 'Dead bug', 'gym', 'Abdos & gainage', null, 'reps'], ['farmer', 'Farmer walk|Marche du fermier', 'db', 'Abdos & gainage', 'hinge', 'kg']
+  ];
+  var libKey = function (t) { return normTxt(String(t || '').replace(/^\s*hsr\s*·\s*/i, '').replace(/\([^)]*\)/g, '')).replace(/[^a-z0-9]/g, ''); };
+  var LIBN = {}; LIB.forEach(function (l) { l[1].split('|').forEach(function (n) { LIBN[libKey(n)] = l; }); });
+  var libFind = function (name) { return LIBN[libKey(name)] || LIBN[normTxt(name).replace(/[^a-z0-9]/g, '')] || null; };
+  var libName = function (l) { return l[1].split('|')[0]; };
+  var libDatalist = function (id) { return '<datalist id="' + id + '">' + LIB.map(function (l) { return '<option value="' + esc(libName(l)) + '">' + esc(l[3]) + '</option>'; }).join('') + '</datalist>'; };
+  // Mouvement CrossFit correspondant à un exercice du plan (champ cf, sinon bibliothèque, sinon d'après le nom)
   var cfIdOf = function (ex) {
-    if (ex.cf) return ex.cf; var n = normTxt(ex.name);
+    if (ex.cf) return ex.cf; var lb = libFind(ex.name); if (lb) return lb[0]; var n = normTxt(ex.name);
     if (/pause|tempo|leger/.test(n)) return null;
     if (/front squat/.test(n)) return 'front-squat';
     if (/back squat|^squat$/.test(n)) return 'back-squat';
@@ -219,13 +284,15 @@
     return null;
   };
   // Grandes familles de mouvements, pour repérer la fatigue croisée
-  var PAT_L = { squat: 'squat', hinge: 'charnière de hanche', pushV: 'poussée verticale', pushH: 'poussée horizontale', pull: 'tirage' };
+  var PAT_L = { squat: 'squat', hinge: 'charnière de hanche', pushV: 'poussée verticale', pushH: 'poussée horizontale', pull: 'tirage', bras: 'bras (biceps, triceps, avant-bras)' };
   var exPattern = function (name) {
+    var lb = libFind(name); if (lb) return lb[4];
     var n = normTxt(name);
     if (/mollet|calf|adduction|abduction|crunch|gainage|hollow/.test(n)) return null;
     if (/militaire|strict press|overhead|push press|epaule/.test(n)) return 'pushV';
     if (/couche|incline|bench|dips|pompe|push-up/.test(n)) return 'pushH';
     if (/traction|pull|rowing|tirage|row/.test(n)) return 'pull';
+    if (/curl|triceps|biceps|barre au front|poignet/.test(n) && !/leg curl/.test(n)) return 'bras';
     if (/souleve|deadlift|rdl|hip thrust|good morning|hyperextension|leg curl|swing/.test(n)) return 'hinge';
     if (/squat|fente|lunge|presse/.test(n)) return 'squat';
     return null;
@@ -391,7 +458,7 @@
             base = { id: xe.ref, name: e0.name, mode: 'pct', main: num(e0.offset, 0) === 0, orm: o1, sets: pr1.s, reps: pr1.r, repsPlan: pr1.r, loadNum: L1, rpePlan: rpeNum(rs0.rpe), rpeTxt: String(rs0.rpe), rest: e0.rest || rs0.rest || '2–3 min', note: e0.note || '', info: 'Hors cycle : repère = semaine de travail la plus proche' + (o1 ? ' · 1RM de travail ' + kg(Math.round(o1 * tf * 2) / 2) : '') + ' · note un RPE de 7 ou plus pour recaler ton 1RM' }; } }
         if (!base && e0) { if (e0) base = { id: xe.ref, name: e0.name, mode: e0.mode === 'reps' ? 'reps' : 'kg', sets: num(e0.sets, 3) || 3, reps: num(e0.reps, 8) || 8, loadNum: e0.mode === 'kg' && num(e0.startKg, 0) ? num(e0.startKg) : null, rpePlan: 8, rpeTxt: '8', rest: e0.rest || '2 min', note: e0.note || '' }; }
       }
-      if (!base) base = { id: xe.id, name: xe.name || 'Exercice', mode: 'kg', sets: 3, reps: 10, loadNum: null, rpePlan: 8, rpeTxt: '8', rest: '2 min', note: '' };
+      if (!base) { var lbe = libFind(xe.name); base = { id: xe.id, name: xe.name || 'Exercice', mode: lbe && lbe[5] === 'reps' ? 'reps' : 'kg', sets: 3, reps: 10, loadNum: null, rpePlan: 8, rpeTxt: '8', rest: '2 min', note: '' }; }
       var it = clone(base); it.repsPlan = it.repsPlan || it.reps; it.scheme = it.sets + '×' + it.reps; it.load = it.loadNum ? kg(it.loadNum) : '';
       var done = getSets(((lg.ex || {})[it.id]) || null);
       it.ton = done.length ? done.reduce(function (a, z) { return a + num(z.kg, 0) * num(z.reps, 0); }, 0) : num(it.sets, 0) * num(it.reps, 0) * num(it.loadNum, 0);
@@ -710,10 +777,10 @@
       var free = f.ex.map(function (z, i) { return z.ref ? '' : '<span class="chip xchip" style="color:var(--tx)">' + esc(z.name) + '<button class="xrm" data-a="xf-rm" data-i="' + i + '" aria-label="Retirer ' + esc(z.name) + '">×</button></span>'; }).join('');
       exh = '<div class="col" style="gap:8px"><b class="small">Exercices réalisés</b>' + (own.length ? '<span class="small mu">Touche ceux de ton programme : ils comptent dans l’ajustement des 1RM et des charges.</span><div class="xchips">' + chips + '</div>' : '') +
         (free ? '<div class="xchips">' + free + '</div>' : '') +
-        '<div class="row" style="flex-wrap:nowrap"><input class="in" data-xf="newEx" placeholder="Autre exercice (ex. Hip thrust)" value="' + esc(f.newEx || '') + '" style="flex:1;min-width:0"><button class="btn sm" data-a="xf-add">' + ICON.plus + 'Ajouter</button></div>' +
+        '<div class="row" style="flex-wrap:nowrap"><input class="in" data-xf="newEx" list="pl-lib2" autocomplete="off" placeholder="Autre exercice (ex. Hip thrust)" value="' + esc(f.newEx || '') + '" style="flex:1;min-width:0"><button class="btn sm" data-a="xf-add">' + ICON.plus + 'Ajouter</button></div>' +
         '<span class="small mu">Après l’enregistrement, note tes séries (charge, reps, RPE) sous chaque exercice, comme pour une séance prévue.</span></div>';
     }
-    return '<div class="card col" id="xform" style="gap:12px"><div class="row between"><h2>' + (f.id ? 'Modifier la séance' : 'Ajouter une séance') + '</h2><button class="btn sm ghost icon" data-a="xf-cancel" aria-label="Fermer">×</button></div>' +
+    return libDatalist('pl-lib2') + '<div class="card col" id="xform" style="gap:12px"><div class="row between"><h2>' + (f.id ? 'Modifier la séance' : 'Ajouter une séance') + '</h2><button class="btn sm ghost icon" data-a="xf-cancel" aria-label="Fermer">×</button></div>' +
       '<div class="row" role="group" aria-label="Type de séance" style="flex-wrap:nowrap">' + seg + '</div>' +
       '<div class="fgrid w2"><label class="field"><span>Date</span><input class="in" type="date" data-xf="date" value="' + esc(f.date) + '"></label><label class="field"><span>Programme</span><select class="in" data-xf="pid">' + popt + '</select></label></div>' +
       '<label class="field"><span>Nom</span><input class="in" data-xf="name" value="' + esc(f.name || '') + '" placeholder="' + (isM ? 'ex. Muscu haut du corps' : (f.kind === 'course' ? 'ex. Footing en forêt' : 'ex. Vélo, natation, mobilité')) + '"></label>' +
@@ -1039,7 +1106,7 @@
               else if (e.mode === 'reps') f = nfld('Séries', pth + 'sets', e.sets) + nfld('Reps S1', pth + 'reps', e.reps) + nfld('+ reps / sem.', pth + 'incReps', e.incReps) + nfld('Reps max', pth + 'maxReps', e.maxReps) + sel('Semaine test', pth + 'testMax', opt([[0, '1 série en moins'], [1, 'Test : max unbroken']], num(e.testMax, 0) > 0 || e.testMax === true ? 1 : 0)) + fld('Note', pth + 'note', e.note);
               else f = fld('Prescription', pth + 'text', e.text, 'placeholder="ex. 3×12 RPE 8"') + fld('Note', pth + 'note', e.note);
               if (e.mode !== 'libre') f += restF;
-              return '<div class="exr"><div class="row between"><span class="small mu">Exercice ' + (j + 1) + '</span><button class="btn sm ghost icon" data-a="ed-del-ex" data-i="' + i + '" data-j="' + j + '" aria-label="Supprimer l’exercice">' + ICON.trash + '</button></div><div class="fgrid w2">' + fld('Nom', pth + 'name', e.name) + sel('Type', pth + 'mode', opt(EX_MODES, e.mode), true) + '</div><div class="fgrid">' + f + '</div></div>';
+              return '<div class="exr"><div class="row between"><span class="small mu">Exercice ' + (j + 1) + '</span><button class="btn sm ghost icon" data-a="ed-del-ex" data-i="' + i + '" data-j="' + j + '" aria-label="Supprimer l’exercice">' + ICON.trash + '</button></div><div class="fgrid w2">' + fld('Nom', pth + 'name', e.name, 'list="pl-lib" autocomplete="off" placeholder="Choisis ou écris un exercice"') + sel('Type', pth + 'mode', opt(EX_MODES, e.mode), true) + '</div><div class="fgrid">' + f + '</div></div>';
             }).join('') + '<button class="btn sm" data-a="ed-add-ex" data-i="' + i + '">' + ICON.plus + 'Ajouter un exercice</button></div>';
         }).join('') + '<button class="btn" data-a="ed-add-sess">' + ICON.plus + 'Ajouter une séance</button></div>';
     }
@@ -1086,7 +1153,7 @@
     var sh = $id('sheet');
     if (!ed) { sh.innerHTML = ''; document.body.style.overflow = ''; return; }
     var prevBody = sh.querySelector('.sheet-body'), top = prevBody ? prevBody.scrollTop : 0;
-    sh.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Éditeur de programme"><div class="sheet-in"><div class="sheet-head"><button class="btn ghost sm" data-a="ed-cancel">Annuler</button><h2>' + (ed.isNew ? 'Nouveau · ' : '') + esc(KIND[ed.draft.kind].label) + '</h2><button class="btn primary sm" data-a="ed-save">Enregistrer</button></div><div class="sheet-body">' + editorBody() + '</div></div></div>';
+    sh.innerHTML = libDatalist('pl-lib') + '<div class="sheet" role="dialog" aria-modal="true" aria-label="Éditeur de programme"><div class="sheet-in"><div class="sheet-head"><button class="btn ghost sm" data-a="ed-cancel">Annuler</button><h2>' + (ed.isNew ? 'Nouveau · ' : '') + esc(KIND[ed.draft.kind].label) + '</h2><button class="btn primary sm" data-a="ed-save">Enregistrer</button></div><div class="sheet-body">' + editorBody() + '</div></div></div>';
     document.body.style.overflow = 'hidden';
     var nb = sh.querySelector('.sheet-body'); if (nb) nb.scrollTop = top;
   };
@@ -1229,7 +1296,7 @@
       case 'xf-kind': if (ui.xf) { var nk = b.getAttribute('data-k'); if (nk !== ui.xf.kind) { ui.xf.kind = nk; var np = xfPrograms(nk, ui.xf.date)[0]; ui.xf.pid = np ? np.id : null; ui.xf.ex = []; } } break;
       case 'xf-rpe': if (ui.xf) { var rn = num(b.getAttribute('data-n')) | 0; ui.xf.rpe = ui.xf.rpe === rn ? 0 : rn; } break;
       case 'xf-ex': if (ui.xf) { var rf = b.getAttribute('data-ref'), ri = -1; ui.xf.ex.forEach(function (z, i) { if (z.ref === rf) ri = i; }); if (ri >= 0) ui.xf.ex.splice(ri, 1); else { var re0 = findEx(progById(ui.xf.pid), rf); ui.xf.ex.push({ ref: rf, id: rf, name: re0 ? re0.name : '' }); } } break;
-      case 'xf-add': if (ui.xf) { var inp0 = document.querySelector('[data-xf="newEx"]'), nn = String((inp0 && inp0.value) || ui.xf.newEx || '').trim(); if (nn) { ui.xf.ex.push({ ref: null, id: 'xe' + uid(), name: nn }); ui.xf.newEx = ''; } if (inp0) inp0.blur(); } break;
+      case 'xf-add': if (ui.xf) { var inp0 = document.querySelector('[data-xf="newEx"]'), nn = String((inp0 && inp0.value) || ui.xf.newEx || '').trim(); if (nn) { var lbx = libFind(nn); ui.xf.ex.push({ ref: null, id: 'xe' + uid(), name: lbx ? libName(lbx) : nn, lib: lbx ? lbx[0] : null }); ui.xf.newEx = ''; } if (inp0) inp0.blur(); } break;
       case 'xf-rm': if (ui.xf) ui.xf.ex.splice(num(b.getAttribute('data-i')), 1); break;
       case 'xf-save':
         if (!ui.xf) break;
@@ -1237,7 +1304,7 @@
         if (!P || !fd) { toast('Choisis une date et un programme.'); break; }
         var xid0 = F.id || ('x' + uid()), oldLog = null, oldOv = {};
         if (F.id) { var OP = progById(F.origPid); if (OP) { var oe0 = (OP.extras || []).filter(function (z) { return z.id === F.id; })[0]; if (oe0) { var ow = extraW(OP, oe0); oldLog = (OP.logs || {})[ow + '|' + F.id] || null; if (OP.logs) delete OP.logs[ow + '|' + F.id]; Object.keys(OP.overrides || {}).forEach(function (k) { var ps2 = k.split('|'); if (ps2[0] === String(ow) && ps2[1] === F.id) { oldOv[ps2[2]] = OP.overrides[k]; delete OP.overrides[k]; } }); OP.extras = OP.extras.filter(function (z) { return z.id !== F.id; }); if (OP !== P) persist(OP); } } }
-        var XE = { id: xid0, extra: true, kind: F.kind, date: F.date, day: dow(fd), name: String(F.name || '').trim(), dur: num(F.dur, 0) || null, rpe: num(F.rpe, 0) || null, km: F.kind === 'course' ? (num(F.km, 0) || null) : null, note: String(F.note || '').trim(), exercises: F.kind === 'muscu' ? F.ex.map(function (z) { return { id: z.id, ref: z.ref || null, name: z.name }; }) : [] };
+        var XE = { id: xid0, extra: true, kind: F.kind, date: F.date, day: dow(fd), name: String(F.name || '').trim(), dur: num(F.dur, 0) || null, rpe: num(F.rpe, 0) || null, km: F.kind === 'course' ? (num(F.km, 0) || null) : null, note: String(F.note || '').trim(), exercises: F.kind === 'muscu' ? F.ex.map(function (z) { return { id: z.id, ref: z.ref || null, name: z.name, lib: z.lib || null }; }) : [] };
         P.extras = (P.extras || []).concat([XE]); P.logs = P.logs || {};
         var nw = extraW(P, XE), lgx = Object.assign({}, oldLog || {}); lgx.done = true; if (XE.rpe) lgx.rpe = XE.rpe; else delete lgx.rpe;
         if (lgx.ex) { var keep = {}; XE.exercises.forEach(function (z) { if (lgx.ex[z.id]) keep[z.id] = lgx.ex[z.id]; }); lgx.ex = keep; }
@@ -1418,9 +1485,12 @@
           if (xs[sid]) d = xs[sid].date; else { var s0 = null; (p.sessions || []).forEach(function (z) { if (z.id === sid) s0 = z; }); if (!s0) return; d = iso(addDays(progStart(p), (w - 1) * 7 + effDay(p, s0, w))); }
           var ents = [];
           Object.keys(lg.ex).forEach(function (eid) {
-            var ex = findEx(p, eid); if (!ex || ex.mode !== 'pct' || num(ex.offset, 0) !== 0) return;
+            var ex = findEx(p, eid);
+            if (!ex && xs[sid]) { var xe = (xs[sid].exercises || []).filter(function (z) { return z.id === eid; })[0]; if (xe) ex = xe.ref ? findEx(p, xe.ref) : { name: xe.name, mode: 'kg' }; }
+            if (!ex || ['pct', 'kg', 'reps'].indexOf(ex.mode || 'kg') < 0) return;
             var id = cfIdOf(ex); if (!id) return;
-            var sets = getSets(lg.ex[eid]).filter(function (z) { return num(z.kg, 0) > 0 && num(z.reps, 0) > 0; }).map(function (z) { return { weight: num(z.kg), reps: num(z.reps), diff: Math.max(0, 10 - (num(z.rpe, 0) || 8)) }; });
+            var bw = ex.mode === 'reps';
+            var sets = getSets(lg.ex[eid]).filter(function (z) { return num(z.reps, 0) > 0 && (bw || num(z.kg, 0) > 0); }).map(function (z) { return { weight: num(z.kg, 0), reps: num(z.reps), diff: Math.max(0, 10 - (num(z.rpe, 0) || 8)) }; });
             if (sets.length) ents.push({ movementId: id, sets: sets });
           });
           if (ents.length) out.push({ id: 'plan-' + p.id + '-' + k, date: d, entries: ents, metcons: [], plan: true });
@@ -1453,9 +1523,12 @@
       });
       return out;
     },
+    library: function () { return LIB.map(function (l) { return { id: l[0], n: libName(l), k: l[2], g: l[3], pat: l[4], mode: l[5] }; }); },
     programs: function () { return state.programs.map(function (p) { return { id: p.id, name: p.name || KIND[p.kind].label, color: colorOf(p), kind: p.kind }; }); },
     open: function (key) { var x = findInst(key); if (!x) return; ui.view = 'semaine'; ui.weekStart = iso(mondayOf(x.date)); ui.day = dow(x.date); ui.sel = key; ui.xf = null; ui.edit = null; },
     add: function (d, kind) { var dt = parseISO(d); if (!dt) return; ui.view = 'semaine'; ui.weekStart = iso(mondayOf(dt)); ui.day = dow(dt); ui.sel = null; var k = kind || 'muscu', xp = xfPrograms(k, d)[0]; ui.xf = { kind: k, date: d, pid: xp ? xp.id : null, name: '', dur: '', rpe: 0, km: '', note: '', ex: [], newEx: '' }; }
   };
+  // Les mouvements de musculation de la bibliothèque rejoignent la liste du suivi CrossFit
+  if (typeof window.registerMoves === 'function') window.registerMoves(LIB.filter(function (l) { return /^mu-/.test(l[0]); }).map(function (l) { return { id: l[0], n: libName(l), al: l[1].split('|'), k: l[2], g: 'Muscu · ' + l[3], pat: l[4] }; }));
   if (S.tab === 'plan') render();
 })();
