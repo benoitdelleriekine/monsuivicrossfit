@@ -1523,6 +1523,8 @@
       });
       return out;
     },
+    /* Accès au moteur pour les tests automatiques (lecture seule, aucune interface ne s'en sert) */
+    engine: { gen: gen, tmTrace: tmTrace, kgShift: kgShift, findEx: findEx, findInst: findInst, muscuSpec: muscuSpec, logsFor: logsFor, cfIdOf: cfIdOf, exPattern: exPattern, libFind: libFind, LIB: LIB, progStart: progStart, instancesOn: instancesOn, weekStats: weekStats, parseISO: parseISO, iso: iso, addDays: addDays, rstep: rstep, e1rm: e1rm },
     library: function () { return LIB.map(function (l) { return { id: l[0], n: libName(l), k: l[2], g: l[3], pat: l[4], mode: l[5] }; }); },
     programs: function () { return state.programs.map(function (p) { return { id: p.id, name: p.name || KIND[p.kind].label, color: colorOf(p), kind: p.kind }; }); },
     open: function (key) { var x = findInst(key); if (!x) return; ui.view = 'semaine'; ui.weekStart = iso(mondayOf(x.date)); ui.day = dow(x.date); ui.sel = key; ui.xf = null; ui.edit = null; },

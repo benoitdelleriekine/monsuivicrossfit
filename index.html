@@ -301,6 +301,10 @@ const FEEL=["","Très dure","Dure","Correcte","Bonne","Excellente"];
 const MSC={"Découvert":"var(--orchid)","Nouveau palier":"var(--aqua)","Record":"var(--melon)"};
 const PACE={row:500,ski:500,run:1000,bike:1000,assault:1000,shuttle:100,sled:10,"handstand-walk":10};
 const KEY="cf-progres";
+/* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
+   Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
+const APP_VERSION="msc-v56";
+const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
 /* ══════════ FORMATS DE METCON ══════════ */
@@ -436,6 +440,36 @@ function payload(local){return{sessions:S.sessions,custom:S.custom,planif:S.plan
  lastExport:S.lastExport,theme:S.theme,tests:S.tests,decl:S.decl,pin:S.pin,tabsOff:S.tabsOff,pain:S.pain,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
 const save=()=>{S.updatedAt=Date.now();pushSoon();try{localStorage.setItem(KEY,JSON.stringify(
  payload(true)))}catch(e){alert("Sauvegarde impossible : la mémoire du navigateur est pleine ou bloquée.")}};
+/* ══════════ SAUVEGARDE COMPLÈTE ══════════
+   Toutes les données : séances, mouvements perso, profil, plan (programmes et suivi),
+   douleur, tests et déclarations de niveau, épinglages, réglages. */
+function backupData(){const d=payload(false);
+ return{v:2,app:APP_VERSION,exported:TODAY,profile:d.profile,sessions:d.sessions,custom:d.custom,
+  planif:d.planif,pain:d.pain,tests:d.tests,decl:d.decl,pin:d.pin,tabsOff:d.tabsOff,bar:d.bar,theme:d.theme}}
+/* Restaure un fichier v1 (séances seules) ou v2 (tout). Les programmes restaurés sont datés de
+   maintenant pour primer sur une version plus ancienne restée sur le compte. */
+function restoreData(d){
+ if(!d||!Array.isArray(d.sessions))throw new Error("format");
+ S.sessions=d.sessions.map(x=>({metcons:[],entries:[],...x}));
+ S.custom=Array.isArray(d.custom)?d.custom:[];if(d.profile)S.profile=d.profile;
+ if(d.v>=2){
+  if(d.planif){const pl=normPlanif(d.planif),now=Date.now();pl.programs.forEach(p=>{p.updatedAt=now});S.planif=pl}
+  if(d.pain)S.pain=normPain(d.pain);
+  if(d.tests)S.tests=migrateHistDict(d.tests);if(d.decl)S.decl=migrateHistDict(d.decl);
+  if(Array.isArray(d.pin))S.pin=d.pin;if(Array.isArray(d.tabsOff))S.tabsOff=d.tabsOff;
+  if(d.bar)S.bar=d.bar;if(d.theme){S.theme=d.theme;applyTheme()}}
+ S.draft=null;S.focus=null;S.mc=null}
+function backups(){try{const b=JSON.parse(localStorage.getItem(BKEY)||"[]");return Array.isArray(b)?b:[]}catch(e){return[]}}
+/* Au premier lancement d'une nouvelle version, garde une copie des données (3 au plus). */
+function snapshotOnUpdate(){try{
+ const prev=localStorage.getItem(VKEY);
+ if(prev!==APP_VERSION&&(S.sessions.length||(S.planif&&S.planif.programs.length))){
+  const b=backups();b.unshift({ver:prev||"ancienne version",at:new Date().toISOString(),data:backupData()});
+  localStorage.setItem(BKEY,JSON.stringify(b.slice(0,3)))}
+ localStorage.setItem(VKEY,APP_VERSION)}catch(e){}}
+function downloadJSON(obj,name){const bl=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
+ const u=URL.createObjectURL(bl),l=document.createElement("a");l.href=u;l.download=name;l.click();
+ setTimeout(()=>URL.revokeObjectURL(u),2000)}
 function load(){let raw=null;
  try{raw=localStorage.getItem(KEY)}catch(e){}
  if(!raw){/* reprise des données d'une version antérieure */
@@ -1040,9 +1074,13 @@ function vProfil(){
    <button class="btn btn-go" data-act="psave">${first?"C'est parti":"Enregistrer"}</button>`;
   h+=accountCard();
   if(p)h+=`<div class="card flat" style="margin-top:20px"><div class="eyebrow" style="margin-bottom:10px">Sauvegarde</div>
-   <div style="font-size:13px;color:var(--mute);line-height:1.6;margin-bottom:14px">Tes données vivent dans ce navigateur. Exporte-les de temps en temps pour ne rien perdre en cas de changement de téléphone.</div>
+   <div style="font-size:13px;color:var(--mute);line-height:1.6;margin-bottom:14px">« Exporter » télécharge un fichier avec toutes tes données : séances, plan, douleur et réglages. « Importer » le recharge, par exemple sur un nouveau téléphone.</div>
    <div style="display:flex;gap:10px"><button class="btn btn-quiet" style="padding:12px;font-size:13px" data-act="export">Exporter</button>
-   <button class="btn btn-quiet" style="padding:12px;font-size:13px" data-act="import">Importer</button></div></div>`;
+   <button class="btn btn-quiet" style="padding:12px;font-size:13px" data-act="import">Importer</button></div>`+
+   (()=>{const b=backups();return b.length?`<div style="font-size:12.5px;color:var(--mute);line-height:1.6;margin:16px 0 4px">Copies gardées automatiquement avant chaque mise à jour de l'app :</div>`+
+    b.map((x,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)">
+     <span style="font-size:13px">${fMid(x.at.slice(0,10))} <span style="color:var(--mute)">· ${(x.data.sessions||[]).length} séances, ${((x.data.planif||{}).programs||[]).length} programmes</span></span>
+     <button class="chip" data-act="bkdl" data-v="${i}">Télécharger</button></div>`).join(""):""})()+`</div>`;
   h+=`<div class="card flat" style="margin-top:20px">
    <div class="eyebrow" style="margin-bottom:11px">Apparence</div>
    <div class="chips">`+[["auto","Automatique"],["light","Clair"],["dark","Sombre"]]
@@ -3055,19 +3093,14 @@ document.addEventListener("click",ev=>{
       metcons:(s.metcons||[]).map(x=>({...x,items:x.items.map(i=>({...i})),res:{...x.res}}))};
     S.tab="noter";S.focus=null;S.mc=null;break}
   case"del":if(confirm("Supprimer définitivement cette séance ?"))S.sessions=S.sessions.filter(x=>x.id!==b.dataset.id);break;
-  case"export":{S.lastExport=TODAY;const bl=new Blob([JSON.stringify(
-    {v:1,exported:TODAY,profile:S.profile,sessions:S.sessions,custom:S.custom},null,2)],{type:"application/json"});
-    const u=URL.createObjectURL(bl),l=document.createElement("a");
-    l.href=u;l.download="progres-crossfit-"+TODAY+".json";l.click();
-    setTimeout(()=>URL.revokeObjectURL(u),2000);return}
+  case"export":{S.lastExport=TODAY;save();downloadJSON(backupData(),"mon-suivi-complet-"+TODAY+".json");return}
+  case"bkdl":{const x=backups()[+v];if(x)downloadJSON(x.data,"mon-suivi-avant-"+String(x.ver).replace(/[^a-z0-9-]/gi,"")+"-"+x.at.slice(0,10)+".json");return}
   case"import":{const f=document.createElement("input");f.type="file";f.accept="application/json,.json";
     f.onchange=()=>{const file=f.files[0];if(!file)return;const r=new FileReader();
       r.onload=()=>{try{const d=JSON.parse(r.result);
         if(!Array.isArray(d.sessions))throw 0;
-        if(!confirm("Remplacer les données actuelles par celles du fichier ?"))return;
-        S.sessions=d.sessions.map(x=>({metcons:[],entries:[],...x}));
-        S.custom=d.custom||[];if(d.profile)S.profile=d.profile;
-        S.draft=null;S.focus=null;S.mc=null;save();render();
+        if(!confirm(d.v>=2?"Remplacer toutes les données actuelles (séances, plan, douleur, réglages) par celles du fichier ?":"Remplacer les séances actuelles par celles du fichier ?"))return;
+        restoreData(d);save();render();
       }catch(e){alert("Fichier illisible. Choisis un export généré par l'application.")}};
       r.readAsText(file)};f.click();return}
  }
@@ -3244,6 +3277,7 @@ if(window.matchMedia)window.matchMedia("(prefers-color-scheme:dark)")
  .addEventListener("change",()=>{if(S.theme==="auto")applyTheme()});
 
 load();
+snapshotOnUpdate();
 if(!S.profile)openProfil();
 render();
 /* Mise à jour du "service worker" : sur iPhone, une appli ajoutée à l'écran
