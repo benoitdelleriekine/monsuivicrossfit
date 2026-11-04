@@ -873,7 +873,7 @@
      (exercice affiché, début, repos en cours) est gardé à part pour reprendre. */
   var RUNK = 'planif-run', RUNC = ['#3E7F73', '#4E9A7F', '#62AD84', '#86B86F', '#B5BE5E', '#D9B44F', '#E79A45', '#EC7D43', '#E8603F', '#D9453B'];
   try { tm.mute = localStorage.getItem('planif-mute') === '1'; } catch (e) {}
-  var runSave = function () { try { if (ui.run) localStorage.setItem(RUNK, JSON.stringify({ key: ui.run.key, exI: ui.run.exI, t0: ui.run.t0, open: !!ui.run.open, end: !!ui.run.end, rest: tm.end || 0, restLbl: tm.label || '' })); else localStorage.removeItem(RUNK); } catch (e) {} };
+  var runSave = function () { try { if (ui.run) localStorage.setItem(RUNK, JSON.stringify({ key: ui.run.key, exI: ui.run.exI, t0: ui.run.t0, open: !!ui.run.open, end: !!ui.run.end, add: !!ui.run.add, rest: tm.end || 0, restLbl: tm.label || '' })); else localStorage.removeItem(RUNK); } catch (e) {} };
   var wl = null;
   var wakeOn = function () { try { if (navigator.wakeLock && !wl && document.visibilityState === 'visible') navigator.wakeLock.request('screen').then(function (l) { wl = l; l.addEventListener('release', function () { wl = null; }); }).catch(function () {}); } catch (e) {} };
   var wakeOff = function () { try { if (wl) wl.release(); } catch (e) {} wl = null; };
@@ -959,7 +959,8 @@
   };
   var runEndHtml = function (x) {
     var lg = x.log || {}, mins = Math.round((Date.now() - num(ui.run.t0, Date.now())) / 60000), rv = num(lg.rpe, 0);
-    var h = '<h2 class="runname">Bravo, c’est fini</h2>' + (mins > 0 && mins < 300 ? '<p class="t2">' + mins + ' min depuis le début.</p>' : '');
+    var h = '<h2 class="runname">Bravo, c’est fini</h2>' + (mins > 0 && mins < 300 ? '<p class="t2">' + mins + ' min depuis le début' + (x.s.free ? ' : durée enregistrée pour la charge de la séance' : '') + '.</p>' : '');
+    if (x.s.free) h += '<label class="field"><span>Nom de la séance</span><input class="in" data-rf="name" maxlength="60" value="' + esc(ui.run.name != null ? ui.run.name : (x.s.name || '')) + '" placeholder="Séance libre"></label>';
     h += '<div class="col" style="gap:6px"><div class="row between"><span class="small mu">RPE de la séance (effort global)' + (x.g.rpe ? ' · prévu ' + fmtN(x.g.rpe) : '') + '</span><b class="small">' + (rv ? 'RPE ' + rv : 'Touche l’échelle') + '</b></div>' + runScale('run-srpe', rv) + '</div>';
     h += summaryHtml(x);
     return h + '<div class="runfoot"><button class="btn primary runmain" data-a="run-finish">' + ICON.check + 'Terminer</button><button class="btn sm ghost" data-a="run-back">Revenir aux exercices</button></div>';
@@ -975,18 +976,63 @@
     if (!x) { ui.run = null; runSave(); el.innerHTML = ''; runLock(false); wakeOff(); return; }
     var its = x.g.items, c = colorOf(x.p);
     if (!(ui.run.exI >= 0 && ui.run.exI < its.length)) ui.run.exI = 0;
-    var ae = el.querySelector('.runbody'), sc = ae ? ae.scrollTop : 0, same = ui.run.lastEx === ui.run.exI && ui.run.lastEnd === !!ui.run.end;
-    var head = '<div class="runhead"><button class="btn sm" data-a="run-close" aria-label="Quitter le mode séance (tes séries sont gardées)">✕ Quitter</button><div class="col" style="gap:0;align-items:center;min-width:0;flex:1"><b class="runtt">' + esc(String(x.g.title).split(' — ')[0]) + '</b><span class="small mu">' + (ui.run.end ? 'Bilan' : 'Exercice ' + (ui.run.exI + 1) + ' / ' + its.length) + '</span></div><button class="btn sm icon" data-a="run-mute" aria-pressed="' + !!tm.mute + '" aria-label="' + (tm.mute ? 'Activer le bip de fin de repos' : 'Couper le bip de fin de repos') + '">' + (tm.mute ? '🔕' : '🔔') + '</button></div>';
-    var dots = '<div class="rundots" aria-label="Exercices">' + its.map(function (it, j) { var st = runState(x, it), on = !ui.run.end && j === ui.run.exI; return '<button class="rd ' + st + (on ? ' on' : '') + '" data-a="run-go" data-i="' + j + '" aria-label="' + esc(it.name) + '"' + (on ? ' aria-current="step"' : '') + '>' + (st === 'done' ? '✓' : st === 'skip' ? '–' : (j + 1)) + '</button>'; }).join('') + '</div>';
-    el.innerHTML = '<div class="run" role="dialog" aria-modal="true" aria-label="Mode séance">' + head + dots + runRestHtml() + '<div class="runbody">' + (ui.run.end ? runEndHtml(x) : runExHtml(x, its[ui.run.exI], c)) + '</div></div>';
+    var ae = el.querySelector('.runbody'), sc = ae ? ae.scrollTop : 0, same = ui.run.lastEx === ui.run.exI && ui.run.lastEnd === !!ui.run.end && !ui.run.add;
+    var head = '<div class="runhead"><button class="btn sm" data-a="run-close" aria-label="Quitter le mode séance (tes séries sont gardées)">✕ Quitter</button><div class="col" style="gap:0;align-items:center;min-width:0;flex:1"><b class="runtt">' + esc(String(x.g.title).split(' — ')[0]) + '</b><span class="small mu">' + (ui.run.end ? 'Bilan' : ui.run.add || !its.length ? 'Ajout d’un exercice' : 'Exercice ' + (ui.run.exI + 1) + ' / ' + its.length) + '</span></div><button class="btn sm icon" data-a="run-mute" aria-pressed="' + !!tm.mute + '" aria-label="' + (tm.mute ? 'Activer le bip de fin de repos' : 'Couper le bip de fin de repos') + '">' + (tm.mute ? '🔕' : '🔔') + '</button></div>';
+    var dots = '<div class="rundots" aria-label="Exercices">' + its.map(function (it, j) { var st = runState(x, it), on = !ui.run.end && !ui.run.add && j === ui.run.exI; return '<button class="rd ' + st + (on ? ' on' : '') + '" data-a="run-go" data-i="' + j + '" aria-label="' + esc(it.name) + '"' + (on ? ' aria-current="step"' : '') + '>' + (st === 'done' ? '✓' : st === 'skip' ? '–' : (j + 1)) + '</button>'; }).join('') + (x.s.extra ? '<button class="rd' + (ui.run.add && !ui.run.end ? ' on' : '') + '" data-a="run-add" aria-label="Ajouter un exercice">+</button>' : '') + '</div>';
+    el.innerHTML = '<div class="run" role="dialog" aria-modal="true" aria-label="Mode séance">' + head + dots + runRestHtml() + '<div class="runbody">' + (ui.run.end ? runEndHtml(x) : ui.run.add || !its.length ? runAddHtml(x) : runExHtml(x, its[ui.run.exI], c)) + '</div></div>';
     var nb = el.querySelector('.runbody'); if (nb && same) nb.scrollTop = sc;
     ui.run.lastEx = ui.run.exI; ui.run.lastEnd = !!ui.run.end;
     var cur = el.querySelector('.rd.on'); if (cur && cur.scrollIntoView) try { cur.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) {}
     drawTimer();
   };
+  var runOwn = function (x) {
+    var have = {}, own = [], seen = {};
+    x.g.items.forEach(function (it) { have[normTxt(it.name)] = 1; });
+    (x.p.kind === 'muscu' ? (x.p.sessions || []) : []).forEach(function (s0) { (s0.exercises || []).forEach(function (e) { var k = normTxt(e.name); if (seen[k] || have[k]) return; seen[k] = 1; own.push(e); }); });
+    return own;
+  };
+  var runAddHtml = function (x) {
+    var own = runOwn(x), n = x.g.items.length;
+    var h = '<h2 class="runname">' + (n ? 'Exercice suivant' : 'Premier exercice') + '</h2>';
+    h += '<div class="col" style="gap:6px"><span class="small mu">Choisis dans la bibliothèque ou tape un nom libre.</span><div class="row" style="flex-wrap:nowrap"><input class="in" data-rf="newEx" list="run-lib" autocomplete="off" enterkeyhint="done" placeholder="ex. Hip thrust" aria-label="Nom de l’exercice" value="' + esc(ui.run.newEx || '') + '" style="flex:1;min-width:0;min-height:52px;font-size:17px"><button class="btn primary" data-a="run-addname" style="min-height:52px">' + ICON.plus + 'Ajouter</button></div></div>';
+    if (n) h += '<div class="row between"><button class="btn sm ghost" data-a="run-back">‹ Revenir aux exercices</button><button class="btn primary" data-a="run-endnow">' + ICON.check + 'Terminer la séance</button></div>';
+    if (own.length) h += '<div class="col" style="gap:6px"><span class="small mu">Ceux de ton programme comptent pour tes 1RM et tes charges.</span><div class="xchips">' + own.map(function (e) { return '<button class="chip xchip" data-a="run-addref" data-ref="' + esc(e.id) + '">' + esc(e.name) + '</button>'; }).join('') + '</div></div>';
+    if (!n) h += '<span class="small mu">Ajoute ton premier exercice, puis note tes séries au fur et à mesure. Tout s’enregistre comme une séance faite aujourd’hui.</span>';
+    return libDatalist('run-lib') + h;
+  };
+  var runExtra = function (x) { return (x.p.extras || []).filter(function (z) { return z.id === x.s.id; })[0] || null; };
+  var runSetExtra = function (x, patch) {
+    var E = runExtra(x); if (!E) return;
+    x.p.extras = x.p.extras.map(function (z) { return z.id === E.id ? Object.assign({}, z, patch) : z; }); persist(x.p);
+  };
+  var runAddEx = function (x, xe) {
+    var E = runExtra(x); if (!E) return -1;
+    var ex = (E.exercises || []).slice(), at = -1; ex.forEach(function (z, i) { if (z.id === xe.id) at = i; });
+    if (at < 0) { ex.push(xe); runSetExtra(x, { exercises: ex }); }
+    var x2 = findInst(ui.run.key), j = -1; if (x2) x2.g.items.forEach(function (it, i) { if (it.id === xe.id) j = i; });
+    return j;
+  };
+  var runHasSets = function (x) { return x.g.items.some(function (it) { return getSets(runRaw(x, it)).length > 0; }); };
+  var runDropEmpty = function (x) {
+    if (!x || !x.s.extra || !x.s.free || runHasSets(x)) return false;
+    var P0 = x.p; P0.extras = (P0.extras || []).filter(function (z) { return z.id !== x.s.id; }); if (P0.logs) delete P0.logs[x.w + '|' + x.s.id]; persist(P0);
+    if (ui.sel === x.key) ui.sel = null; return true;
+  };
+  var runFree = function () {
+    editBegin();
+    var d = iso(T0), fd = parseISO(d), ps = xfPrograms('muscu', d), P0 = ps.filter(function (q) { return q.kind === 'muscu'; })[0] || ps[0];
+    if (!P0) { toast('Crée d’abord un programme (onglet Programmes).'); return; }
+    if (ui.run && !ui.run.open) { var old = findInst(ui.run.key); if (old) runDropEmpty(old); }
+    var XE = { id: 'x' + uid(), extra: true, kind: 'muscu', date: d, day: dow(fd), name: 'Séance libre', dur: null, rpe: null, km: null, note: '', exercises: [], free: 1 };
+    P0.extras = (P0.extras || []).concat([XE]); persist(P0);
+    var key = P0.id + '|' + extraW(P0, XE) + '|' + XE.id;
+    ui.view = 'semaine'; ui.weekStart = iso(mondayOf(fd)); ui.day = dow(fd); ui.sel = key; ui.xf = null; ui.edit = null; if (ui.hidden[P0.id]) ui.hidden[P0.id] = false;
+    ui.run = { key: key, t0: Date.now(), exI: 0, end: false, add: true, open: true };
+    runLock(true); wakeOn(); runSave(); drawRun(); render();
+  };
   var runOpen = function (key) {
     var x = findInst(key); if (!x || !isMuscuInst(x)) return;
-    if (!ui.run || ui.run.key !== key) { var f = runFirst(x); ui.run = { key: key, t0: Date.now(), exI: f < 0 ? 0 : f, end: f < 0 }; }
+    if (!ui.run || ui.run.key !== key) { var f = runFirst(x), nx0 = !x.g.items.length && !!x.s.extra; ui.run = { key: key, t0: Date.now(), exI: f < 0 ? 0 : f, end: f < 0 && !nx0, add: nx0 }; }
     ui.run.open = true; ui.run.d = null; ui.run.more = null;
     runLock(true); wakeOn(); runSave(); drawRun();
   };
@@ -996,17 +1042,31 @@
     runSave(); runLock(false); wakeOff(); drawRun(); drawTimer(); render();
   };
   var runAct = function (a, b) {
+    if (a === 'run-free') { runFree(); return; }
     if (a === 'run-open') { var k0 = b.getAttribute('data-key'); if (!futureOk(k0)) return; runOpen(k0); render(); return; }
     if (!ui.run) return;
     var x = findInst(ui.run.key); if (!x) { runClose(true); return; }
     var it = ui.run.end ? null : x.g.items[ui.run.exI];
-    var go = function (j) { if (j < 0) ui.run.end = true; else { ui.run.exI = j; ui.run.end = false; } ui.run.d = null; ui.run.more = null; };
+    var go = function (j) { ui.run.add = false; if (j < 0) { if (x.s.extra) ui.run.add = true; else ui.run.end = true; } else { ui.run.exI = j; ui.run.end = false; } ui.run.d = null; ui.run.more = null; };
     switch (a) {
-      case 'run-close': runClose(false); return;
-      case 'run-finish': runClose(true); toast('Séance enregistrée'); return;
+      case 'run-close': if (runDropEmpty(x)) { runClose(true); toast('Séance vide : rien n’a été enregistré'); return; } runClose(false); return;
+      case 'run-finish':
+        if (runDropEmpty(x)) { runClose(true); toast('Séance vide : rien n’a été enregistré'); return; }
+        if (x.s.free) { var nm = String(ui.run.name != null ? ui.run.name : (x.s.name || '')).trim() || 'Séance libre', pt = { name: nm }, mn = Math.round((Date.now() - num(ui.run.t0, Date.now())) / 60000); if (!num(x.s.dur, 0) && mn >= 5 && mn < 300) pt.dur = mn; runSetExtra(x, pt); }
+        runClose(true); toast('Séance enregistrée'); return;
       case 'run-mute': tm.mute = !tm.mute; try { localStorage.setItem('planif-mute', tm.mute ? '1' : '0'); } catch (e) {} break;
       case 'run-go': go(num(b.getAttribute('data-i')) | 0); break;
-      case 'run-back': ui.run.end = false; break;
+      case 'run-back': ui.run.end = false; ui.run.add = false; if (!x.g.items.length) ui.run.add = true; break;
+      case 'run-add': ui.run.add = true; ui.run.end = false; ui.run.newEx = ''; break;
+      case 'run-endnow': ui.run.add = false; ui.run.end = true; tm.end = 0; clearInterval(tm.iv); break;
+      case 'run-addref': var rf = b.getAttribute('data-ref'), re1 = findEx(x.p, rf); if (re1) { var ja = runAddEx(x, { id: rf, ref: rf, name: re1.name, lib: null }); if (ja >= 0) go(ja); } break;
+      case 'run-addname':
+        var inp = b.parentNode && b.parentNode.querySelector('[data-rf="newEx"]'), nn = String((inp && inp.value) || ui.run.newEx || '').trim();
+        if (!nn) { toast('Tape le nom de l’exercice'); return; }
+        var own1 = runOwn(x).filter(function (e) { return normTxt(e.name) === normTxt(nn); })[0], lbx = libFind(nn), jb;
+        if (own1) jb = runAddEx(x, { id: own1.id, ref: own1.id, name: own1.name, lib: null });
+        else { var dup = x.g.items.filter(function (it) { return normTxt(it.name) === normTxt(lbx ? libName(lbx) : nn); })[0]; jb = dup ? x.g.items.indexOf(dup) : runAddEx(x, { id: 'xe' + uid(), ref: null, name: lbx ? libName(lbx) : nn, lib: lbx ? lbx[0] : null }); }
+        ui.run.newEx = ''; if (jb >= 0) go(jb); break;
       case 'run-next': go(runNext(x, ui.run.exI)); break;
       case 'run-step': if (it) { var d = runDraft(x, it), f = b.getAttribute('data-f'); d[f] = Math.max(0, Math.round((num(d[f], 0) + num(b.getAttribute('data-d'))) * 100) / 100); } break;
       case 'run-rpe': if (it) { var d1 = runDraft(x, it), n = num(b.getAttribute('data-n')); d1.rpe = num(d1.rpe, 0) === n ? null : n; } break;
@@ -1019,7 +1079,7 @@
         var wasMore = ui.run.more === it.id;
         runPush(x, it, z); x = findInst(ui.run.key); ui.run.d = null; ui.run.more = null;
         if (wasMore || getSets(runRaw(x, it)).length < runN(it)) startTimer(it.rest || '2 min');
-        else { var nj = runNext(x, ui.run.exI); if (nj < 0) { tm.end = 0; clearInterval(tm.iv); go(-1); } else { startTimer(it.rest || '2 min'); tm.label = 'Repos · ensuite ' + x.g.items[nj].name; go(nj); } }
+        else { var nj = runNext(x, ui.run.exI); if (nj < 0) { if (x.s.extra) startTimer(it.rest || '2 min'); else { tm.end = 0; clearInterval(tm.iv); } go(-1); } else { startTimer(it.rest || '2 min'); tm.label = 'Repos · ensuite ' + x.g.items[nj].name; go(nj); } }
         break;
       case 'run-undo': if (it) { runPush(x, it, null); ui.run.d = null; } break;
       case 'run-skip': if (it && !getSets(runRaw(x, it)).length) { runSkip(x, it, true); x = findInst(ui.run.key); } go(runNext(x, ui.run.exI)); break;
@@ -1031,9 +1091,10 @@
     runSave(); drawRun(); render();
   };
   var runBtnHtml = function (x) {
-    if (!isMuscuInst(x) || !x.g.items.some(function (it) { return runLoggable(x, it); })) return '';
-    var act = !!(ui.run && ui.run.key === x.key), f = runFirst(x);
-    if (f < 0 && !act) return '';
+    if (!isMuscuInst(x)) return '';
+    var act = !!(ui.run && ui.run.key === x.key), f = runFirst(x), empty = !!x.s.extra && !x.g.items.length;
+    if (!empty && !x.g.items.some(function (it) { return runLoggable(x, it); })) return '';
+    if (f < 0 && !act && !empty) return '';
     var started = act || x.g.items.some(function (it) { var st = runState(x, it); return st === 'done' || st === 'part' || st === 'skip'; });
     return '<button class="btn primary runbtn" data-a="run-open" data-key="' + esc(x.key) + '">▶ ' + (started ? 'Reprendre la séance' : 'Démarrer la séance') + '</button><span class="small mu" style="margin-top:-4px">Plein écran, exercice par exercice, repos lancé automatiquement.</span>';
   };
@@ -1128,7 +1189,7 @@
       '<div class="wkhead"><button class="btn icon" data-a="wk" data-d="-1" aria-label="Semaine précédente">' + ICON.left + '</button><div class="col" style="gap:2px;align-items:center;text-align:center;min-width:0"><span class="bc" style="font-size:24px">Semaine du ' + mon.getDate() + ' ' + MOIS[mon.getMonth()] + '</span><span class="small mu">' + range + '</span></div><button class="btn icon" data-a="wk" data-d="1" aria-label="Semaine suivante">' + ICON.right + '</button></div>' +
       (progLabels ? '<div class="scrollx">' + progLabels + '</div>' : '<p class="mu">Aucun programme actif cette semaine.</p>') +
       kpis + alerts +
-      '<div class="wk"><div class="wk-main">' + main + '<button class="btn xadd" data-a="xf-new">' + ICON.plus + 'Ajouter une séance faite (muscu, course, autre)</button></div><div class="wk-side">' + (ui.xf ? extraFormHtml() : detailHtml(sel)) + '</div></div></section>';
+      '<div class="wk"><div class="wk-main">' + main + (state.programs.length ? '<button class="btn xadd" data-a="run-free">▶ Démarrer une séance de muscu libre</button>' : '') + '<button class="btn xadd" data-a="xf-new">' + ICON.plus + 'Ajouter une séance faite (muscu, course, autre)</button></div><div class="wk-side">' + (ui.xf ? extraFormHtml() : detailHtml(sel)) + '</div></div></section>';
   };
 
   // ---------- Vue Mois ----------
@@ -1404,14 +1465,15 @@
   sheetEl.addEventListener('change', onField);
   (function () {
     var re = $id('run'); if (!re) return;
-    re.addEventListener('input', function (e) { var f = e.target.getAttribute && e.target.getAttribute('data-rf'); if (!f || !ui.run || !ui.run.d) return; ui.run.d[f] = e.target.value === '' ? null : e.target.value; });
+    re.addEventListener('input', function (e) { var f = e.target.getAttribute && e.target.getAttribute('data-rf'); if (!f || !ui.run) return; if (f === 'newEx' || f === 'name') { ui.run[f] = e.target.value; return; } if (!ui.run.d) return; ui.run.d[f] = e.target.value === '' ? null : e.target.value; });
+    re.addEventListener('keydown', function (e) { if (e.key !== 'Enter' || !e.target.getAttribute || e.target.getAttribute('data-rf') !== 'newEx') return; e.preventDefault(); var bt = re.querySelector('[data-a="run-addname"]'); if (bt) bt.click(); });
   })();
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && ui.run && ui.run.open) { wakeOn(); drawTimer(); } });
   /* Reprise : l'app a été fermée pendant la séance (appel, téléphone verrouillé…) */
   var runResume = function () { try {
     var rs0 = JSON.parse(localStorage.getItem(RUNK) || 'null');
     if (rs0 && rs0.key && Date.now() - num(rs0.t0, 0) < 5 * 3600000 && findInst(rs0.key)) {
-      ui.run = { key: rs0.key, exI: num(rs0.exI, 0) | 0, t0: num(rs0.t0, Date.now()), end: !!rs0.end, open: !!rs0.open };
+      ui.run = { key: rs0.key, exI: num(rs0.exI, 0) | 0, t0: num(rs0.t0, Date.now()), end: !!rs0.end, add: !!rs0.add, open: !!rs0.open };
       if (num(rs0.rest, 0) > Date.now() - 60000) { tm.end = num(rs0.rest); tm.label = rs0.restLbl || 'Repos'; tm.beeped = tm.end <= Date.now(); clearInterval(tm.iv); tm.iv = setInterval(drawTimer, 250); }
       if (ui.run.open) { runLock(true); wakeOn(); drawRun(); }
     } else if (rs0) localStorage.removeItem(RUNK);
@@ -1699,6 +1761,8 @@
     timer: function (txt) { startTimer(txt || '2 min'); },
     /* Mode séance plein écran (bouton « Démarrer » de la carte Aujourd'hui) */
     run: function (key) { if (futureOk(key)) runOpen(key); },
+    /* Séance de muscu libre : créée vide aujourd'hui, remplie dans le mode séance */
+    free: function () { runFree(); },
     closeForm: function () { ui.xf = null; },
     /* 1RM de travail actuels des mouvements principaux, par mouvement CrossFit lié */
     workingMaxes: function () {

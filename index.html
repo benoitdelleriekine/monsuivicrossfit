@@ -315,7 +315,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v61";
+const APP_VERSION="msc-v62";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -1629,6 +1629,7 @@ function vNoter(){
    return`<div class="head"><div class="eyebrow">Qu'as-tu fait ?</div><h1>Noter</h1></div><div class="pane">
     <div class="ntype">${typ.map(([k,l,d,c])=>`<button data-act="${k==="crossfit"?"new":"notek"}" data-k="${k}" style="--c:${c}">
      <i></i><b>${l}</b><span>${d}</span>${planOn()||k==="crossfit"?sub(k):""}</button>`).join("")}</div>
+    ${window.PLAN&&PLAN.free&&S.planif&&(S.planif.programs||[]).length?`<button class="btn btn-quiet" style="margin-top:12px" data-act="planfree">▶ Démarrer une séance de muscu libre</button>`:""}
     ${l?`<button class="btn btn-quiet" style="margin-top:12px" data-act="repeat">Reprendre celle du ${fMid(l.date)}</button>`:""}
     <div class="empty">Pas besoin de le faire pendant l'entraînement. La date se choisit juste après.</div></div>`}
   const en=entryOf();if(en)return vDetail(en);
@@ -2986,6 +2987,7 @@ document.addEventListener("click",ev=>{
   case"noteback":S.notePlan=false;if(window.PLAN&&PLAN.closeForm)PLAN.closeForm();break;
   case"tabtog":{if(!S.tabsOff)S.tabsOff=[];const i=S.tabsOff.indexOf(v);if(i>=0)S.tabsOff.splice(i,1);else S.tabsOff.push(v);break}
   case"planopen":if(window.PLAN&&PLAN.open){PLAN.open(v);S.tab="plan";S.day=null}break;
+  case"planfree":if(window.PLAN&&PLAN.free){S.tab="plan";S.notePlan=false;S.day=null;setTimeout(()=>PLAN.free(),0)}break;
   case"planrun":if(window.PLAN&&PLAN.open){PLAN.open(v);S.tab="plan";S.day=null;if(PLAN.run)setTimeout(()=>PLAN.run(v),0)}break;
   case"planadd":if(window.PLAN&&PLAN.add){PLAN.add(S.day||TODAY,b.dataset.k);S.tab="plan";S.day=null}break;
   case"openday":S.tab="historique";S.open=v;S.day=null;break;
