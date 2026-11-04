@@ -71,16 +71,25 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .tile b{display:block;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:var(--fs-num);line-height:1}
 .tile span{display:block;margin-top:5px;font-size:var(--fs-cap);color:var(--mute);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile i{position:absolute;left:0;right:0;top:0;height:3px;background:var(--c)}
-.badge{display:inline-flex;align-items:center;gap:5px;border-radius:var(--r-pill);padding:3px 9px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent)}
+.tbadge{display:inline-flex;align-items:center;gap:5px;border-radius:var(--r-pill);border:0;padding:3px 9px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent)}
 .row-link{width:100%;display:flex;align-items:center;gap:var(--sp-3);padding:13px 0;text-align:left;border-top:1px solid var(--line)}
 .row-link:first-child{border-top:0}
+.mval{flex:none;text-align:right;max-width:46%}
+.mval b{display:block;font-size:17px;white-space:nowrap}
+.mval small{display:block;font-size:11.5px;color:var(--mute);font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.famchips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:10px -22px 10px;padding:0 22px}
+.famchips::-webkit-scrollbar{display:none}
+.famchips .chip{flex:none;min-height:40px;padding:7px 13px;font-size:13.5px}
+.famchips .chip span{color:var(--mute);font-weight:600;margin-left:2px}
+.famchips .chip.on{background:var(--aqua);border-color:var(--aqua);color:var(--onacc);font-weight:700}
+.famchips .chip.on span{color:var(--onacc);opacity:.75}
 .hpill{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 13px;border-radius:var(--r-pill);background:var(--sunk);border:1px solid var(--line);font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap}
 .hpill svg{width:18px;height:18px}
 .acts{display:flex;gap:var(--sp-2);margin-top:var(--sp-3)}
 .acts .btn{flex:1;padding:12px 10px;font-size:14px;border-radius:var(--r-m)}
 .eyebrow{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--mute);font-weight:600}
 .head{padding:calc(30px + env(safe-area-inset-top)) 22px 10px}
-.head h1{font-family:"Barlow Condensed",sans-serif;font-weight:700;text-transform:uppercase;font-size:44px;letter-spacing:.006em;line-height:.9;margin-top:5px}
+.head h1{font-family:"Barlow Condensed",sans-serif;font-weight:700;text-transform:uppercase;font-size:40px;letter-spacing:.006em;line-height:.9;margin-top:5px}
 .phead2{padding-bottom:14px}
 .phead2 .hrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .head.phead2 h1{font-size:var(--fs-h1);margin-top:6px;line-height:1.08;padding-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -158,6 +167,12 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .stat span{font-size:12px;color:var(--mute);font-weight:500;line-height:1.3;display:block;margin-top:4px}
 .scroll{display:flex;gap:11px;overflow-x:auto;padding:4px 22px 8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
 .scroll::-webkit-scrollbar{display:none}
+.ms2{flex:none;width:150px;min-height:118px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border-radius:var(--r-l);padding:12px 13px;scroll-snap-align:start;background:var(--card);border:1px solid var(--line);box-shadow:var(--sh-lo)}
+.ms2 .tbadge{font-size:10.5px;padding:3px 8px;margin-bottom:6px}
+.ms2 .v{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:23px;line-height:1.05;letter-spacing:-.01em}
+.ms2 .v.sm{font-size:18px}
+.ms2 .n{font-size:13px;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ms2 small{font-size:12px;color:var(--mute);margin-top:auto;padding-top:4px}
 .ms-card{flex:none;width:178px;border-radius:19px;padding:16px;scroll-snap-align:start;color:var(--onacc);box-shadow:var(--sh)}
 .ms-card b{display:block;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:15.5px;line-height:1.18;margin:10px 0 7px;letter-spacing:-.015em}
 .ms-card small{font-size:12px;opacity:.85;font-weight:500}
@@ -206,6 +221,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .tab{flex:1;min-width:0;padding:8px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;
  font-size:12px;font-weight:600;color:var(--mute);border-radius:14px;letter-spacing:.01em}
 .tab.on{background:transparent;color:var(--aqua)}
+.tab{min-height:52px}
+.tab svg{padding:3px 14px;box-sizing:content-box;border-radius:999px;transition:background .15s}
+.tab.on svg{background:color-mix(in srgb,var(--aqua) 18%,transparent)}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);
   -webkit-backdrop-filter:blur(3px);z-index:60;display:flex;align-items:flex-end}
 .sheet-in{background:var(--card);border:1px solid var(--line);border-bottom:none;width:100%;max-width:520px;margin:0 auto;max-height:88vh;
@@ -223,6 +241,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gtab button span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .gtab button.on{background:var(--aqua);border-color:var(--aqua);color:var(--onacc);font-weight:700}
+.gtab button{border-radius:var(--r-m)}
 .gtab svg{opacity:.9;flex:none}
 .lvbar{display:flex;gap:4px;margin-bottom:8px}
 .lvseg{flex:1;height:10px;border-radius:5px;background:var(--track)}
@@ -237,7 +256,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
   padding:10px 18px;border-radius:0 0 20px 20px}
  #overlay .sheet{align-items:center}
  .head{padding-top:26px}
- .head h1{font-size:50px}
+ .head h1{font-size:44px}
  .scroll{padding-left:22px;padding-right:22px}
  .sheet-in{border-radius:24px;margin-bottom:6vh;max-width:560px}
  .sheet{align-items:center}
@@ -357,7 +376,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v65";
+const APP_VERSION="msc-v66";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -581,6 +600,10 @@ const unitLabel=u=>u==="sec"?"secondes":u==="m"?"mètres":"répétitions";
    des données ; retombe sur le calcul complet si on lui passe autre chose
    que S.sessions (aucun appel actuel ne le fait, gardé par prudence). */
 let msCache=null,msKey=null;
+/* Records et premières fois de toutes les séances (CrossFit + séries du plan et des séances libres) */
+let msAllKey=null,msAllCache=null;
+function msAll(){const key=String(S.updatedAt||0)+":"+((S.planif&&S.planif.programs)||[]).map(p=>p.updatedAt||0).join(",")+":"+(S.tabsOff||[]).join(",");
+ if(msAllCache&&msAllKey===key)return msAllCache;msAllKey=key;msAllCache=milestonesCalc(allSess());return msAllCache}
 function milestones(ss){
  if(ss===S.sessions){
   const key=S.updatedAt||0;
@@ -634,7 +657,7 @@ function statsRange(from,to){
 /* Une phrase d'accueil tirée des données réelles, jamais culpabilisante */
 function accroche(){
  const G=(f,m)=>S.profile&&S.profile.sex==="f"?f:m;
- const ms=milestones(S.sessions), st=streak(allDone());
+ const ms=msAll(), st=streak(allDone());
  const der=sorted()[0];
  const jours=der?Math.round((new Date(TODAY)-new Date(der.date))/864e5):null;
  const recent=ms.find(m=>(new Date(TODAY)-new Date(m.date))/864e5<=7);
@@ -743,7 +766,7 @@ function vProgres(){
   if(!S.sessions.length&&!hasPlan)return`<div class="head"><div class="eyebrow">Bienvenue</div><h1>Tes progrès</h1></div>
    <div class="pane"><div class="empty">Ici s'afficheront tes records, tes paliers franchis et tes premières fois.<br>Tout commence par une séance notée.</div>
    <button class="btn btn-go" data-act="new">Noter ma première séance</button></div>`;
-  const ms=milestones(S.sessions),st=streak(allDone()),msDays=new Set(ms.map(x=>x.date));
+  const ms=msAll(),st=streak(allDone()),msDays=new Set(ms.map(x=>x.date));
   const days=new Set(S.sessions.map(s=>s.date));
   const [titre,sous]=accroche();
 
@@ -774,7 +797,7 @@ function vProgres(){
    for(let i=0;i<g.cells.length;i+=7){
     h+=`<div class="grid" style="max-width:none;margin-bottom:4px">`+g.cells.slice(i,i+7).map(d=>{
      if(!d)return`<div></div>`;
-     const c=days.has(d)?"on":msDays.has(d)?"on":"",star=msDays.has(d);
+     const c=days.has(d)?"on":"",star=msDays.has(d);
      const jour=+d.slice(8), pl=hasPlan?planDay(d):[];
      plDone+=pl.filter(x=>x.done).length;
      const dots=pl.slice(0,3).map(x=>`<i class="pdot${x.done?" done":d<TODAY?" miss":""}" style="--c:${x.color}"></i>`).join("");
@@ -868,67 +891,59 @@ function vProgres(){
   h+=painCard();
   h+=`</div>`;   /* le conteneur d'accueil se referme ici : les sections
                     suivantes ouvrent chacune le leur, sinon les marges s'ajoutent */
-  if(ms.length){h+=`<div class="pane" style="padding-bottom:0"><div class="eyebrow" style="margin-bottom:11px">Premières fois</div></div>
-   <div class="scroll">`+ms.slice(0,12).map(x=>`<button class="ms-card" style="background:${MSC[x.t]};text-align:left"
-   ${x.id?`data-act="fiche" data-v="${x.id}"`:""}>
-   <span class="tag">${x.t}</span><b>${esc(x.v)}</b>
-   <small style="display:flex;justify-content:space-between;align-items:center">${fMid(x.date)}${x.id?'<span style="font-size:15px;opacity:.7">›</span>':""}</small></button>`).join("")+`</div><div style="height:16px"></div>`}
+  if(ms.length){
+   const MSI={"Record":["🏆","Record","var(--c-rec)"],"Découvert":["✦","Découverte","var(--c-first)"],"Nouveau palier":["▲","Palier","var(--c-cf)"]};
+   h+=`<div class="pane" style="padding-bottom:0"><div class="card-h" style="margin-bottom:10px"><div class="eyebrow">Records et premières fois</div>
+    <button class="hpill" style="min-height:36px;font-size:13px" data-act="records">Tout voir ›</button></div></div>
+   <div class="scroll">`+ms.slice(0,12).map(x=>{const I=MSI[x.t]||["★",x.t,"var(--c-rec)"],pr=String(x.v).split(" — "),nm=pr[0],val=pr.slice(1).join(" — ");
+    return`<button class="ms2" style="--c:${I[2]}" ${x.id?`data-act="fiche" data-v="${x.id}"`:""} aria-label="${esc(I[1]+" : "+x.v+", "+fMid(x.date))}">
+     <span class="tbadge">${I[0]} ${I[1]}</span>${val?`<b class="v">${esc(val)}</b><span class="n">${esc(nm)}</span>`:`<b class="v sm">${esc(nm)}</b><span class="n">1ʳᵉ fois</span>`}
+     <small>${fMid(x.date)}</small></button>`}).join("")+`</div><div style="height:16px"></div>`}
 
   h+=benchCard();
-  const inE=[...new Set(S.sessions.flatMap(s=>(s.entries||[]).filter(e=>e.sets&&e.sets.length).map(e=>e.movementId)))];
+  /* Mes mouvements : CrossFit, plan et séances libres réunis ; mêmes valeurs que la page Records */
+  const AS=allSess();
+  const inE=[...new Set(AS.flatMap(s=>(s.entries||[]).filter(e=>e.sets&&e.sets.length).map(e=>e.movementId)))].filter(id=>mv(id).k!=="wod");
   const inM=[...new Set(S.sessions.flatMap(s=>(s.metcons||[]).flatMap(mc=>mcTotals(mc).map(t=>t.id))))];
   const used=[...inE,...inM.filter(x=>!inE.includes(x))];
   if(used.length){
-   /* Familles ordonnées, puis liste des mouvements de la famille retenue. */
    const ORDER=["Haltéro","Force","Haltères","Gymnastique","Cardio","Mes mouvements"];
-   const rank=g=>{const i=ORDER.indexOf(g);return i<0?99:i};
-   const groups=[...new Set(used.map(id=>mv(id).g))].sort((a,b)=>rank(a)-rank(b));
-   const gSel=S.progG&&groups.includes(S.progG)?S.progG:groups[0];
-   let inG=used.filter(id=>mv(id).g===gSel);
-
-   /* Filtre texte, proposé seulement quand la liste devient longue */
+   const famOf=id=>{const g=mv(id).g||"Autres";return/^Muscu/.test(g)?"Muscu":g};
+   const rank=g=>{const i=ORDER.indexOf(g);return i<0?(g==="Muscu"?2.5:99):i};
+   const groups=[...new Set(used.map(famOf))].sort((a,b)=>rank(a)-rank(b));
+   const gSel=S.progG==="*"||!S.progG?"*":groups.includes(S.progG)?S.progG:"*";
    const q=(S.mq||"").toLowerCase().trim();
-   const longue=inG.length>8;
-   if(q)inG=inG.filter(id=>mv(id).n.toLowerCase().includes(q));
-
-   /* Tri : par défaut les plus récemment travaillés remontent */
+   let inG=q?used.filter(id=>mv(id).n.toLowerCase().includes(q)):gSel==="*"?used:used.filter(id=>famOf(id)===gSel);
    const tri=S.msort||"recent";
-   const lastUse={};
-   S.sessions.forEach(s2=>{
-    const t=[...(s2.entries||[]).map(e=>e.movementId),...(s2.metcons||[]).flatMap(mc=>mcTotals(mc).map(x=>x.id))];
-    t.forEach(id=>{if(!lastUse[id]||s2.date>lastUse[id])lastUse[id]=s2.date})});
-   const cnt={};
-   S.sessions.forEach(s2=>{
+   const lastUse={},cnt={},src={};
+   AS.forEach(s2=>{const isPl=!!s2.plan;
     const t=new Set([...(s2.entries||[]).map(e=>e.movementId),...(s2.metcons||[]).flatMap(mc=>mcTotals(mc).map(x=>x.id))]);
-    t.forEach(id=>cnt[id]=(cnt[id]||0)+1)});
+    t.forEach(id=>{cnt[id]=(cnt[id]||0)+1;if(!lastUse[id]||s2.date>lastUse[id])lastUse[id]=s2.date;src[id]=(src[id]||0)|(isPl?2:1)})});
    inG=[...inG].sort((a,b)=>
     tri==="alpha"?mv(a).n.localeCompare(mv(b).n,"fr")
     :tri==="freq"?(cnt[b]||0)-(cnt[a]||0)||mv(a).n.localeCompare(mv(b).n,"fr")
     :(lastUse[b]||"").localeCompare(lastUse[a]||"")||mv(a).n.localeCompare(mv(b).n,"fr"));
-
-   h+=`<div class="pane" id="movblock"><div class="eyebrow" style="margin-bottom:11px">Mes mouvements</div>
-    <div class="gtab" style="grid-template-columns:repeat(${groups.length},minmax(0,1fr))">`+
-    groups.map(g=>`<button class="${gSel===g?"on":""}" data-act="progg" data-v="${esc(g)}"
-     title="${esc(g)}">${gicon(g)}<span>${GSHORT[g]||g}</span></button>`).join("")+`</div>`;
-
-   if(longue||q)h+=`<input class="inp" id="mq" style="margin-top:10px;padding:11px 14px;font-size:14px"
-    placeholder="Filtrer dans ${esc(GSHORT[gSel]||gSel)}…" value="${esc(S.mq||"")}">`;
-
-   h+=`<div class="chips" style="margin:10px 0 12px">`+
-    [["recent","Récents"],["freq","Les plus faits"],["alpha","A → Z"]].map(([k,l])=>
-     `<button class="chip" style="padding:7px 12px;font-size:12px;${tri===k?"font-weight:700;color:var(--ink);border-color:var(--ink)":""}"
-      data-act="msort" data-v="${k}">${l}</button>`).join("")+`</div>`;
-
+   let wm={};try{if(planOn()&&PLAN.workingMaxes)PLAN.workingMaxes().forEach(x=>{if(!wm[x.id]||x.work>wm[x.id])wm[x.id]=x.work})}catch(e){}
+   const LIM=8,all=S.mall||q,shown=all?inG:inG.slice(0,LIM);
+   h+=`<div class="pane" id="movblock"><div class="eyebrow" style="margin-bottom:10px">Mes mouvements</div>
+    <input class="inp" id="mq" type="search" enterkeyhint="search" autocomplete="off" style="padding:11px 14px;font-size:15px" placeholder="🔍 Rechercher un mouvement…" value="${esc(S.mq||"")}" aria-label="Rechercher un mouvement">
+    ${q?"":`<div class="chips famchips">`+[["*","Tout",used.length],...groups.map(g=>[g,GSHORT[g]||g,used.filter(id=>famOf(id)===g).length])].map(([k,l,n])=>
+     `<button class="chip${gSel===k?" on":""}" data-act="progg" data-v="${esc(k)}" aria-pressed="${gSel===k}">${esc(l)} <span>${n}</span></button>`).join("")+`</div>`}
+    <div class="seg" style="margin:${q?"10px":"0"} 0 12px" role="group" aria-label="Tri">`+
+    [["recent","Récents"],["freq","Fréquents"],["alpha","A → Z"]].map(([k,l])=>
+     `<button class="${tri===k?"on":""}" data-act="msort" data-v="${k}" aria-pressed="${tri===k}">${l}</button>`).join("")+`</div>`;
    if(!inG.length)h+=`<div class="card"><div style="font-size:13.5px;color:var(--mute)">Aucun mouvement ne correspond.</div></div>`;
-   else h+=`<div class="card" style="padding:4px 16px">`+inG.map((id,i)=>{
-    const m2=mv(id),st2=movStat(id);
-    return`<button style="width:100%;display:flex;align-items:center;gap:12px;padding:13px 0;text-align:left;
-     ${i?"border-top:1px solid var(--line)":""}" data-act="fiche" data-v="${id}">
+   else{h+=`<div class="card" style="padding:2px 16px">`+shown.map(id=>{
+    const m2=mv(id),r=recOf(id),c=curveFor(id),nb=c.length,wk=wm[id];
+    const sub=nb?`${nb} séance${nb>1?"s":""} · ${fMid(lastUse[id]||c[nb-1].date)}`:"vu en metcon";
+    const cap=r?(r.k===0?"max estimé":r.k===2?r.sub:/× /.test(r.txt)?"meilleure série":(m2.u==="sec"?"meilleure tenue":"meilleure série")):"";
+    return`<button class="row-link" data-act="fiche" data-v="${id}">
      <div style="flex:1;min-width:0">
       <div style="font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m2.n)}</div>
-      <div style="font-size:12px;color:var(--mute);margin-top:3px">${st2.sub}</div></div>
-     ${st2.txt?`<span class="dsp" style="font-size:17px;white-space:nowrap">${st2.txt}</span>`:""}
+      <div style="font-size:12px;color:var(--mute);margin-top:3px">${sub}</div></div>
+     <div class="mval">${r?`<b class="dsp">${r.txt}</b><small>${wk?"plan : "+fr(wk)+" kg":cap}</small>`:`<b class="dsp" style="color:var(--mute)">—</b>`}</div>
      <span style="color:var(--mute);font-size:17px;flex:none">›</span></button>`}).join("")+`</div>`;
+    if(!q&&inG.length>LIM)h+=`<button class="btn btn-quiet" style="margin-top:-4px;padding:12px;font-size:14px" data-act="mall">${S.mall?"Afficher moins":"Voir les "+(inG.length-LIM)+" autres"}</button>`}
    h+=`</div>`}
 
   return h+patternCard()+`<div style="height:24px"></div>`}
@@ -1615,7 +1630,7 @@ function weekTiles(){
  const cf=S.sessions.filter(s=>inW(s.date)).length;
  const k={muscu:0,course:0,autre:0};
  try{if(planOn()&&PLAN.historyList)PLAN.historyList().forEach(x=>{if(inW(x.date)){const t=k[x.kind]!=null?x.kind:"autre";k[t]++}})}catch(e){}
- const rec=milestones(S.sessions).filter(m=>inW(m.date)).length;
+ const rec=msAll().filter(m=>inW(m.date)&&m.t!=="Découvert").length;
  const tl=[[cf,"CrossFit","var(--c-cf)"],[k.muscu,"Muscu","var(--c-mu)"]];
  if(k.course||planOn()&&(PLAN.programs?PLAN.programs():[]).some(p=>p.kind==="course"))tl.push([k.course,"Course","var(--c-run)"]);
  if(k.autre)tl.push([k.autre,"Autre","var(--c-oth)"]);
@@ -1626,17 +1641,19 @@ function weekTiles(){
 /* ══════════ RECORDS ══════════
    Tous les records au même endroit : charge max estimée (CrossFit et plan muscu),
    meilleure série au poids du corps, meilleure allure, et 1RM de travail du plan. */
-function recordList(){
- const used=new Set();allSess().forEach(s=>(s.entries||[]).forEach(e=>{if((e.sets||[]).length)used.add(e.movementId)}));
- const rows=[];
- used.forEach(id=>{const m=mv(id);if(m.k==="wod")return;const c=curveFor(id);
+function recOf(id){const m=mv(id),rows=[];const c=curveFor(id);
   const wr=c.filter(x=>x.rm!=null),wp=c.filter(x=>x.pace!=null),wn=c.filter(x=>x.reps>0);
   if(wr.length){const b=wr.reduce((a,x)=>x.rm>a.rm?x:a);rows.push({id,m,val:b.rm,txt:fx(b.rm)+" kg",sub:"charge max estimée",date:b.date,k:0})}
   else if((m.k==="cardio"||PACE[id])&&wp.length){const b=wp.reduce((a,x)=>x.pace<a.pace?x:a);rows.push({id,m,val:-b.pace,txt:mmss(b.pace),sub:"/ "+(PACE[id]||500)+" m",date:b.date,k:2})}
   else{let bw=null;allSess().forEach(s=>(s.entries||[]).filter(e=>e.movementId===id).forEach(e=>(e.sets||[]).forEach(x=>{
     if(x.weight>0&&x.reps>0&&(!bw||x.weight>bw.w||(x.weight===bw.w&&x.reps>bw.r)))bw={w:x.weight,r:x.reps,date:s.date}})));
    if(bw)rows.push({id,m,val:bw.w,txt:fr(bw.w)+" kg × "+bw.r,sub:"meilleure série",date:bw.date,k:1});
-   else if(wn.length){const b=wn.reduce((a,x)=>x.reps>a.reps?x:a);rows.push({id,m,val:b.reps,txt:b.reps+(m.u==="sec"?" s":m.u==="m"?" m":" reps"),sub:"meilleure série",date:b.date,k:1})}}});
+   else if(wn.length){const b=wn.reduce((a,x)=>x.reps>a.reps?x:a);rows.push({id,m,val:b.reps,txt:b.reps+(m.u==="sec"?" s":m.u==="m"?" m":" reps"),sub:"meilleure série",date:b.date,k:1})}}
+ return rows[0]||null}
+function recordList(){
+ const used=new Set();allSess().forEach(s=>(s.entries||[]).forEach(e=>{if((e.sets||[]).length)used.add(e.movementId)}));
+ const rows=[];
+ used.forEach(id=>{if(mv(id).k==="wod")return;const r=recOf(id);if(r)rows.push(r)});
  return rows}
 function vRecords(){
  /* Une seule ligne par mouvement : ce que tu as fait (CrossFit, muscu du plan, séances libres)
@@ -3014,7 +3031,8 @@ document.addEventListener("click",ev=>{
  switch(a){
   case"tab":S.records=false;if(S.notePlan&&window.PLAN&&PLAN.closeForm)PLAN.closeForm();S.tab=v;S.focus=null;S.fiche=null;S.notePlan=false;break;
   case"prog":S.prog=v;break;
-  case"progg":S.progG=v;S.prog=null;S.mq="";pendingAnchor="movblock";break;
+  case"progg":S.progG=v;S.prog=null;S.mq="";S.mall=false;pendingAnchor="movblock";break;
+  case"mall":S.mall=!S.mall;pendingAnchor="movblock";break;
   case"msort":S.msort=v;pendingAnchor="movblock";break;
   case"fiche":S.fiche=v;break;
   case"sugg":if(S.d)S.d.w=+v;break;
