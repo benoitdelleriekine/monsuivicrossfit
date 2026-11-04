@@ -1,0 +1,353 @@
+[
+ {
+  "id": "muscu5mvt16444",
+  "kind": "muscu",
+  "name": "Muscu force · 5 mouvements",
+  "start": "2026-11-09",
+  "color": "#FF9F43",
+  "preset": null,
+  "blocks": [
+   {
+    "goal": "hyp",
+    "weeks": 4,
+    "end": "deload",
+    "custom": {
+     "s": 4,
+     "r": 6,
+     "p0": 70,
+     "inc": 2.5,
+     "rpe": 8
+    }
+   },
+   {
+    "goal": "force",
+    "weeks": 2,
+    "end": "none",
+    "custom": {
+     "s": 4,
+     "r": 6,
+     "p0": 70,
+     "inc": 2.5,
+     "rpe": 8
+    }
+   },
+   {
+    "goal": "max",
+    "weeks": 2,
+    "end": "deload",
+    "custom": {
+     "s": 4,
+     "r": 6,
+     "p0": 70,
+     "inc": 2.5,
+     "rpe": 8
+    }
+   },
+   {
+    "goal": "max",
+    "weeks": 1,
+    "end": "test",
+    "custom": {
+     "s": 4,
+     "r": 6,
+     "p0": 70,
+     "inc": 2.5,
+     "rpe": 8
+    }
+   }
+  ],
+  "sessions": [
+   {
+    "id": "sessmar",
+    "name": "Muscu mardi — Soulevé de terre / Press (+ squat & DC légers)",
+    "day": 1,
+    "dur": 100,
+    "exercises": [
+     {
+      "id": "mtr",
+      "name": "Tractions strictes",
+      "mode": "reps",
+      "sets": 6,
+      "reps": 2,
+      "incReps": 0.25,
+      "maxReps": 3,
+      "note": "Séries courtes, loin de l'échec · Bras tendus en bas, menton au-dessus de la barre en haut · Omoplates serrées, gainage, aucun élan · Coude qui tire : arrête la série",
+      "rest": "2 min"
+     },
+     {
+      "id": "mneg",
+      "name": "Tractions négatives lentes",
+      "mode": "reps",
+      "sets": 3,
+      "reps": 2,
+      "incReps": 0,
+      "maxReps": 0,
+      "note": "Monte en sautant ou sur un banc, menton au-dessus de la barre · Descends en 5 s jusqu'aux bras tendus · Repose les pieds et recommence",
+      "rest": "2 min"
+     },
+     {
+      "id": "mdl",
+      "name": "Soulevé de terre",
+      "mode": "pct",
+      "orm": 120,
+      "offset": 0,
+      "repCap": 6,
+      "setCap": 4,
+      "note": "Barre au-dessus du milieu du pied, dos neutre · Pousse le sol : hanches et épaules montent ensemble · Repose la barre à chaque rep, sans rebond"
+     },
+     {
+      "id": "msql",
+      "name": "Squat pause (léger)",
+      "mode": "pct",
+      "orm": 102,
+      "offset": -15,
+      "repCap": 5,
+      "note": "Pause 2 s en bas sans relâcher le gainage · Remonte vite, trajectoire propre · Séance technique : reste léger"
+     },
+     {
+      "id": "msp",
+      "name": "Strict press",
+      "mode": "pct",
+      "orm": 45,
+      "offset": 0,
+      "note": "Fessiers et abdos serrés, pas de cambrure · Barre près du visage, la tête passe dessous en haut · Aucune impulsion des jambes"
+     },
+     {
+      "id": "mbpl",
+      "name": "Développé couché pause (léger)",
+      "mode": "pct",
+      "orm": 80,
+      "offset": -15,
+      "repCap": 5,
+      "note": "Pause 1 s sur la poitrine, barre immobile · Omoplates serrées, pieds ancrés au sol · Pousse fort après la pause"
+     },
+     {
+      "id": "mdi",
+      "name": "Développé incliné haltères",
+      "mode": "kg",
+      "sets": 3,
+      "reps": 10,
+      "startKg": 16,
+      "incKg": 2,
+      "note": "Charge par haltère · Banc à 30°, coudes à environ 45° du buste · Descente contrôlée, étirement en bas",
+      "repsMax": 12,
+      "rest": "2 min"
+     },
+     {
+      "id": "madd",
+      "name": "Adduction hanche machine",
+      "mode": "kg",
+      "sets": 3,
+      "reps": 12,
+      "startKg": 35,
+      "incKg": 5,
+      "note": "Amplitude complète · 1 s de serrage en fin de mouvement · Retour lent, sans laisser claquer la charge",
+      "repsMax": 15,
+      "rest": "60–90 s"
+     },
+     {
+      "id": "mabd",
+      "name": "Abduction hanche machine",
+      "mode": "kg",
+      "sets": 3,
+      "reps": 12,
+      "startKg": 45,
+      "incKg": 5,
+      "note": "Buste calé contre le dossier · 1 s de maintien en ouverture · Retour lent, sans laisser claquer la charge",
+      "repsMax": 15,
+      "rest": "60–90 s"
+     },
+     {
+      "id": "mh1",
+      "name": "HSR · Mollet debout unilatéral (barre)",
+      "mode": "kg",
+      "sets": 3,
+      "reps": 8,
+      "startKg": 28,
+      "incKg": 0,
+      "note": "Tempo lent : 3 s en montée, 3 s en descente · Talon sous la marche en bas, pointe haute en haut",
+      "keep": true,
+      "rest": "2 min"
+     },
+     {
+      "id": "mh2",
+      "name": "HSR · Seated calf raise (machine)",
+      "mode": "kg",
+      "sets": 3,
+      "reps": 8,
+      "startKg": 143,
+      "incKg": 0,
+      "note": "Tempo lent : 3 s en montée, 3 s en descente · Genoux fléchis : travaille le soléaire · Amplitude complète",
+      "keep": true,
+      "rest": "2 min"
+     },
+     {
+      "id": "mh3",
+      "name": "Leg curl allongé unilatéral",
+      "mode": "kg",
+      "sets": 3,
+      "reps": 12,
+      "startKg": 12.5,
+      "incKg": 0,
+      "note": "Charge par jambe · Hanches collées au banc · Descente lente en 3 s",
+      "keep": true,
+      "rest": "90 s"
+     }
+    ]
+   },
+   {
+    "id": "sesssam",
+    "name": "Muscu samedi — Squat / Bench",
+    "day": 5,
+    "dur": 95,
+    "exercises": [
+     {
+      "id": "str",
+      "name": "Tractions strictes (densité)",
+      "mode": "reps",
+      "sets": 3,
+      "reps": 3,
+      "incReps": 0.25,
+      "maxReps": 4,
+      "note": "1 rep en réserve, pas plus · Même technique stricte, aucun élan · Coude qui tire : arrête la série · Semaine test : max unbroken",
+      "rest": "3 min"
+     },
+     {
+      "id": "ssq",
+      "name": "Back squat",
+      "mode": "pct",
+      "orm": 102,
+      "offset": 0,
+      "note": "Genoux dans l'axe des pieds · Descends au moins à la parallèle · Respire et gaine avant chaque rep"
+     },
+     {
+      "id": "sbp",
+      "name": "Développé couché",
+      "mode": "pct",
+      "orm": 80,
+      "offset": 0,
+      "note": "Omoplates serrées, pieds ancrés au sol · Barre au bas de la poitrine, sans rebond · Poignets droits au-dessus des coudes"
+     },
+     {
+      "id": "srow",
+      "name": "Rowing poitrine appuyée (haltères)",
+      "mode": "kg",
+      "sets": 4,
+      "reps": 8,
+      "repsMax": 12,
+      "startKg": 0,
+      "incKg": 2,
+      "note": "Charge par haltère · Poitrine collée au banc incliné · Tire les coudes vers les hanches, 1 s en haut",
+      "rest": "2 min"
+     },
+     {
+      "id": "smp",
+      "name": "Développé militaire haltères",
+      "mode": "kg",
+      "sets": 3,
+      "reps": 10,
+      "startKg": 13,
+      "incKg": 2,
+      "note": "Charge par haltère · Abdos serrés, pas de cambrure · Haltères qui se rejoignent au-dessus de la tête",
+      "repsMax": 12,
+      "rest": "2 min"
+     },
+     {
+      "id": "scr",
+      "name": "Crunch décliné",
+      "mode": "reps",
+      "sets": 3,
+      "reps": 12,
+      "incReps": 1,
+      "maxReps": 20,
+      "note": "Enroule le dos vertèbre par vertèbre · Expire en montant · Descente lente, mains sans tirer sur la nuque",
+      "rest": "60 s"
+     },
+     {
+      "id": "shy",
+      "name": "Hyperextension lombaire",
+      "mode": "reps",
+      "sets": 3,
+      "reps": 12,
+      "incReps": 1,
+      "maxReps": 20,
+      "note": "Remonte jusqu'à l'alignement du corps, pas au-delà · Serre les fessiers en haut · Mouvement lent et contrôlé",
+      "rest": "60 s"
+     },
+     {
+      "id": "sh1",
+      "name": "HSR · Mollet debout unilatéral (barre)",
+      "mode": "kg",
+      "sets": 3,
+      "reps": 8,
+      "startKg": 28,
+      "incKg": 0,
+      "note": "Tempo lent : 3 s en montée, 3 s en descente · Talon sous la marche en bas, pointe haute en haut",
+      "keep": true,
+      "rest": "2 min"
+     },
+     {
+      "id": "sh2",
+      "name": "HSR · Seated calf raise (machine)",
+      "mode": "kg",
+      "sets": 3,
+      "reps": 8,
+      "startKg": 143,
+      "incKg": 0,
+      "note": "Tempo lent : 3 s en montée, 3 s en descente · Genoux fléchis : travaille le soléaire · Amplitude complète",
+      "keep": true,
+      "rest": "2 min"
+     },
+     {
+      "id": "sh3",
+      "name": "Leg curl allongé unilatéral",
+      "mode": "kg",
+      "sets": 3,
+      "reps": 12,
+      "startKg": 12.5,
+      "incKg": 0,
+      "note": "Charge par jambe · Hanches collées au banc · Descente lente en 3 s",
+      "keep": true,
+      "rest": "90 s"
+     }
+    ]
+   }
+  ],
+  "logs": {},
+  "overrides": {},
+  "moves": {},
+  "createdAt": 1793616444037
+ },
+ {
+  "id": "coursedim45",
+  "kind": "course",
+  "name": "Course · reprise vers 45 min",
+  "start": "2026-11-02",
+  "color": "#5AA9FF",
+  "weeks": 13,
+  "deloadEvery": 4,
+  "deloadPct": 25,
+  "capPct": 15,
+  "preset": null,
+  "runs": [
+   {
+    "id": "rdim",
+    "name": "Course continue",
+    "day": 6,
+    "type": "continu",
+    "startMin": 24,
+    "mode": "min",
+    "inc": 2,
+    "switchMin": 30,
+    "inc2": 3,
+    "maxMin": 45,
+    "rpe": 4,
+    "note": "Allure facile : tu peux parler en phrases complètes · Si c'est dur, ralentis plutôt que d'écourter"
+   }
+  ],
+  "logs": {},
+  "overrides": {},
+  "moves": {},
+  "createdAt": 1793616444200
+ }
+]

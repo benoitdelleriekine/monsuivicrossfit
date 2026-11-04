@@ -2,7 +2,7 @@
 # Lance toutes les suites de test. Aucune dépendance : Node seul suffit.
 cd "$(dirname "$0")"
 ko=0
-for f in *.js; do
+for f in [!_]*.js; do
   out=$(node "$f" 2>&1)
   e=$(echo "$out" | grep -cE "✗|ERREUR|CASSÉ|PERDU|SyntaxError|TypeError|ReferenceError")
   o=$(echo "$out" | grep -cE "✓|Aucune erreur|exacts|conforme")
