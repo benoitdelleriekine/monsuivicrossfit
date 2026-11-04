@@ -75,6 +75,15 @@ console.log('\n═══ Bibliothèque de mouvements ═══\n');
  const miss=ex.filter(n=>!E(R).libFind(n));T('tous les exercices du programme sont reconnus',!miss.length,miss.join(', ')||null);
  const reg=R.HOST?true:false;T('l\'app hôte expose ses séances au module',reg);}
 
+console.log('\n═══ Records et charge conseillée ═══\n');
+{const R=app(p=>{p.logs={'1|sessmar':{done:true,ex:{mdl:{sets:sets(85,6,7)}}}}});
+ const wm=R.PLAN.workingMaxes();
+ T('1RM de travail des 4 mouvements principaux disponibles',wm.length===4&&wm.some(x=>x.id==='back-squat'&&x.work===102),wm.map(x=>x.name+' '+x.work).join(', '));
+ const sq=R.suggestFor(R.mv('back-squat'),5);
+ T('charge conseillée back squat 5 reps à RPE 8 : 1RM 102 kg → 82,5 kg',sq&&sq.kg===82.5,sq&&sq.kg);
+ T('pas de conseil pour un mouvement au poids du corps',R.suggestFor(R.mv('pull-up'),5)===null);
+ const rl=R.recordList();T('les séries du plan figurent dans les records (soulevé de terre)',rl.some(r=>r.id==='deadlift'),rl.map(r=>r.id).join(','));}
+
 console.log('\n═══ Fusion des programmes entre appareils ═══\n');
 {const R=app();const a={programs:[{id:'p1',updatedAt:10,v:'a'}],deleted:[]},b={programs:[{id:'p1',updatedAt:20,v:'b'}],deleted:[]};
  T('la version la plus récente d\'un programme l\'emporte',R.mergePlanif(a,b).programs[0].v==='b');

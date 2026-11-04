@@ -21,6 +21,6 @@ function boot(store){
  global.localStorage={getItem:k=>store[k]===undefined?null:store[k],setItem:(k,v)=>{store[k]=String(v)},removeItem:k=>{delete store[k]}};
  global.alert=()=>{};global.confirm=()=>true;global.prompt=()=>null;
  global.Blob=function(){};global.URL={createObjectURL:()=>'',revokeObjectURL(){}};
- const R=new Function(host+'\n;'+planif+'\n;return {S,render,save,load,payload,applyRemote,backupData,restoreData,snapshotOnUpdate,backups,mergePlanif,normPlanif,APP_VERSION,PLAN:window.PLAN,HOST:window.PLAN_HOST};')();
- R.store=store;return R}
+ const R=new Function(host+'\n;'+planif+'\n;return {S,render,save,load,payload,applyRemote,backupData,restoreData,snapshotOnUpdate,backups,mergePlanif,normPlanif,APP_VERSION,suggestFor,recordList,mv,PLAN:window.PLAN,HOST:window.PLAN_HOST};')();
+ global.PLAN=global.window.PLAN;R.store=store;return R}
 module.exports={boot};
