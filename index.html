@@ -315,7 +315,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v60";
+const APP_VERSION="msc-v61";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -1560,7 +1560,7 @@ function todayCard(){
  if(!pl.length&&!cf.length)h+=`<div style="font-size:13.5px;color:var(--mute);padding:6px 0">Pas de séance prévue : jour de repos ou séance libre.</div>`;
  cf.forEach(x=>{h+=`<button style="width:100%;text-align:left;border-top:1px solid var(--line);padding:11px 0;display:flex;align-items:center;gap:9px" data-act="openday" data-v="${x.id}">
   <i class="pdot done" style="--c:var(--aqua)"></i><b style="flex:1;font-size:14px">CrossFit${(x.metcons||[])[0]&&x.metcons[0].name?" · "+esc(x.metcons[0].name):""}</b><span style="font-size:12px;font-weight:600">Faite ›</span></button>`});
- pl.forEach(x=>{h+=`<button style="width:100%;text-align:left;border-top:1px solid var(--line);padding:11px 0;display:flex;align-items:center;gap:9px" data-act="planopen" data-v="${esc(x.key)}">
+ pl.forEach(x=>{h+=`<button style="width:100%;text-align:left;border-top:1px solid var(--line);padding:11px 0;display:flex;align-items:center;gap:9px" data-act="${!x.done&&x.kind==="muscu"&&window.PLAN&&PLAN.run?"planrun":"planopen"}" data-v="${esc(x.key)}">
   <i class="pdot${x.done?" done":""}" style="--c:${x.color};flex:none"></i>
   <span style="flex:1;min-width:0"><b style="display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}</b>
   <span style="font-size:12px;color:var(--mute)">${esc(x.prog)}${x.dur?" · "+x.dur+" min":""}</span></span>
@@ -2986,6 +2986,7 @@ document.addEventListener("click",ev=>{
   case"noteback":S.notePlan=false;if(window.PLAN&&PLAN.closeForm)PLAN.closeForm();break;
   case"tabtog":{if(!S.tabsOff)S.tabsOff=[];const i=S.tabsOff.indexOf(v);if(i>=0)S.tabsOff.splice(i,1);else S.tabsOff.push(v);break}
   case"planopen":if(window.PLAN&&PLAN.open){PLAN.open(v);S.tab="plan";S.day=null}break;
+  case"planrun":if(window.PLAN&&PLAN.open){PLAN.open(v);S.tab="plan";S.day=null;if(PLAN.run)setTimeout(()=>PLAN.run(v),0)}break;
   case"planadd":if(window.PLAN&&PLAN.add){PLAN.add(S.day||TODAY,b.dataset.k);S.tab="plan";S.day=null}break;
   case"openday":S.tab="historique";S.open=v;S.day=null;break;
   case"fclose":S.fiche=null;break;
