@@ -181,11 +181,58 @@
       var has = (s.exercises || []).some(function (e) { return s.extra ? e.ref === ex.id : e.id === ex.id; }); if (!has) return;
       var lg = (p.logs || {})[k + '|' + s.id]; if (lg && lg.ex && lg.ex[ex.id]) res.push({ raw: lg.ex[ex.id], sess: s });
     });
+    cfLifts(p, ex).forEach(function (c) { if (c.w === k) res.push(c); });
     return res;
+  };
+  // Séries CrossFit d'un mouvement principal, notées après la référence du programme
+  var cfLifts = function (p, ex) {
+    if (p.kind !== 'muscu' || ex.mode !== 'pct' || num(ex.offset, 0) !== 0) return [];
+    var id = cfIdOf(ex); if (!id) return [];
+    var since = iso(new Date(Math.max(num(p.createdAt, 0), num(ex.refAt, 0)) || 0));
+    var out = [];
+    cfSessions().forEach(function (c) {
+      if (c.date < since) return;
+      (c.lifts || []).forEach(function (l) { if (l.id !== id || !(l.sets || []).length) return; var d = parseISO(c.date); out.push({ raw: { sets: l.sets }, sess: { id: 'cf-' + c.id, extra: true, cf: true }, w: Math.round(dayDiff(mondayOf(d), progStart(p)) / 7) + 1 }); });
+    });
+    return out;
+  };
+  // ---------- Séances externes (CrossFit de l'app hôte) ----------
+  // L'app hôte peut exposer window.PLAN_HOST = { sessions(), open(id) } ; seule ici, la liste est vide.
+  var HOST = function () { return window.PLAN_HOST || null; };
+  var cfCache = null, cfCacheT = 0;
+  var cfSessions = function () { var t = Date.now(); if (cfCache && t - cfCacheT < 300) return cfCache; var h = HOST(), r = []; try { r = h && h.sessions ? (h.sessions() || []) : []; } catch (e) { r = []; } cfCache = r; cfCacheT = t; return r; };
+  var cfOn = function (d) { var k = iso(d); return cfSessions().filter(function (c) { return c.date === k; }); };
+  var CFP = { id: '__cf', name: 'CrossFit', kind: 'fixe', color: 'var(--aqua, #6E9BEA)' };
+  var normTxt = function (t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
+  // Mouvement CrossFit correspondant à un exercice du plan (champ cf, sinon d'après le nom)
+  var cfIdOf = function (ex) {
+    if (ex.cf) return ex.cf; var n = normTxt(ex.name);
+    if (/pause|tempo|leger/.test(n)) return null;
+    if (/front squat/.test(n)) return 'front-squat';
+    if (/back squat|^squat$/.test(n)) return 'back-squat';
+    if (/souleve de terre|deadlift/.test(n) && !/roumain|jambes tendues/.test(n)) return 'deadlift';
+    if (/developpe couche|bench/.test(n) && !/haltere|incline/.test(n)) return 'bench';
+    if (/strict press|developpe militaire barre|^militaire$/.test(n)) return 'strict-press';
+    if (/push press/.test(n)) return 'push-press';
+    return null;
+  };
+  // Grandes familles de mouvements, pour repérer la fatigue croisée
+  var PAT_L = { squat: 'squat', hinge: 'charnière de hanche', pushV: 'poussée verticale', pushH: 'poussée horizontale', pull: 'tirage' };
+  var exPattern = function (name) {
+    var n = normTxt(name);
+    if (/mollet|calf|adduction|abduction|crunch|gainage|hollow/.test(n)) return null;
+    if (/militaire|strict press|overhead|push press|epaule/.test(n)) return 'pushV';
+    if (/couche|incline|bench|dips|pompe|push-up/.test(n)) return 'pushH';
+    if (/traction|pull|rowing|tirage|row/.test(n)) return 'pull';
+    if (/souleve|deadlift|rdl|hip thrust|good morning|hyperextension|leg curl|swing/.test(n)) return 'hinge';
+    if (/squat|fente|lunge|presse/.test(n)) return 'squat';
+    return null;
   };
   var AUTO_ALPHA = 0.5, AUTO_CAP = 0.05;
   // Première semaine à prendre en compte : S1, ou plus tôt si une séance a été ajoutée avant le cycle
-  var firstWeek = function (p) { var k0 = 1; (p.extras || []).forEach(function (e) { var k = extraW(p, e); if (k < k0) k0 = k; }); return k0; };
+  var firstWeek = function (p) { var k0 = 1; (p.extras || []).forEach(function (e) { var k = extraW(p, e); if (k < k0) k0 = k; });
+    (p.sessions || []).forEach(function (s) { (s.exercises || []).forEach(function (e) { cfLifts(p, e).forEach(function (c) { if (c.w < k0) k0 = c.w; }); }); });
+    return k0; };
   var horsPlan = function (sp, sess) { return !sp || sp.deload || (sp.test && sess && sess.extra); };
   // Semaine de travail la plus proche (la précédente en priorité) : sert de repère aux séances hors plan
   var refSpec = function (p, k) {
@@ -226,7 +273,7 @@
           var nf = f + AUTO_ALPHA * (target - f);
           f = Math.max(f * (1 - AUTO_CAP), Math.min(f * (1 + AUTO_CAP), nf));
         }
-        steps.push({ w: k, from: orm * before, to: orm * f, extra: !!lg.sess.extra });
+        steps.push({ w: k, from: orm * before, to: orm * f, extra: !!lg.sess.extra, cf: !!lg.sess.cf });
       });
     }
     return { f: f, steps: steps };
@@ -387,6 +434,7 @@
       x.g.items.forEach(function (it) { o.ton += it.ton || 0; });
       if (x.g.light) o.light = true;
     });
+    for (var j = 0; j < 7; j++) cfOn(addDays(monday, j)).forEach(function (c) { var ua = Math.round(num(c.dur, 60) * num(c.rpe, 7)); o.ua += ua; o.byProg.__cf = (o.byProg.__cf || 0) + ua; o.cf = (o.cf || 0) + 1; });
     return o;
   };
 
@@ -492,6 +540,9 @@
     }
     if (d >= 2) return { warn: true, text: 'Effort bien plus élevé que prévu : n’augmente pas la charge à la prochaine séance.', adj: 0 };
     return { warn: false, text: 'Conforme à ce qui était prévu.', adj: 0 };
+  };
+  var cfCardsHtml = function (d) {
+    return cfOn(d).map(function (c) { var ua = Math.round(num(c.dur, 60) * num(c.rpe, 7)); return '<button class="sess" data-a="cf-open" data-id="' + esc(c.id) + '" style="padding:14px">' + pillHtml(CFP, 'CrossFit') + '<span class="t" style="font-size:15px">' + esc(c.name || 'Séance CrossFit') + '</span><span class="m">' + fmtN(num(c.dur, 60)) + ' min · RPE ' + fmtN(num(c.rpe, 7)) + (c.est ? ' (estimé)' : '') + ' · ' + ua + ' UA</span><span class="done-tag">' + ICON.check + 'Faite</span></button>'; }).join('');
   };
   var sessCardHtml = function (x, big) {
     var c = colorOf(x.p), on = ui.sel === x.key;
@@ -657,6 +708,21 @@
       '<label class="field"><span>Note</span><textarea class="in" data-xf="note" rows="2">' + esc(f.note || '') + '</textarea></label>' +
       '<div class="row"><button class="btn primary" data-a="xf-save">' + (f.id ? 'Enregistrer' : 'Ajouter la séance') + '</button><button class="btn ghost" data-a="xf-cancel">Annuler</button></div></div>';
   };
+  // Fatigue croisée : un CrossFit la veille ou le jour même sur les mêmes familles de mouvements
+  var crossAlert = function (x) {
+    if (!isMuscuInst(x) || (x.log && x.log.done)) return '';
+    var pats = {}, names = {};
+    x.g.items.forEach(function (it) { var pt = exPattern(it.name); if (pt && (it.mode === 'pct' || it.mode === 'kg' || it.mode === 'reps')) { pats[pt] = 1; (names[pt] = names[pt] || []).push(it.name); } });
+    var hits = [];
+    [[-1, 'Hier'], [0, 'Aujourd’hui']].forEach(function (dd) {
+      cfOn(addDays(x.date, dd[0])).forEach(function (c) {
+        var ov = Object.keys(c.pats || {}).filter(function (pt) { return pats[pt] && c.pats[pt] >= 3; });
+        if (ov.length) hits.push(dd[1] + ' au CrossFit' + (c.name ? ' (' + c.name + ')' : '') + ' : ' + ov.map(function (pt) { return PAT_L[pt]; }).join(', ') + '. Aujourd’hui : ' + ov.map(function (pt) { return names[pt].join(', '); }).join(', '));
+      });
+    });
+    if (!hits.length) return '';
+    return '<div class="advice warn">' + esc(hits.join(' · ')) + '. Ces muscles ont déjà travaillé : garde le RPE prévu, pas de record aujourd’hui, et note un RPE honnête (l’ajustement en tiendra compte).</div>';
+  };
   var detailHtml = function (x) {
     if (!x) return '<div class="card col"><h2>Détail de la séance</h2><p class="mu">Touche une séance pour voir les exercices, séries et charges, puis note ton RPE quand elle est faite.</p></div>';
     var c = colorOf(x.p), log = x.log || {}, adv = adviceFor(x);
@@ -673,7 +739,7 @@
     var rpe = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (n) { var on = log.rpe === n, fill = log.rpe && n <= log.rpe; return '<button data-a="rpe" data-key="' + esc(x.key) + '" data-n="' + n + '" aria-pressed="' + on + '" aria-label="RPE ' + n + '" class="' + (on ? 'on' : '') + (n === plan ? ' plan' : '') + '" style="background:' + (fill ? RPEC[n - 1] : tint(RPEC[n - 1], 0.22)) + '"><span>' + n + '</span></button>'; }).join('');
     var rpeLab = log.rpe ? 'RPE ' + log.rpe + ' · ' + Math.max(0, 10 - log.rpe) + ' en réserve' : 'Touche l’échelle';
     return '<div class="card col" style="gap:10px">' + pillHtml(x.p) + '<h2>' + esc(x.g.title) + '</h2><span class="mu" style="font-size:13px">' + esc(dLabel(x.date)) + ' · semaine ' + x.w + '/' + progLen(x.p) + ' · ' + esc(x.g.meta) + '</span>' + (x.s.extra ? '<span class="small mu">Durée ' + x.g.dur + ' min · RPE ' + fmtN(x.g.rpe) + ' · charge ' + x.g.ua + ' UA</span>' : '<span class="small mu">Durée prévue ' + x.g.dur + ' min · charge prévue ' + x.g.ua + ' UA</span>') +
-      (x.s.extra ? extraBarHtml(x) : moveHtml(x)) + (x.s.extra && isMuscuInst(x) ? '<b class="small" style="margin-top:4px">Exercices · note tes séries réelles</b>' : '') + (x.p.kind === 'muscu' && !x.s.extra ? '<div class="row between" style="margin-top:4px"><b class="small">Exercices</b>' + (ui.reorder === x.key ? '<span class="row">' + ((x.p.orders || {})[x.w + '|' + x.s.id] ? '<button class="btn sm ghost" data-a="ord-all" data-key="' + esc(x.key) + '">Garder cet ordre pour tout le cycle</button><button class="btn sm ghost" data-a="ord-reset" data-key="' + esc(x.key) + '">Ordre du plan</button>' : '') + '<button class="btn sm primary" data-a="reorder" data-key="">Terminé</button></span>' : '<button class="btn sm b-order" data-a="reorder" data-key="' + esc(x.key) + '">Réorganiser</button>') + '</div>' : '') + '<div class="items">' + items + '</div>' +
+      crossAlert(x) + (x.s.extra ? extraBarHtml(x) : moveHtml(x)) + (x.s.extra && isMuscuInst(x) ? '<b class="small" style="margin-top:4px">Exercices · note tes séries réelles</b>' : '') + (x.p.kind === 'muscu' && !x.s.extra ? '<div class="row between" style="margin-top:4px"><b class="small">Exercices</b>' + (ui.reorder === x.key ? '<span class="row">' + ((x.p.orders || {})[x.w + '|' + x.s.id] ? '<button class="btn sm ghost" data-a="ord-all" data-key="' + esc(x.key) + '">Garder cet ordre pour tout le cycle</button><button class="btn sm ghost" data-a="ord-reset" data-key="' + esc(x.key) + '">Ordre du plan</button>' : '') + '<button class="btn sm primary" data-a="reorder" data-key="">Terminé</button></span>' : '<button class="btn sm b-order" data-a="reorder" data-key="' + esc(x.key) + '">Réorganiser</button>') + '</div>' : '') + '<div class="items">' + items + '</div>' +
       '<div class="col" style="border-top:1px solid var(--bd);padding-top:12px;gap:10px">' +
       '<button class="btn" data-a="done" data-key="' + esc(x.key) + '" aria-pressed="' + !!log.done + '" style="min-height:48px;' + (log.done ? 'border-color:var(--ok);color:#0F1215;background:var(--ok)' : 'border-color:rgba(127,224,201,.6);color:var(--ok);background:rgba(127,224,201,.10)') + '">' + ICON.check + (log.done ? 'Séance faite' : 'Marquer comme faite') + '</button>' +
       '<div class="col" style="gap:6px"><div class="row between"><span class="small mu">' + (x.s.extra ? 'RPE ressenti' : 'RPE ressenti · repère blanc = prévu (' + fmtN(x.g.rpe) + ')') + '</span><b class="small">' + rpeLab + '</b></div><div class="rpe" role="group" aria-label="RPE ressenti, de 1 à 10">' + rpe + '</div><div class="rpe-ends small mu"><span>Très facile</span><span>Maximal</span></div></div>' +
@@ -738,8 +804,8 @@
       main = '<div class="wgrid">' + days.map(function (x, i) { var isT = iso(x.d) === iso(T0); return '<div class="dcol' + (isT ? ' today' : '') + '"><div class="dhead"><span class="dname">' + JOURS[i] + '</span><span class="dnum' + (isT ? ' today' : '') + '">' + x.d.getDate() + '</span></div>' + (x.list.length ? x.list.map(function (s) { return sessCardHtml(s, false); }).join('') : '<div class="rest">Repos</div>') + '</div>'; }).join('') + '</div>';
     } else {
       var dsel = Math.max(0, Math.min(6, ui.day));
-      main = '<div class="strip" role="group" aria-label="Jour">' + days.map(function (x, i) { var isT = iso(x.d) === iso(T0); return '<button class="' + (i === dsel ? 'on' : '') + (isT ? ' today' : '') + '" data-a="day" data-day="' + i + '" aria-pressed="' + (i === dsel) + '" aria-label="' + esc(dLabel(x.d)) + ', ' + x.list.length + ' séance(s)"><span class="l">' + JOURS[i] + '</span><span class="n">' + x.d.getDate() + '</span><span class="dots">' + x.list.map(function (s) { return '<span class="dot" style="background:' + colorOf(s.p) + '"></span>'; }).join('') + '</span></button>'; }).join('') + '</div>' +
-        '<span class="dname" style="margin-top:4px">' + esc(dLabel(days[dsel].d)) + '</span>' + (days[dsel].list.length ? days[dsel].list.map(function (s) { return sessCardHtml(s, true); }).join('') : '<div class="rest">Repos</div>');
+      main = '<div class="strip" role="group" aria-label="Jour">' + days.map(function (x, i) { var isT = iso(x.d) === iso(T0); return '<button class="' + (i === dsel ? 'on' : '') + (isT ? ' today' : '') + '" data-a="day" data-day="' + i + '" aria-pressed="' + (i === dsel) + '" aria-label="' + esc(dLabel(x.d)) + ', ' + x.list.length + ' séance(s)"><span class="l">' + JOURS[i] + '</span><span class="n">' + x.d.getDate() + '</span><span class="dots">' + x.list.map(function (s) { return '<span class="dot" style="background:' + colorOf(s.p) + '"></span>'; }).join('') + cfOn(x.d).map(function () { return '<span class="dot" style="background:' + CFP.color + '"></span>'; }).join('') + '</span></button>'; }).join('') + '</div>' +
+        '<span class="dname" style="margin-top:4px">' + esc(dLabel(days[dsel].d)) + '</span>' + (days[dsel].list.length || cfOn(days[dsel].d).length ? days[dsel].list.map(function (s) { return sessCardHtml(s, true); }).join('') + cfCardsHtml(days[dsel].d) : '<div class="rest">Repos</div>');
       if (sel && dow(sel.date) !== dsel) sel = null;
     }
     return '<section class="col" style="gap:12px" aria-label="Semaine">' +
@@ -882,18 +948,19 @@
     var n = Math.min(30, Math.ceil((dayDiff(e, s) + 1) / 7));
     var mon = parseISO(ui.weekStart), weeks = [];
     for (var i = 0; i < n; i++) { var m = addDays(s, i * 7), st = weekStats(m); weeks.push({ m: m, st: st }); }
+    var segP = progs.concat(weeks.some(function (x) { return x.st.byProg.__cf; }) ? [CFP] : []);
     var vals = weeks.map(function (x, i) {
       var cur = iso(x.m) === iso(mon), pv = i && !startsThisWeek(x.m) ? weeks[i - 1].st.ua : 0, vr = pv ? (x.st.ua - pv) / pv * 100 : null, showN = W || cur || i === 0 || i === weeks.length - 1;
-      return { v: x.st.ua, segs: progs.filter(function (p) { return x.st.byProg[p.id]; }).map(function (p) { return { v: x.st.byProg[p.id], c: colorOf(p) }; }), lab: (!W && !cur) ? '' : fmtN(x.st.ua / 1000) + 'k', n: showN ? x.m.getDate() + '/' + (x.m.getMonth() + 1) : '', cur: cur, var: (!W && !(vr != null && vr > 15 && !weeks[i - 1].st.light)) ? null : (vr == null ? '' : (vr >= 0 ? '+' : '') + Math.round(vr) + '%'), hot: vr != null && vr > 15 && !weeks[i - 1].st.light, d: iso(x.m), aria: 'Semaine du ' + x.m.getDate() + ' ' + MOIS[x.m.getMonth()] + ' : ' + thou(x.st.ua) + ' UA' };
+      return { v: x.st.ua, segs: segP.filter(function (p) { return x.st.byProg[p.id]; }).map(function (p) { return { v: x.st.byProg[p.id], c: colorOf(p) }; }), lab: (!W && !cur) ? '' : fmtN(x.st.ua / 1000) + 'k', n: showN ? x.m.getDate() + '/' + (x.m.getMonth() + 1) : '', cur: cur, var: (!W && !(vr != null && vr > 15 && !weeks[i - 1].st.light)) ? null : (vr == null ? '' : (vr >= 0 ? '+' : '') + Math.round(vr) + '%'), hot: vr != null && vr > 15 && !weeks[i - 1].st.light, d: iso(x.m), aria: 'Semaine du ' + x.m.getDate() + ' ' + MOIS[x.m.getMonth()] + ' : ' + thou(x.st.ua) + ' UA' };
     });
-    var legend = progs.map(function (p) { return '<span><i style="background:' + colorOf(p) + '"></i>' + esc(p.name) + '</span>'; }).join('');
+    var legend = segP.map(function (p) { return '<span><i style="background:' + colorOf(p) + '"></i>' + esc(p.name) + '</span>'; }).join('');
     var adh = progs.map(function (p) {
       var past = 0, done = 0, L = progLen(p);
       for (var w = 1; w <= L; w++) sessList(p).forEach(function (ss) { var d = addDays(progStart(p), (w - 1) * 7 + effDay(p, ss, w)); var lg = (p.logs || {})[w + '|' + ss.id], dn = !!(lg && lg.done); if (d <= T0 || dn) { past++; if (dn) done++; } });
       var pc = past ? Math.round(done / past * 100) : 0;
       return '<div class="col" style="gap:6px;padding:10px 0;border-top:1px solid var(--bd)"><div class="row between">' + pillHtml(p) + '<span class="bc" style="font-size:20px">' + (past ? pc + ' %' : '—') + '</span></div><span aria-hidden="true" style="display:block;height:6px;border-radius:3px;background:var(--bd);overflow:hidden"><span style="display:block;height:100%;width:' + pc + '%;background:' + colorOf(p) + '"></span></span><span class="small mu">' + done + ' faites sur ' + past + ' prévues à ce jour</span></div>';
     }).join('');
-    return '<section class="col" style="gap:14px" aria-label="Analyse"><div class="card col" style="gap:12px"><h2>Charge interne hebdo, toutes activités</h2><p class="small mu">Durée × RPE prévu (UA). Orange : hausse de plus de 15 % sur une semaine. Touche une semaine pour l’ouvrir.</p>' +
+    return '<section class="col" style="gap:14px" aria-label="Analyse"><div class="card col" style="gap:12px"><h2>Charge interne hebdo, toutes activités</h2><p class="small mu">Durée × RPE prévu (UA)' + (segP.length > progs.length ? ', CrossFit compris (durée × RPE noté)' : '') + '. Orange : hausse de plus de 15 % sur une semaine. Touche une semaine pour l’ouvrir.</p>' +
       '<div style="overflow-x:auto"><div style="min-width:' + (W ? 0 : Math.max(320, n * 22)) + 'px">' + barsHtml(vals, { action: 'an-week' }) + '</div></div><div class="legend">' + legend + '</div></div>' +
       ormCard(progs) + '<div class="card col"><h3>Assiduité</h3>' + adh + '</div></section>';
   };
@@ -1161,6 +1228,7 @@
       case 'x-del-yes':
         var xd2 = findInst(key); if (xd2 && xd2.s.extra) { var PP = xd2.p, did2 = xd2.s.id; PP.extras = (PP.extras || []).filter(function (z) { return z.id !== did2; }); if (PP.logs) delete PP.logs[xd2.w + '|' + did2]; Object.keys(PP.overrides || {}).forEach(function (k) { if (k.indexOf(xd2.w + '|' + did2 + '|') === 0) delete PP.overrides[k]; }); persist(PP); ui.sel = null; toast('Séance supprimée'); }
         ui.confirm = null; break;
+      case 'cf-open': var hh = HOST(); if (hh && hh.open) hh.open(b.getAttribute('data-id')); return;
       case 'reorder': ui.reorder = key || null; ui.edit = null; break;
       case 'mv-up': case 'mv-down':
         var xo2 = findInst(key); if (xo2) { var p2 = xo2.p, okk = xo2.w + '|' + xo2.s.id, ids = orderedEx(p2, xo2.s, xo2.w).map(function (e) { return e.id; }), ix = ids.indexOf(b.getAttribute('data-ex')), jx = a === 'mv-up' ? ix - 1 : ix + 1;
@@ -1292,7 +1360,9 @@
     /* Pour le calendrier de l'accueil : séances du plan d'un jour donné (AAAA-MM-JJ) */
     dayList: function (d) {
       var dt = parseISO(d); if (!dt) return [];
-      return instancesOn(dt, true).map(function (x) { return { key: x.key, title: x.g.title, meta: x.g.meta, color: colorOf(x.p), prog: x.p.name || KIND[x.p.kind].label, kind: x.s.extra ? x.s.kind : x.p.kind, done: !!(x.log && x.log.done), rpe: (x.log && x.log.rpe) || null, extra: !!x.s.extra, dur: x.g.dur }; });
+      return instancesOn(dt, true).map(function (x) { var pats = {}, heavy = [], hp = {};
+        if (isMuscuInst(x)) x.g.items.forEach(function (it) { var pt = exPattern(it.name); if (pt) pats[pt] = PAT_L[pt]; if (it.mode === 'pct' && it.main && !(x.g.spec || {}).deload && it.loadNum) { heavy.push(it.name + ' ' + it.sets + '×' + it.reps + ' à ' + fmtN(it.loadNum) + ' kg'); if (pt) hp[pt] = PAT_L[pt]; } });
+        return { key: x.key, title: x.g.title, meta: x.g.meta, color: colorOf(x.p), prog: x.p.name || KIND[x.p.kind].label, kind: x.s.extra ? x.s.kind : x.p.kind, done: !!(x.log && x.log.done), rpe: (x.log && x.log.rpe) || null, extra: !!x.s.extra, dur: x.g.dur, pats: pats, heavy: heavy, heavyPats: hp }; });
     },
     /* Toutes les séances faites (prévues ou ajoutées), datées, pour les vues Semaines et Année de l'accueil */
     doneList: function () {
@@ -1305,6 +1375,28 @@
           if (xs[sid]) d = xs[sid].date;
           else { var s0 = null; sessList(p).forEach(function (z) { if (z.id === sid) s0 = z; }); if (!s0) return; d = iso(addDays(progStart(p), (w - 1) * 7 + effDay(p, s0, w))); }
           if (d) out.push({ date: d, color: c, prog: p.id });
+        });
+      });
+      return out;
+    },
+    /* Séries de muscu des mouvements principaux, pour les courbes et records de l'app */
+    liftSets: function () {
+      var out = [];
+      state.programs.forEach(function (p) {
+        if (p.kind !== 'muscu') return;
+        var xs = {}; (p.extras || []).forEach(function (e) { xs[e.id] = e; });
+        Object.keys(p.logs || {}).forEach(function (k) {
+          var lg = p.logs[k]; if (!lg || !lg.ex) return;
+          var i = k.indexOf('|'), w = num(k.slice(0, i)), sid = k.slice(i + 1), d = null;
+          if (xs[sid]) d = xs[sid].date; else { var s0 = null; (p.sessions || []).forEach(function (z) { if (z.id === sid) s0 = z; }); if (!s0) return; d = iso(addDays(progStart(p), (w - 1) * 7 + effDay(p, s0, w))); }
+          var ents = [];
+          Object.keys(lg.ex).forEach(function (eid) {
+            var ex = findEx(p, eid); if (!ex || ex.mode !== 'pct' || num(ex.offset, 0) !== 0) return;
+            var id = cfIdOf(ex); if (!id) return;
+            var sets = getSets(lg.ex[eid]).filter(function (z) { return num(z.kg, 0) > 0 && num(z.reps, 0) > 0; }).map(function (z) { return { weight: num(z.kg), reps: num(z.reps), diff: Math.max(0, 10 - (num(z.rpe, 0) || 8)) }; });
+            if (sets.length) ents.push({ movementId: id, sets: sets });
+          });
+          if (ents.length) out.push({ id: 'plan-' + p.id + '-' + k, date: d, entries: ents, metcons: [], plan: true });
         });
       });
       return out;

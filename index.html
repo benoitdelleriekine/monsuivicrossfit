@@ -79,6 +79,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .gcell.ms{background:var(--melon)}
 .gcell.today{box-shadow:inset 0 0 0 1.5px var(--mute)}
 .gcell.pick{box-shadow:inset 0 0 0 2px var(--ink)}
+.rpes{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}
+.rpes button{min-height:40px;padding:0;text-align:center;display:flex;align-items:center;justify-content:center;border-radius:8px;font-weight:700;font-size:14px;color:var(--ink);background:hsl(var(--h) 45% 50% / .16);border:1px solid transparent}
+.rpes button.on{background:hsl(var(--h) 60% 50%);color:#0F1215;border-color:var(--ink)}
 .pdots{display:flex;gap:2px;height:6px}
 .pdot{display:inline-block;width:6px;height:6px;border-radius:50%;box-shadow:inset 0 0 0 1.4px var(--c);background:transparent}
 .pdot.done{background:var(--c);box-shadow:none}
@@ -392,7 +395,7 @@ function levelInfo(v,t,names){
   next:idx<4?{name:names[idx+1],need:t[idx+1]-v}:null}}
 
 /* ══════════ LOGIQUE ══════════ */
-const rirOf=d=>(DIFFS.find(x=>x.k===d)||DIFFS[1]).rir;
+const rirOf=d=>typeof d==="number"?d:(DIFFS.find(x=>x.k===d)||DIFFS[1]).rir;
 /* Epley sur répétitions effectives (reps + réserve estimée).
    Au-delà de 8 reps effectives l'estimation n'a plus de valeur : on ne calcule pas. */
 function e1rm(w,r,d){const e=(r||0)+rirOf(d);return(!w||w<=0||!r||e>8)?null:w*(1+e/30)}
@@ -457,7 +460,11 @@ function mv(id){return BASE[id]||S.custom.find(c=>c.id===id)||{id,n:"Mouvement i
 const allMoves=()=>[...M,...S.custom];
 const sorted=()=>[...S.sessions].sort((a,b)=>b.date.localeCompare(a.date));
 function lastFor(id){for(const s of sorted()){const e=(s.entries||[]).find(x=>x.movementId===id&&x.sets&&x.sets.length);if(e)return{s,e}}return null}
-function eachSet(id,fn){S.sessions.forEach(s=>(s.entries||[]).filter(e=>e.movementId===id)
+/* Séances du module Plan (séries des mouvements principaux), mêlées aux séances
+   CrossFit pour les records, courbes et historiques des mouvements. */
+function planSess(){try{return window.PLAN&&PLAN.liftSets&&!(S.tabsOff||[]).includes("plan")?PLAN.liftSets():[]}catch(e){return[]}}
+const allSess=()=>S.sessions.concat(planSess());
+function eachSet(id,fn){allSess().forEach(s=>(s.entries||[]).filter(e=>e.movementId===id)
  .forEach(e=>(e.sets||[]).forEach(x=>fn(x,s))))}
 function bestOf(id){let b=null;eachSet(id,x=>{const v=e1rm(x.weight,x.reps,x.diff);if(v&&(!b||v>b))b=v});return b}
 function bestReps(id){let b=0,lv=lvlOf(id);eachSet(id,x=>{if((x.level??0)>=(lv??0)&&!x.weight&&x.reps>b)b=x.reps});return b}
@@ -537,6 +544,37 @@ function accroche(){
  if(jours!=null)return["Dernière séance le "+fMid(der.date).replace(/\.$/,"")+".","Reprends quand ça t'arrange."];
  return["Bienvenue.","Ta première séance t'attend."]}
 
+/* Ce que le module Plan voit d'une séance CrossFit : durée et RPE (charge interne),
+   séries des mouvements lourds (1RM de travail), familles de mouvements (fatigue). */
+const FEEL_RPE=[7,9,8,7,6,6];
+const PAT_CF={"back-squat":["squat"],"front-squat":["squat"],ohs:["squat","pushV"],"air-squat":["squat"],pistol:["squat"],
+ lunge:["squat"],"front-lunge":["squat"],"oh-lunge":["squat","pushV"],"db-lunge":["squat"],"wall-ball":["squat","pushV"],dball:["squat","hinge"],
+ thruster:["squat","pushV"],"db-thruster":["squat","pushV"],"box-jump":["squat"],"box-step":["squat"],
+ deadlift:["hinge"],sdhp:["hinge","pull"],"good-morning":["hinge"],"hip-thrust":["hinge"],"back-ext":["hinge"],"kb-swing":["hinge"],
+ snatch:["hinge","squat","pushV"],"power-snatch":["hinge","pushV"],"hang-snatch":["hinge","pushV"],"snatch-balance":["squat","pushV"],"snatch-pull":["hinge"],
+ clean:["hinge","squat"],"power-clean":["hinge"],"hang-clean":["hinge"],"clean-pull":["hinge"],"clean-jerk":["hinge","squat","pushV"],
+ "db-snatch":["hinge","pushV"],"db-clean-jerk":["hinge","pushV"],"devil-press":["hinge","pushH","pushV"],"man-maker":["hinge","pushH","pushV"],farmer:["hinge"],
+ "strict-press":["pushV"],"push-press":["pushV"],jerk:["pushV"],"push-jerk":["pushV"],"split-jerk":["pushV"],"db-press":["pushV"],
+ hspu:["pushV"],"handstand-walk":["pushV"],"wall-walk":["pushV"],
+ bench:["pushH"],"push-up":["pushH"],"ring-dip":["pushH"],burpee:["pushH"],bfb:["pushH"],
+ "pull-up":["pull"],c2b:["pull"],"ring-row":["pull"],"bent-row":["pull"],bmu:["pull","pushH"],rmu:["pull","pushH"],"rope-climb":["pull"],t2b:["pull"],
+ fran:["squat","pushV","pull"],grace:["hinge","pushV"],isabel:["hinge","pushV"],diane:["hinge","pushV"],elizabeth:["hinge","pushH"],nancy:["squat","pushV"],
+ helen:["hinge","pull"],jackie:["squat","pushV","pull"],karen:["squat","pushV"],cindy:["pull","pushH","squat"],angie:["pull","pushH","squat"],
+ barbara:["pull","pushH","squat"],chelsea:["pull","pushH","squat"],mary:["pushV","squat","pull"],dt:["hinge","pushV"],murph:["pull","pushH","squat"],
+ linda:["hinge","pushH"],amanda:["pull","hinge"],eva:["hinge","pull"],"filthy-fifty":["squat","hinge","pull","pushV","pushH"]};
+function cfForPlan(s){
+ const pats={},add=(id,u)=>(PAT_CF[id]||[]).forEach(k=>pats[k]=(pats[k]||0)+u);
+ const lifts=[];
+ (s.entries||[]).forEach(e=>{const sets=(e.sets||[]);add(e.movementId,sets.length);
+  const ws=sets.filter(x=>x.weight>0&&x.reps>0).map(x=>({kg:x.weight,reps:x.reps,rpe:10-rirOf(x.diff)}));
+  if(ws.length)lifts.push({id:e.movementId,sets:ws})});
+ (s.metcons||[]).forEach(mc=>{let any=false;try{mcTotals(mc).forEach(t=>{any=true;add(t.id,Math.max(1,Math.round((t.reps||0)/10)))})}catch(e){}
+  (mc.items||[]).forEach(it=>{if(!any)add(it.movementId,3)})});
+ const mc0=(s.metcons||[])[0];
+ return{id:s.id,date:s.date,name:mc0&&mc0.name?mc0.name:"",dur:Number(s.dur)>0?Number(s.dur):60,
+  rpe:Number(s.rpe)>0?Number(s.rpe):FEEL_RPE[s.feel||3]||7,est:!(Number(s.dur)>0&&Number(s.rpe)>0),lifts,pats}}
+window.PLAN_HOST={sessions:()=>S.sessions.map(cfForPlan),
+ open:id=>{S.tab="historique";S.open=id;S.day=null;render()}};
 /* Séances du module Plan (muscu, course, autres) pour le calendrier de l'accueil */
 const planOn=()=>!(S.tabsOff||[]).includes("plan")&&window.PLAN&&typeof PLAN.dayList==="function";
 const planDay=d=>{try{return planOn()?PLAN.dayList(d):[]}catch(e){return[]}};
@@ -805,7 +843,7 @@ function vFiche(id){
   const bestSet=r.sets.reduce((a,x)=>{const v=e1rm(x.weight,x.reps,x.diff);
    return v&&(!a.v||v>a.v)?{x,v}:a},{x:null,v:null}).x;
   h+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${r.sets.length?"12px":"0"}">
-   <b style="font-size:14.5px">${fLong(r.date)}</b>
+   <b style="font-size:14.5px">${fLong(r.date)}${r.plan?' <span style="font-size:11.5px;color:var(--mute);font-weight:600">· Plan muscu</span>':""}</b>
    ${r.pr?'<span class="badge hot">Record</span>':r.rm!=null?`<span class="badge">${r.rm.toFixed(1)} kg est.</span>`:""}</div>`;
   if(r.sets.length){
    h+=`<div style="border-top:1px solid var(--line)">`+r.sets.map((x,i)=>{
@@ -813,7 +851,7 @@ function vFiche(id){
     return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">
      <span style="flex:0 0 20px;font-size:11px;color:var(--mute);font-weight:600">${i+1}</span>
      <span style="flex:1;font-size:14px;${top?"font-weight:700":""}">${setLabel(x,m)}</span>
-     ${x.diff?`<span style="font-size:11px;color:var(--mute)">${(DIFFS.find(d=>d.k===x.diff)||{}).l||""}</span>`:""}
+     ${x.diff!=null&&x.diff!==""?`<span style="font-size:11px;color:var(--mute)">${typeof x.diff==="number"?"RPE "+(10-x.diff):(DIFFS.find(d=>d.k===x.diff)||{}).l||""}</span>`:""}
      ${v?`<span style="font-size:12.5px;color:${top?"var(--aqua)":"var(--mute)"};font-weight:600;min-width:56px;text-align:right">${v.toFixed(1)} kg</span>`:""}
     </div>`}).join("")+`</div>`}
   r.mcs.forEach(x=>{h+=`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;${r.sets.length?"":"border-top:1px solid var(--line)"}">
@@ -1043,7 +1081,7 @@ function patternCard(){
 
 /* Un point par seance : meilleure charge estimee, meilleure serie, meilleure allure */
 function curveFor(id){
- return S.sessions.map(s=>{let rm=null,rp=0,pc=null;
+ return allSess().map(s=>{let rm=null,rp=0,pc=null;
    (s.entries||[]).filter(e=>e.movementId===id).forEach(e=>(e.sets||[]).forEach(x=>{
     const v=e1rm(x.weight,x.reps,x.diff);if(v&&(!rm||v>rm))rm=v;
     if(x.reps>rp)rp=x.reps;
@@ -1055,13 +1093,13 @@ function curveFor(id){
 /* Historique detaille : chaque seance, ses series, et les passages en metcon */
 function histFor(id){
  const out=[];
- sorted().forEach(s=>{
+ [...allSess()].sort((a,b)=>b.date.localeCompare(a.date)).forEach(s=>{
   const sets=[];
   (s.entries||[]).filter(e=>e.movementId===id).forEach(e=>(e.sets||[]).forEach(x=>sets.push(x)));
   const mcs=[];
   (s.metcons||[]).forEach(mc=>mcTotals(mc).forEach(t=>{if(t.id===id)
     mcs.push({name:mc.name||(FMT[mc.format]||FORMATS[0]).l,txt:t.txt,score:mcScore(mc)})}));
-  if(sets.length||mcs.length)out.push({date:s.date,feel:s.feel,sets,mcs,
+  if(sets.length||mcs.length)out.push({date:s.date,feel:s.feel,sets,mcs,plan:!!s.plan,
     rm:sets.reduce((a,x)=>{const v=e1rm(x.weight,x.reps,x.diff);return v&&(!a||v>a)?v:a},null)})});
  let top=null;
  [...out].reverse().forEach(r=>{if(r.rm!=null&&(top===null||r.rm>top+0.05)){r.pr=true;top=r.rm}});
@@ -1390,6 +1428,16 @@ function hist_bench(name,curId){
    past.slice(0,4).map(x=>`<div class="row"><span style="font-size:13.5px;color:var(--mute)">${fMid(x.date)}</span>
    <span><span class="dsp" style="font-size:18px">${x.sc.txt}</span>${x.rx?' <span class="badge">Rx</span>':""}</span></div>`).join("")+`</div>`}
 
+/* Rappel des séances lourdes du plan autour de la date du CrossFit */
+function planNear(date){
+ if(!planOn())return"";
+ const sh=n=>{const x=new Date(date+"T12:00");x.setDate(x.getDate()+n);return iso(x)};
+ const lines=[];
+ [[1,"Demain"],[-1,"Hier"]].forEach(([n,l])=>planDay(sh(n)).forEach(x=>{
+  if(!x.heavy||!x.heavy.length||(n<0&&!x.done))return;
+  const fam=Object.values(x.heavyPats||{});
+  lines.push(`<b>${l} au plan</b> : ${esc(x.heavy.join(", "))}.${fam.length?` ${n>0?"Évite le gros volume":"Vas-y mollo"} en ${esc(fam.join(", "))}.`:""}`)}));
+ return lines.length?`<div class="card" style="margin-top:14px;border-color:var(--melon);font-size:13.5px;line-height:1.6">${lines.join("<br>")}</div>`:""}
 function vNoter(){
   if(!S.draft){const l=sorted()[0];
    return`<div class="head"><div class="eyebrow">De retour du box</div><h1>Noter</h1></div><div class="pane">
@@ -1404,6 +1452,7 @@ function vNoter(){
    <button class="chip ${d.date===TODAY?"on":""}" data-act="date" data-v="${TODAY}">Aujourd'hui</button>
    <button class="chip ${d.date===YD?"on":""}" data-act="date" data-v="${YD}">Hier</button>
    <input type="date" class="chip" id="dt" value="${d.date}" max="${TODAY}" style="flex:1;min-width:132px"></div>`;
+  h+=planNear(d.date);
   h+=`<div class="eyebrow" style="margin:22px 0 10px">Travail spécifique</div>`;
   if(d.entries.length){h+=`<div class="card">`+d.entries.map(e=>{const m=mv(e.movementId);
    return`<div class="row"><button style="flex:1;min-width:0" data-act="focus" data-id="${e.id}">
@@ -1421,7 +1470,14 @@ function vNoter(){
    <button data-act="mcdel" data-i="${i}" aria-label="Retirer" style="color:var(--mute);font-size:22px;padding:0 4px">×</button></div>`).join("")+`</div>`}
   else h+=`<div style="font-size:13px;color:var(--mute);line-height:1.6;margin-bottom:12px">Le conditionnement du jour : AMRAP, For Time, EMOM… avec son format et ton score.</div>`;
   h+=`<button class="btn btn-quiet" data-act="mcadd">Ajouter un metcon</button>
-   <div class="card" style="margin-top:26px"><div class="eyebrow" style="margin-bottom:11px">La séance était</div>
+   <div class="card" style="margin-top:26px"><div class="eyebrow" style="margin-bottom:11px">Durée et effort</div>
+   <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><span style="font-size:13.5px;color:var(--mute)">Durée</span>
+    <input class="inp" id="sdur" type="number" inputmode="numeric" min="5" max="300" value="${d.dur||""}" placeholder="60" style="width:90px;text-align:center">
+    <span style="font-size:13.5px;color:var(--mute)">min</span></div>
+   <div style="font-size:13.5px;color:var(--mute);margin-bottom:8px">RPE de la séance (effort global)${d.rpe?` : <b style="color:var(--ink)">${d.rpe}</b>`:""}</div>
+   <div class="rpes">`+[1,2,3,4,5,6,7,8,9,10].map(i=>`<button class="${d.rpe===i?"on":""}" data-act="srpe" data-v="${i}" aria-pressed="${d.rpe===i}" style="--h:${Math.round(150-i*14)}">${i}</button>`).join("")+`</div>
+   <div style="font-size:12px;color:var(--mute);line-height:1.6;margin-top:8px">Durée × RPE = charge de la séance, comptée avec ton plan muscu et course.</div></div>
+   <div class="card" style="margin-top:14px"><div class="eyebrow" style="margin-bottom:11px">La séance était</div>
    <div class="chips">`+[1,2,3,4,5].map(i=>`<button class="chip ${d.feel===i?"on":""}" data-act="feel" data-v="${i}">${FEEL[i]}</button>`).join("")+`</div>
    <textarea class="inp" id="nt" rows="2" style="margin-top:12px;resize:vertical" placeholder="Ce qui a bien marché, ce qui a coincé…">${esc(d.note)}</textarea></div>
    <button class="btn btn-go" data-act="saveS" ${d.entries.some(e=>e.sets.length)||(d.metcons||[]).length?"":"disabled"}>Enregistrer la séance</button>
@@ -2647,7 +2703,7 @@ document.addEventListener("click",ev=>{
  const a=b.dataset.act,v=b.dataset.v,en=entryOf();
  /* Un rendu obsolète peut laisser un bouton dont le contexte n'existe plus
     (séance abandonnée, metcon supprimé) : on l'ignore au lieu de planter. */
- if(/^(date|feel|focus|rm|saveS|drop|pick|mcpick|mcadd|mcopen|mcdel)$/.test(a)&&!S.draft)return;
+ if(/^(date|feel|srpe|focus|rm|saveS|drop|pick|mcpick|mcadd|mcopen|mcdel)$/.test(a)&&!S.draft)return;
  const MC=S.draft&&S.mc!=null?(S.draft.metcons||[])[S.mc]:null;
  if(/^(mcname|mcfmt|mcres|mcdone|mcrx|mcitemdel|mcstruct|mclad|mcladu|mcdup|mcquick|mcmove|mcpass)$/.test(a)&&!MC)return;
  if(/^(shtype|shfmt|shbg|shcol|shlogo|shsave|shcopy|shpick)$/.test(a)&&!S.share)return;
@@ -2763,6 +2819,7 @@ document.addEventListener("click",ev=>{
     S.tab="noter";S.mc=null;break}
   case"date":S.draft.date=v;break;
   case"feel":S.draft.feel=+v;break;
+  case"srpe":S.draft.rpe=S.draft.rpe===+v?null:+v;break;
   case"pick":S.picker=true;S.pickFor="entry";S.q="";break;
   case"mcpick":S.picker=true;S.pickFor="metcon";S.q="";break;
   case"mcadd":{if(!S.draft.metcons)S.draft.metcons=[];
@@ -2922,6 +2979,7 @@ document.addEventListener("input",ev=>{const t=ev.target;
   st[t.dataset.f]=t.dataset.f==="reps"?Math.round(n):n;save();render();return}
  if(t.id==="dt"&&t.value){if(S.draft)S.draft.date=t.value;save();render();return}
  if(t.id==="nt"){if(S.draft)S.draft.note=t.value;save();return}
+ if(t.id==="sdur"){if(S.draft){const v=parseInt(t.value);S.draft.dur=v>0?Math.min(300,v):null}save();return}
  if(t.dataset.k){S.d[t.dataset.k]=t.value===""?0:Math.max(0,parseFloat(t.value)||0);
   const en=entryOf();if(en){const m=mv(en.movementId);
    if(m.k==="barbell"||m.k==="cardio"||m.u==="reps"){save();render()}}}});
