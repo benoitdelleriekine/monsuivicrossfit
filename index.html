@@ -55,10 +55,39 @@ body{font-family:Barlow,system-ui,-apple-system,sans-serif;color:var(--ink);-web
 #app{max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:calc(98px + env(safe-area-inset-bottom))}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;text-align:left}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px solid var(--aqua);outline-offset:2px}
+:root{ /* Design system : espacements, rayons, tailles de texte, couleurs par type de séance */
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;
+  --r-s:10px;--r-m:14px;--r-l:20px;--r-pill:999px;
+  --fs-cap:12px;--fs-sm:13.5px;--fs-md:15px;--fs-lg:18px;--fs-num:24px;--fs-h1:34px;
+  --c-cf:var(--aqua);--c-mu:var(--pl-or,#FF9F43);--c-run:var(--pl-te,#7FE0C9);--c-oth:var(--pl-vi,#C792EA);--c-rec:var(--melon);--c-first:var(--orchid)}
 .dsp{font-family:"Barlow Condensed",Barlow,sans-serif;font-weight:700;letter-spacing:-.015em;line-height:1.02}
+/* Composants partagés */
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);margin-bottom:var(--sp-3)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:3px;padding:3px;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-m)}
+.seg button{min-height:36px;border-radius:11px;font-size:var(--fs-sm);font-weight:600;color:var(--mute);text-align:center;padding:0 6px}
+.seg button.on{background:var(--aqua);color:var(--onacc);font-weight:700}
+.tiles{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:var(--sp-2);margin-bottom:14px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r-m);padding:12px 9px 10px;position:relative;overflow:hidden;text-align:left;box-shadow:var(--sh-lo);min-height:66px}
+.tile b{display:block;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:var(--fs-num);line-height:1}
+.tile span{display:block;margin-top:5px;font-size:var(--fs-cap);color:var(--mute);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile i{position:absolute;left:0;right:0;top:0;height:3px;background:var(--c)}
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:var(--r-pill);padding:3px 9px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent)}
+.row-link{width:100%;display:flex;align-items:center;gap:var(--sp-3);padding:13px 0;text-align:left;border-top:1px solid var(--line)}
+.row-link:first-child{border-top:0}
+.hpill{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 13px;border-radius:var(--r-pill);background:var(--sunk);border:1px solid var(--line);font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap}
+.hpill svg{width:18px;height:18px}
+.acts{display:flex;gap:var(--sp-2);margin-top:var(--sp-3)}
+.acts .btn{flex:1;padding:12px 10px;font-size:14px;border-radius:var(--r-m)}
 .eyebrow{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--mute);font-weight:600}
 .head{padding:calc(30px + env(safe-area-inset-top)) 22px 10px}
 .head h1{font-family:"Barlow Condensed",sans-serif;font-weight:700;text-transform:uppercase;font-size:44px;letter-spacing:.006em;line-height:.9;margin-top:5px}
+.phead2{padding-bottom:14px}
+.phead2 .hrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.head.phead2 h1{font-size:var(--fs-h1);margin-top:6px;line-height:1.08;padding-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.phead2 .eyebrow svg{flex:none}
+.phead2 .hello{font-size:var(--fs-sm);font-weight:600;margin-top:6px;line-height:1.4}
+.phead2 .hello span{color:var(--mute);font-weight:500}
+.hacts{display:flex;gap:6px;flex:none}
 .pane{padding:0 22px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:14px;box-shadow:var(--sh)}
 .card.flat{box-shadow:none;background:var(--sunk);border:1px solid var(--line)}
@@ -77,12 +106,25 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:252px;margin:0 auto}
 .gcell{aspect-ratio:1;border-radius:5px;background:var(--track);animation:pop .3s backwards}
 .gcell.on{background:var(--aqua)}
+#calblock .grid{gap:4px}
+#calblock .gcell{aspect-ratio:auto;height:40px;border-radius:8px;position:relative}
+.calseg{width:108px;flex:none}
+.calseg button{min-height:34px;font-size:13px}
+.calnav{min-width:36px;min-height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;color:var(--ink);background:var(--sunk);border:1px solid var(--line)}
+.cstar{position:absolute;top:2px;right:4px;font-size:10px;line-height:1;color:var(--melon)}
+.gcell.on .cstar{color:var(--onacc)}
+.cstar.l{position:static;font-size:11px;margin-right:5px}
+#calblock .callegend{justify-content:flex-start;gap:6px 12px;flex-wrap:wrap;margin-top:10px}
+.callegend .pdot{width:8px;height:8px;margin-right:5px;display:inline-block;vertical-align:0}
+.calsum{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:var(--fs-sm);color:var(--mute)}
+.calsum b{color:var(--ink);font-weight:700}
 .gcell.ms{background:var(--melon)}
 .gcell.today{box-shadow:inset 0 0 0 1.5px var(--mute)}
 .gcell.pick{box-shadow:inset 0 0 0 2px var(--ink)}
-.pains{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
-.pains button{min-height:44px;padding:0;border-radius:8px;font-weight:700;font-size:13px;color:var(--ink);background:hsl(var(--h) 45% 50% / .16);border:1px solid transparent;display:flex;align-items:center;justify-content:center}
+.pains{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:2px}
+.pains button{min-height:44px;padding:0;border-radius:4px;font-weight:700;font-size:13px;color:var(--ink);background:hsl(var(--h) 45% 50% / .16);border:1px solid transparent;display:flex;align-items:center;justify-content:center}
 .pains button.on{background:hsl(var(--h) 60% 50%);color:#0F1215;border-color:var(--ink)}
+.pains button:first-child{border-radius:10px 4px 4px 10px}.pains button:last-child{border-radius:4px 10px 10px 4px}
 .ntype{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ntype button{text-align:left;padding:16px 14px;border-radius:18px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;gap:4px;min-height:118px}
 .ntype i{width:12px;height:12px;border-radius:50%;background:var(--c);margin-bottom:6px}
@@ -315,7 +357,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v64";
+const APP_VERSION="msc-v65";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -434,6 +476,8 @@ const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",
 function loadout(t,b){const p=(t-b)/2;if(p<0)return null;const o=[];let r=rnd(p);
  for(const x of PLATES){while(r>=x.w-.001){o.push(x);r=rnd(r-x.w)}}return{plates:o,left:r}}
 const monday=d=>{const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));return iso(x)};
+/* Toutes les séances faites (CrossFit + plan : muscu, course, autre), pour la série de semaines */
+function allDone(){let pd=[];try{pd=planOn()?PLAN.doneList():[]}catch(e){}return S.sessions.map(s=>({date:s.date})).concat(pd.map(x=>({date:x.date})))}
 function streak(ss){if(!ss.length)return 0;const w=new Set(ss.map(s=>monday(s.date+"T12:00")));
  let c=0,cur=new Date();cur.setDate(cur.getDate()-((cur.getDay()+6)%7));
  if(!w.has(iso(cur)))cur.setDate(cur.getDate()-7);
@@ -590,7 +634,7 @@ function statsRange(from,to){
 /* Une phrase d'accueil tirée des données réelles, jamais culpabilisante */
 function accroche(){
  const G=(f,m)=>S.profile&&S.profile.sex==="f"?f:m;
- const ms=milestones(S.sessions), st=streak(S.sessions);
+ const ms=milestones(S.sessions), st=streak(allDone());
  const der=sorted()[0];
  const jours=der?Math.round((new Date(TODAY)-new Date(der.date))/864e5):null;
  const recent=ms.find(m=>(new Date(TODAY)-new Date(m.date))/864e5<=7);
@@ -638,7 +682,11 @@ function painChips(d,z,w,label){const cur=painGet(d,z,w);
   <span>${label}</span><b style="color:var(--ink)">${cur==null?"—":cur+"/10"}</b></div>
   <div class="pains">${[0,1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="${cur===n?"on":""}" data-act="pain" data-z="${z}" data-d="${d}" data-w="${w}" data-v="${n}" aria-pressed="${cur===n}" style="--h:${140-n*14}">${n}</button>`).join("")}</div></div>`}
 /* Carte de suivi : 4 semaines, matin (plein) et séance (contour), et l'état du jour */
-function painCard(){const zs=(S.pain&&S.pain.zones)||[];if(!zs.length)return"";
+function painCard(){
+ /* La courbe n'apparaît qu'avec un peu d'historique (3 notes sur 4 semaines) ou une alerte en cours */
+ const zs=((S.pain&&S.pain.zones)||[]).filter(z=>{if(painStatus(z,TODAY))return true;let n=0;
+  for(let i=0;i<28;i++){const d=dShift(TODAY,-i);if(painGet(d,z,"matin")!=null||painGet(d,z,"seance")!=null)n++}return n>=3});
+ if(!zs.length)return"";
  let h=`<div class="card"><div class="eyebrow" style="margin-bottom:4px">Douleur</div>`;
  zs.forEach(z=>{const Z=painZ(z),st=painStatus(z,TODAY),days=[];
   for(let i=27;i>=0;i--)days.push(dShift(TODAY,-i));
@@ -695,66 +743,47 @@ function vProgres(){
   if(!S.sessions.length&&!hasPlan)return`<div class="head"><div class="eyebrow">Bienvenue</div><h1>Tes progrès</h1></div>
    <div class="pane"><div class="empty">Ici s'afficheront tes records, tes paliers franchis et tes premières fois.<br>Tout commence par une séance notée.</div>
    <button class="btn btn-go" data-act="new">Noter ma première séance</button></div>`;
-  const ms=milestones(S.sessions),st=streak(S.sessions),msDays=new Set(ms.map(x=>x.date));
+  const ms=milestones(S.sessions),st=streak(allDone()),msDays=new Set(ms.map(x=>x.date));
   const days=new Set(S.sessions.map(s=>s.date));
   const [titre,sous]=accroche();
 
-  let h=`<div class="head" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
-   <div><div style="display:flex;align-items:center;gap:9px;margin-bottom:2px">${LOGOMARK}
-   <span class="eyebrow">${S.profile&&S.profile.name?esc(S.profile.name):"Mon suivi CrossFit"}</span></div>
-   <h1>Progrès</h1></div>
-   <button class="chip" data-act="records">Records</button></div><div class="pane">
-
-   <div class="card" style="padding:20px">
-   <div class="dsp" style="font-size:21px;line-height:1.25">${titre}</div>
-   <div style="font-size:14px;color:var(--mute);margin-top:5px;line-height:1.5">${sous}</div>
-   <div style="display:flex;gap:8px;margin-top:16px">
-    <button class="btn btn-go" style="flex:1;padding:13px;font-size:14px" data-act="tab" data-v="noter">Noter une séance</button>
-    ${st>0?`<div style="flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
-      padding:0 15px;border:1px solid var(--line);border-radius:16px">
-      <b style="font-size:19px;font-family:'Barlow Condensed',sans-serif">${st}</b>
-      <span style="font-size:12px;color:var(--mute);font-weight:600;letter-spacing:.04em">SEM.</span></div>`:""}
-   </div></div>`;
+  const prenom=S.profile&&S.profile.name?String(S.profile.name).trim().split(/\s+/)[0]:"";
+  let h=`<div class="head phead2">
+   <div class="hrow"><div class="eyebrow" style="display:flex;align-items:center;gap:8px;min-width:0">${LOGOMARK}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fMid(TODAY)}</span></div>
+   <div class="hacts">${st>0?`<span class="hpill" title="Semaines d'affilée avec au moins une séance">🔥 ${st} sem.</span>`:""}
+   <button class="hpill" data-act="records" aria-label="Records"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>Records</button></div></div>
+   <h1>${prenom?"Bonjour "+esc(prenom):"Progrès"}</h1>
+   <div class="hello">${titre} <span>${sous}</span></div></div><div class="pane">`;
   h+=todayCard();
 
   /* ─── Bloc calendrier, trois vues au choix ─── */
   const vue=S.hv||"mois";
-  h+=`<div class="card" id="calblock" style="padding:16px 16px 14px">
-   <div class="gtab" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px">`+
-   [["mois","Mois"],["semaines","Semaines"],["annee","Année"]].map(([k,l])=>
-    `<button class="${vue===k?"on":""}" data-act="hv" data-v="${k}"><span>${l}</span></button>`).join("")+`</div>`;
+  const segV=`<div class="seg calseg" role="group" aria-label="Vue du calendrier">`+[["mois","M","Mois"],["semaines","S","Semaines"],["annee","A","Année"]].map(([k,c,l])=>
+    `<button class="${vue===k?"on":""}" data-act="hv" data-v="${k}" aria-label="${l}" aria-pressed="${vue===k}" title="${l}">${c}</button>`).join("")+`</div>`;
+  h+=`<div class="card" id="calblock" style="padding:14px 14px 12px">`;
+  if(vue!=="mois")h+=`<div class="card-h"><b style="font-size:var(--fs-md)">${vue==="semaines"?"8 dernières semaines":"12 derniers mois"}</b>${segV}</div>`;
 
   if(vue==="mois"){
    const g=monthGrid(S.moff||0), sm=statsRange(g.from,g.to);
-   h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-    <button class="chip" style="padding:7px 12px;min-width:44px" data-act="moff" data-v="-1" aria-label="Mois précédent">‹</button>
-    <b style="font-size:14.5px;text-transform:capitalize">${g.label}</b>
-    <button class="chip" style="padding:7px 12px;min-width:44px;${(S.moff||0)>=0?"opacity:.35":""}" data-act="moff" data-v="1" aria-label="Mois suivant">›</button></div>
+   h+=`<div class="card-h"><div style="display:flex;align-items:center;gap:4px;min-width:0">
+    <button class="calnav" data-act="moff" data-v="-1" aria-label="Mois précédent">‹</button>
+    <b style="font-size:14.5px;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.label}</b>
+    <button class="calnav" style="${(S.moff||0)>=0?"opacity:.35":""}" data-act="moff" data-v="1" aria-label="Mois suivant">›</button></div>${segV}</div>
     <div class="glabel" style="max-width:none">${["L","M","M","J","V","S","D"].map(d=>`<span>${d}</span>`).join("")}</div>`;
    let plDone=0;
    for(let i=0;i<g.cells.length;i+=7){
     h+=`<div class="grid" style="max-width:none;margin-bottom:4px">`+g.cells.slice(i,i+7).map(d=>{
-     if(!d)return`<div style="aspect-ratio:1"></div>`;
-     const c=msDays.has(d)?"ms":days.has(d)?"on":"";
+     if(!d)return`<div></div>`;
+     const c=days.has(d)?"on":msDays.has(d)?"on":"",star=msDays.has(d);
      const jour=+d.slice(8), pl=hasPlan?planDay(d):[];
      plDone+=pl.filter(x=>x.done).length;
      const dots=pl.slice(0,3).map(x=>`<i class="pdot${x.done?" done":d<TODAY?" miss":""}" style="--c:${x.color}"></i>`).join("");
      return`<button class="gcell ${c}${d===TODAY?" today":""}${S.day===d?" pick":""}"
-      data-act="day" data-v="${d}" aria-label="${fLong(d)}${days.has(d)?", séance CrossFit":""}${pl.length?", "+pl.length+" séance(s) du plan":""}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-      font-size:12px;font-weight:600;color:${c?"var(--onacc)":"var(--mute)"}"><span>${jour}</span>${dots?`<span class="pdots">${dots}</span>`:""}</button>`}).join("")+`</div>`}
-   h+=`<div style="display:flex;justify-content:flex-end;margin-top:10px">
-    <button class="chip" style="padding:6px 12px;font-size:12px" data-act="share" data-t="mois" data-v="${S.moff||0}">Partager le mois</button></div>
-   <div class="legend" style="margin-top:11px;flex-wrap:wrap;row-gap:6px"><span><i style="background:var(--aqua)"></i>CrossFit</span>
-    <span><i style="background:var(--melon)"></i>première fois</span>${hasPlan?PLAN.programs().map(p=>`<span><i class="pdot done" style="--c:${p.color};width:8px;height:8px;border-radius:50%;margin-right:5px"></i>${esc(p.name)}</span>`).join("")+`<span><i class="pdot" style="--c:var(--mute);width:8px;height:8px;border-radius:50%;margin-right:5px"></i>prévue</span>`:""}</div>
-    <div style="display:flex;gap:6px;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)">
-    <div style="flex:1;text-align:center"><b style="font-family:'Barlow Condensed',sans-serif;font-size:18px">${sm.n}</b>
-     <div style="font-size:12px;color:var(--mute);font-weight:600;margin-top:2px">CROSSFIT</div></div>
-    ${hasPlan?`<div style="flex:1;text-align:center"><b style="font-family:'Barlow Condensed',sans-serif;font-size:18px">${plDone}</b>
-     <div style="font-size:12px;color:var(--mute);font-weight:600;margin-top:2px">PLAN</div></div>`:""}
-    <div style="flex:1;text-align:center"><b style="font-family:'Barlow Condensed',sans-serif;font-size:18px">${sm.vol.toLocaleString("fr-FR")}</b>
-     <div style="font-size:12px;color:var(--mute);font-weight:600;margin-top:2px">MOUVEMENTS</div></div>
-    <div style="flex:1;text-align:center"><b style="font-family:'Barlow Condensed',sans-serif;font-size:18px">${sm.ms}</b>
-     <div style="font-size:12px;color:var(--mute);font-weight:600;margin-top:2px">PREMIÈRES FOIS</div></div></div>`;
+      data-act="day" data-v="${d}" aria-label="${fLong(d)}${days.has(d)?", séance CrossFit":""}${star?", record ou première fois":""}${pl.length?", "+pl.length+" séance(s) du plan":""}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+      font-size:12px;font-weight:600;color:${c?"var(--onacc)":"var(--mute)"}">${star?`<b class="cstar" aria-hidden="true">★</b>`:""}<span>${jour}</span>${dots?`<span class="pdots">${dots}</span>`:""}</button>`}).join("")+`</div>`}
+   h+=`<div class="legend callegend"><span><i style="background:var(--aqua)"></i>CrossFit</span>${hasPlan?PLAN.programs().map(p=>`<span><i class="pdot done" style="--c:${p.color}"></i>${esc(String(p.name).split(" · ")[0])}</span>`).join("")+`<span><i class="pdot" style="--c:var(--mute)"></i>prévue</span>`:""}<span><b class="cstar l">★</b>record, 1ʳᵉ fois</span></div>
+    <div class="calsum"><span><b>${sm.n}</b> CrossFit${hasPlan?` · <b>${plDone}</b> plan`:""} · <b>${sm.vol.toLocaleString("fr-FR")}</b> mouvements${sm.ms?` · <b style="color:var(--melon)">★ ${sm.ms}</b>`:""}</span>
+    <button class="calnav" data-act="share" data-t="mois" data-v="${S.moff||0}" aria-label="Partager le mois"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button></div>`;
   }
 
   /* Séances du plan faites (muscu, course, autres), comptées avec le CrossFit */
@@ -775,9 +804,9 @@ function vProgres(){
     const a=iso(st1),b=iso(en),r=statsRange(a,b),pl=plIn(a,b);
     wks.push({...r,pl,tot:r.n+sumO(pl),label:fSh(a).slice(0,5)})}
    const mx=Math.max(1,...wks.map(w=>w.tot));
-   h+=`<div style="display:flex;align-items:flex-end;gap:6px;height:96px">`+
+   h+=`<div style="display:flex;align-items:flex-end;gap:6px;height:84px">`+
     wks.map((w,i)=>`<div class="hbar" style="flex:1;text-align:center">
-     ${stack(w.n,w.pl,mx,74,"5px 5px 2px 2px")}
+     ${stack(w.n,w.pl,mx,62,"5px 5px 2px 2px")}
      <div style="font-size:12px;color:${i===7?"var(--ink)":"var(--mute)"};margin-top:5px;font-weight:${i===7?700:600}">${w.tot||"–"}</div></div>`).join("")+
     `</div><div style="font-size:12px;color:var(--mute);text-align:center;margin-top:3px">séances par semaine, sur 8 semaines</div>${legendPl}
     <div style="font-size:13px;color:var(--mute);line-height:1.6;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)">
@@ -795,9 +824,9 @@ function vProgres(){
    const mx=Math.max(1,...mos.map(x=>x.tot));
    const tot=mos.reduce((a,x)=>a+x.tot,0),cf=mos.reduce((a,x)=>a+x.n,0),plT={};
    mos.forEach(x=>Object.keys(x.pl).forEach(k=>plT[k]=(plT[k]||0)+x.pl[k]));
-   h+=`<div style="display:flex;align-items:flex-end;gap:4px;height:100px">`+
+   h+=`<div style="display:flex;align-items:flex-end;gap:4px;height:84px">`+
     mos.map((x,i)=>`<div class="hbar" style="flex:1;text-align:center">
-     ${stack(x.n,x.pl,mx,76,"4px 4px 2px 2px")}
+     ${stack(x.n,x.pl,mx,62,"4px 4px 2px 2px")}
      <div style="font-size:12px;color:${i===11?"var(--ink)":"var(--mute)"};margin-top:5px;font-weight:${i===11?700:600}">${x.label}</div></div>`).join("")+
     `</div>${legendPl}<div style="font-size:13px;color:var(--mute);line-height:1.6;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)">
     <b style="color:var(--ink)">${tot}</b> séances sur douze mois${tot?` (${detail(cf,plT)})`:""},
@@ -1553,21 +1582,46 @@ function hist_bench(name,curId){
 
 /* Carte « Aujourd'hui » : séances prévues du jour et douleur du matin */
 function todayCard(){
+ /* Aujourd'hui : séances du jour, sinon la prochaine prévue ; actions de saisie ; douleur du matin */
  const pl=planOn()?planDay(TODAY):[],zs=(S.pain&&S.pain.zones)||[],cf=S.sessions.filter(x=>x.date===TODAY);
- if(!pl.length&&!zs.length&&!cf.length)return"";
- let h=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-  <div class="eyebrow">Aujourd'hui</div><span style="font-size:12px;color:var(--mute);text-transform:capitalize">${fLong(TODAY)}</span></div>`;
- if(!pl.length&&!cf.length)h+=`<div style="font-size:13.5px;color:var(--mute);padding:6px 0">Pas de séance prévue : jour de repos ou séance libre.</div>`;
- cf.forEach(x=>{h+=`<button style="width:100%;text-align:left;border-top:1px solid var(--line);padding:11px 0;display:flex;align-items:center;gap:9px" data-act="openday" data-v="${x.id}">
+ const canFree=planOn()&&window.PLAN&&PLAN.free&&S.planif&&(S.planif.programs||[]).length>0;
+ const run=pl.find(x=>!x.done&&x.kind==="muscu");
+ let nxt=null;
+ if(!pl.some(x=>!x.done)&&planOn())for(let i=1;i<=14&&!nxt;i++){const d=dShift(TODAY,i),l=planDay(d).filter(x=>!x.done);if(l.length)nxt={d,x:l[0]}}
+ let h=`<div class="card" style="padding:18px"><div class="card-h" style="margin-bottom:4px"><div class="eyebrow">Aujourd'hui</div></div>`;
+ cf.forEach(x=>{h+=`<button class="row-link" style="gap:9px;padding:11px 0" data-act="openday" data-v="${x.id}">
   <i class="pdot done" style="--c:var(--aqua)"></i><b style="flex:1;font-size:14px">CrossFit${(x.metcons||[])[0]&&x.metcons[0].name?" · "+esc(x.metcons[0].name):""}</b><span style="font-size:12px;font-weight:600">Faite ›</span></button>`});
- pl.forEach(x=>{h+=`<button style="width:100%;text-align:left;border-top:1px solid var(--line);padding:11px 0;display:flex;align-items:center;gap:9px" data-act="${!x.done&&x.kind==="muscu"&&window.PLAN&&PLAN.run?"planrun":"planopen"}" data-v="${esc(x.key)}">
+ pl.forEach(x=>{h+=`<button class="row-link" style="gap:9px;padding:11px 0" data-act="${!x.done&&x.kind==="muscu"&&window.PLAN&&PLAN.run?"planrun":"planopen"}" data-v="${esc(x.key)}">
   <i class="pdot${x.done?" done":""}" style="--c:${x.color};flex:none"></i>
   <span style="flex:1;min-width:0"><b style="display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}</b>
   <span style="font-size:12px;color:var(--mute)">${esc(x.prog)}${x.dur?" · "+x.dur+" min":""}</span></span>
-  <span style="flex:none;font-size:12.5px;font-weight:700;color:${x.done?"var(--ink)":"var(--aqua)"}">${x.done?"Faite"+(x.rpe?" · RPE "+x.rpe:""):"Démarrer"} ›</span></button>`});
- if(zs.length){h+=`<div style="border-top:1px solid var(--line);margin-top:2px;padding-top:2px">`+
+  <span style="flex:none;font-size:12.5px;font-weight:700;color:${x.done?"var(--ink)":"var(--aqua)"}">${x.done?"Faite"+(x.rpe?" · RPE "+x.rpe:""):(x.kind==="muscu"?"Démarrer":"Voir")} ›</span></button>`});
+ if(!pl.length&&!cf.length){
+  if(nxt)h+=`<button class="row-link" style="gap:9px;padding:11px 0" data-act="planopen" data-v="${esc(nxt.x.key)}">
+   <i class="pdot" style="--c:${nxt.x.color};flex:none"></i>
+   <span style="flex:1;min-width:0"><span style="display:block;font-size:12px;color:var(--mute)">Repos aujourd'hui · prochaine séance <b style="color:var(--ink);text-transform:capitalize">${fLong(nxt.d)}</b></span>
+   <b style="display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">${esc(nxt.x.title)}</b></span>
+   <span style="flex:none;font-size:12.5px;font-weight:700;color:var(--aqua)">Voir ›</span></button>`;
+  else h+=`<div style="font-size:13.5px;color:var(--mute);padding:6px 0">Pas de séance prévue : jour de repos ou séance libre.</div>`}
+ h+=`<div class="acts">`+(run?`<button class="btn btn-go" data-act="planrun" data-v="${esc(run.key)}">▶ Démarrer</button>`:canFree?`<button class="btn btn-go" data-act="planfree">▶ Séance libre</button>`:"")+
+  `<button class="btn ${run||canFree?"btn-quiet":"btn-go"}" data-act="tab" data-v="noter">+ Noter</button></div>`;
+ if(zs.length){h+=`<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:2px">`+
   zs.map(z=>painChips(TODAY,z,"matin","Ce matin, douleur "+painZ(z)[1].toLowerCase())).join("")+`</div>`}
- return h+`</div>`}
+ return h+`</div>`+weekTiles()}
+
+/* Cette semaine : nombre de séances par type et records, d'un coup d'œil */
+function weekTiles(){
+ const mon=monday(TODAY+"T12:00"),sun=dShift(mon,6),inW=d=>d>=mon&&d<=sun;
+ const cf=S.sessions.filter(s=>inW(s.date)).length;
+ const k={muscu:0,course:0,autre:0};
+ try{if(planOn()&&PLAN.historyList)PLAN.historyList().forEach(x=>{if(inW(x.date)){const t=k[x.kind]!=null?x.kind:"autre";k[t]++}})}catch(e){}
+ const rec=milestones(S.sessions).filter(m=>inW(m.date)).length;
+ const tl=[[cf,"CrossFit","var(--c-cf)"],[k.muscu,"Muscu","var(--c-mu)"]];
+ if(k.course||planOn()&&(PLAN.programs?PLAN.programs():[]).some(p=>p.kind==="course"))tl.push([k.course,"Course","var(--c-run)"]);
+ if(k.autre)tl.push([k.autre,"Autre","var(--c-oth)"]);
+ tl.push([rec,rec>1?"Records":"Record","var(--c-rec)"]);
+ return`<div class="eyebrow" style="margin:4px 2px 9px">Cette semaine</div><div class="tiles">`+tl.map(([n,l,c])=>
+  `<button class="tile" data-act="hv" data-v="semaines" aria-label="${n} ${l} cette semaine" style="--c:${c}"><i></i><b>${n}</b><span>${l}</span></button>`).join("")+`</div>`}
 
 /* ══════════ RECORDS ══════════
    Tous les records au même endroit : charge max estimée (CrossFit et plan muscu),
