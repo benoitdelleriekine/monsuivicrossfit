@@ -315,7 +315,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v62";
+const APP_VERSION="msc-v63";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -1585,19 +1585,23 @@ function recordList(){
    else if(wn.length){const b=wn.reduce((a,x)=>x.reps>a.reps?x:a);rows.push({id,m,val:b.reps,txt:b.reps+(m.u==="sec"?" s":m.u==="m"?" m":" reps"),sub:"meilleure série",date:b.date,k:1})}}});
  return rows}
 function vRecords(){
+ /* Une seule ligne par mouvement : ce que tu as fait (CrossFit, muscu du plan, séances libres)
+    donne la charge max estimée ; le 1RM de travail du plan s'affiche sur la même ligne. */
  const rows=recordList(),wm=planOn()&&PLAN.workingMaxes?(()=>{try{return PLAN.workingMaxes()}catch(e){return[]}})():[];
+ const wmBy={};wm.forEach(x=>{if(!wmBy[x.id]||x.work>wmBy[x.id].work)wmBy[x.id]=x});
+ rows.forEach(r=>{if(wmBy[r.id])r.wm=wmBy[r.id]});
+ Object.values(wmBy).forEach(x=>{if(rows.some(r=>r.id===x.id))return;const m=mv(x.id);if(!m||!m.n)return;
+  rows.push({id:x.id,m,val:x.work,txt:fr(x.work)+" kg",sub:"1RM de travail du plan",date:null,k:0,wmOnly:true,wm:x})});
  let h=`<div class="head" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
   <div><div class="eyebrow">Tous tes meilleurs résultats</div><h1>Records</h1></div>
   <button class="chip" style="white-space:nowrap;flex:none" data-act="recclose">‹ Progrès</button></div><div class="pane">`;
- if(wm.length)h+=`<div class="card"><div class="eyebrow" style="margin-bottom:6px">1RM de travail du plan</div>`+
-  wm.map(x=>`<button style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line)" data-act="fiche" data-v="${esc(x.id)}">
-   <span><b style="font-size:14.5px">${esc(x.name)}</b><span style="display:block;font-size:12.5px;color:var(--mute);margin-top:2px">référence ${fr(x.ref)} kg</span></span>
-   <span class="dsp" style="font-size:24px">${fr(x.work)}<span style="font-size:14px;color:var(--mute);font-weight:500"> kg</span></span></button>`).join("")+`</div>`;
  if(!rows.length)h+=`<div class="empty">Tes records apparaîtront ici dès tes premières séries notées.</div>`;
+ else if(wm.length)h+=`<div style="font-size:12.5px;color:var(--mute);margin:-4px 2px 12px;line-height:1.45">Chaque mouvement réunit tes séries de CrossFit, du plan et des séances libres. « Plan » = 1RM de travail qui sert à calculer tes charges.</div>`;
  const groups=[...new Set(allMoves().map(m=>m.g))].filter(g=>rows.some(r=>r.m.g===g));
- groups.forEach(g=>{const rs=rows.filter(r=>r.m.g===g).sort((a,b)=>b.val-a.val);
-  h+=`<div class="card"><div class="eyebrow" style="margin-bottom:6px">${esc(g)}</div>`+rs.map(r=>`<button style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line)" data-act="fiche" data-v="${esc(r.id)}">
-   <span style="min-width:0"><b style="font-size:14.5px">${esc(r.m.n)}</b><span style="display:block;font-size:12.5px;color:var(--mute);margin-top:2px">${r.sub} · ${fMid(r.date)}</span></span>
+ rows.filter(r=>!groups.includes(r.m.g)).forEach(r=>{if(!groups.includes(r.m.g||""))groups.push(r.m.g||"")});
+ groups.forEach(g=>{const rs=rows.filter(r=>(r.m.g||"")===g).sort((a,b)=>b.val-a.val);
+  h+=`<div class="card"><div class="eyebrow" style="margin-bottom:6px">${esc(g||"Autres")}</div>`+rs.map(r=>`<button style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line)" data-act="fiche" data-v="${esc(r.id)}">
+   <span style="min-width:0"><b style="font-size:14.5px">${esc(r.m.n)}</b><span style="display:block;font-size:12.5px;color:var(--mute);margin-top:2px">${r.sub}${r.date?" · "+fMid(r.date):""}</span>${r.wm&&!r.wmOnly?`<span style="display:block;font-size:12.5px;color:var(--ink);margin-top:2px;font-weight:600">Plan : 1RM de travail ${fr(r.wm.work)} kg</span>`:r.wmOnly?`<span style="display:block;font-size:12.5px;color:var(--mute);margin-top:2px">référence ${fr(r.wm.ref)} kg · pas encore de série notée</span>`:""}</span>
    <span class="dsp" style="font-size:24px;white-space:nowrap">${r.txt}</span></button>`).join("")+`</div>`});
  return h+`<div style="height:24px"></div></div>`}
 
