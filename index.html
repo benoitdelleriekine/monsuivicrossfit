@@ -79,6 +79,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .gcell.ms{background:var(--melon)}
 .gcell.today{box-shadow:inset 0 0 0 1.5px var(--mute)}
 .gcell.pick{box-shadow:inset 0 0 0 2px var(--ink)}
+.pains{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:3px}
+.pains button{min-height:36px;padding:0;border-radius:8px;font-weight:700;font-size:13px;color:var(--ink);background:hsl(var(--h) 45% 50% / .16);border:1px solid transparent;display:flex;align-items:center;justify-content:center}
+.pains button.on{background:hsl(var(--h) 60% 50%);color:#0F1215;border-color:var(--ink)}
+.ntype{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ntype button{text-align:left;padding:16px 14px;border-radius:18px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;gap:4px;min-height:118px}
+.ntype i{width:12px;height:12px;border-radius:50%;background:var(--c);margin-bottom:6px}
+.ntype b{font-size:17px}
+.ntype span{font-size:12.5px;color:var(--mute);line-height:1.4}
 .rpes{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}
 .rpes button{min-height:40px;padding:0;text-align:center;display:flex;align-items:center;justify-content:center;border-radius:8px;font-weight:700;font-size:14px;color:var(--ink);background:hsl(var(--h) 45% 50% / .16);border:1px solid transparent}
 .rpes button.on{background:hsl(var(--h) 60% 50%);color:#0F1215;border-color:var(--ink)}
@@ -420,12 +428,12 @@ function weeksGrid(n){const rows=[],m=new Date();m.setDate(m.getDate()-((m.getDa
 
 /* ══════════ ÉTAT ══════════ */
 let S={sessions:[],custom:[],planif:{programs:[],deleted:[]},bar:15,tab:"progres",draft:null,focus:null,picker:false,q:"",prog:null,open:null,
- profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},pin:[],tabsOff:["niveau"],histOpen:null,nchain:null,nfilt:"tout",share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
+ profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},pin:[],tabsOff:["niveau"],pain:{zones:[],log:{}},hf:"tout",histOpen:null,nchain:null,nfilt:"tout",share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
  updatedAt:0,cloud:{enabled:false,user:null,status:"",busy:false,sent:false},email:"",otp:"",
  d:{w:0,reps:5,diff:"juste",level:0,dist:500,min:2,sec:0,age:30,bw:60}};
 /* Instantané des données, avec horodatage pour arbitrer la synchronisation */
 function payload(local){return{sessions:S.sessions,custom:S.custom,planif:S.planif,bar:S.bar,profile:S.profile,
- lastExport:S.lastExport,theme:S.theme,tests:S.tests,decl:S.decl,pin:S.pin,tabsOff:S.tabsOff,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
+ lastExport:S.lastExport,theme:S.theme,tests:S.tests,decl:S.decl,pin:S.pin,tabsOff:S.tabsOff,pain:S.pain,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
 const save=()=>{S.updatedAt=Date.now();pushSoon();try{localStorage.setItem(KEY,JSON.stringify(
  payload(true)))}catch(e){alert("Sauvegarde impossible : la mémoire du navigateur est pleine ou bloquée.")}};
 function load(){let raw=null;
@@ -442,6 +450,7 @@ function load(){let raw=null;
   S.pin=Array.isArray(d.pin)?d.pin:[];
   /* L'onglet Niveau est masqué par défaut ; il se réactive dans Profil. */
   S.tabsOff=Array.isArray(d.tabsOff)?d.tabsOff:["niveau"];
+  S.pain=normPain(d.pain);
   S.planif=normPlanif(d.planif)}catch(e){}
  /* Réparation des profils écrits par une version antérieure défectueuse :
     sans âge ni poids valides, les barèmes ne veulent rien dire. */
@@ -544,6 +553,59 @@ function accroche(){
  if(jours!=null)return["Dernière séance le "+fMid(der.date).replace(/\.$/,"")+".","Reprends quand ça t'arrange."];
  return["Bienvenue.","Ta première séance t'attend."]}
 
+/* ══════════ SUIVI DE LA DOULEUR ══════════
+   Une note de 0 à 10 par zone : pendant ou après la séance (« seance ») et le
+   lendemain matin (« matin »). Repères : au-delà de 3/10 le matin, 6/10 pendant
+   la séance, ou +2 d'un matin à l'autre, la zone est signalée et les exercices
+   qui la sollicitent sont allégés dans le plan. */
+const PAIN_Z=[["coude","Coude",["pull"]],["epaule","Épaule",["pushV","pushH"]],["poignet","Poignet",["pushH","pushV"]],
+ ["dos","Bas du dos",["hinge","squat"]],["hanche","Hanche",["squat","hinge"]],["genou","Genou",["squat"]],["achille","Tendon d'Achille",["course"]]];
+const painZ=id=>PAIN_Z.find(z=>z[0]===id);
+function normPain(x){const o={zones:[],log:{},zt:x&&Number(x.zt)||0};if(x&&Array.isArray(x.zones))o.zones=x.zones.filter(z=>painZ(z));
+ if(x&&x.log&&typeof x.log==="object")Object.keys(x.log).forEach(k=>{const r=x.log[k];if(r&&typeof r==="object")o.log[k]={v:r.v==null?null:Number(r.v),t:Number(r.t)||0}});return o}
+function mergePain(a,b){a=normPain(a);b=normPain(b);const log={...b.log};
+ Object.keys(a.log).forEach(k=>{if(!log[k]||a.log[k].t>=log[k].t)log[k]=a.log[k]});
+ const zs=(a.zt||0)>=(b.zt||0)?a:b;return{zones:[...zs.zones],zt:zs.zt||0,log}}
+let painVer=0;const painCache={};
+function painGet(d,z,w){const r=(S.pain&&S.pain.log||{})[d+"|"+z+"|"+w];return r&&r.v!=null?r.v:null}
+function painSet(d,z,w,v){if(!S.pain)S.pain={zones:[],log:{}};S.pain.log[d+"|"+z+"|"+w]={v:v==null?null:v,t:Date.now()};painVer++;save()}
+const dShift=(d,n)=>{const x=new Date(d+"T12:00");x.setDate(x.getDate()+n);return iso(x)};
+/* État d'une zone à une date : null si tout va bien, sinon { v, txt } */
+function painStatus(z,D){
+ const m0=painGet(D,z,"matin"),m1=painGet(dShift(D,-1),z,"matin");
+ let prevM=null;for(let i=1;i<=7&&prevM==null;i++){const v=painGet(dShift(D,-i),z,"matin");if(v!=null)prevM=v}
+ const sess=[0,1,2].map(i=>painGet(dShift(D,-i),z,"seance")).filter(v=>v!=null);
+ const mm=m0!=null?m0:m1;
+ if(mm!=null&&mm>3)return{v:mm,txt:(m0!=null?"ce matin ":"hier matin ")+mm+"/10"};
+ if(m0!=null&&prevM!=null&&m0>=prevM+2)return{v:m0,txt:"en hausse ce matin ("+prevM+" → "+m0+"/10)"};
+ const smax=sess.length?Math.max(...sess):null;
+ if(smax!=null&&smax>=6)return{v:smax,txt:smax+"/10 en séance"};
+ return null}
+function painFlags(D){const key=D+"|"+painVer;if(painCache[key])return painCache[key];
+ const out={};(S.pain&&S.pain.zones||[]).forEach(z=>{const st=painStatus(z,D);if(!st)return;const Z=painZ(z);
+  Z[2].forEach(pt=>{const why=Z[1].toLowerCase()+" "+st.txt;if(pt==="course")out.course=why;else{(out.pats=out.pats||{})[pt]=why}})});
+ return painCache[key]=out}
+function painChips(d,z,w,label){const cur=painGet(d,z,w);
+ return`<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:13px;color:var(--mute);margin-bottom:6px">
+  <span>${label}</span><b style="color:var(--ink)">${cur==null?"—":cur+"/10"}</b></div>
+  <div class="pains">${[0,1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="${cur===n?"on":""}" data-act="pain" data-z="${z}" data-d="${d}" data-w="${w}" data-v="${n}" aria-pressed="${cur===n}" style="--h:${140-n*14}">${n}</button>`).join("")}</div></div>`}
+/* Carte de suivi : 4 semaines, matin (plein) et séance (contour), et l'état du jour */
+function painCard(){const zs=(S.pain&&S.pain.zones)||[];if(!zs.length)return"";
+ let h=`<div class="card"><div class="eyebrow" style="margin-bottom:4px">Douleur</div>`;
+ zs.forEach(z=>{const Z=painZ(z),st=painStatus(z,TODAY),days=[];
+  for(let i=27;i>=0;i--)days.push(dShift(TODAY,-i));
+  const col=v=>v==null?"var(--track)":v<=2?"#4E9A7F":v<=5?"#D9B44F":"#D9453B";
+  h+=`<div style="padding-top:12px;margin-top:10px;border-top:1px solid var(--line)">
+   <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><b style="font-size:14.5px">${Z[1]}</b>
+   <span style="font-size:12.5px;font-weight:600;color:${st?"var(--lava)":"var(--mute)"}">${st?"À surveiller : "+esc(st.txt):"RAS"}</span></div>
+   <div style="display:flex;align-items:flex-end;gap:2px;height:46px;margin-top:10px">${days.map(d=>{const m=painGet(d,z,"matin"),se=painGet(d,z,"seance");
+    return`<div title="${fMid(d)}" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;height:100%">
+     ${se!=null?`<div style="height:${4+se*3.6}px;border:1.5px solid ${col(se)};border-radius:3px"></div>`:""}
+     <div style="height:${m!=null?4+m*3.6:3}px;background:${col(m)};border-radius:2px"></div></div>`}).join("")}</div>
+   <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--mute);margin-top:4px"><span>${fSh(days[0])}</span><span>plein : matin · contour : séance</span><span>auj.</span></div>
+   ${st?`<div style="font-size:12.5px;color:var(--mute);line-height:1.55;margin-top:8px">Les exercices qui sollicitent cette zone sont allégés d'une série dans ton plan tant que la douleur reste au-dessus des repères.</div>`:""}</div>`});
+ return h+`</div>`}
+
 /* Ce que le module Plan voit d'une séance CrossFit : durée et RPE (charge interne),
    séries des mouvements lourds (1RM de travail), familles de mouvements (fatigue). */
 const FEEL_RPE=[7,9,8,7,6,6];
@@ -574,6 +636,8 @@ function cfForPlan(s){
  return{id:s.id,date:s.date,name:mc0&&mc0.name?mc0.name:"",dur:Number(s.dur)>0?Number(s.dur):60,
   rpe:Number(s.rpe)>0?Number(s.rpe):FEEL_RPE[s.feel||3]||7,est:!(Number(s.dur)>0&&Number(s.rpe)>0),lifts,pats}}
 window.PLAN_HOST={sessions:()=>S.sessions.map(cfForPlan),
+ pain:{zones:()=>((S.pain&&S.pain.zones)||[]).map(z=>({id:z,l:painZ(z)[1]})),get:painGet,
+  set:(d,z,w,v)=>painSet(d,z,w,v),flags:painFlags},
  open:id=>{S.tab="historique";S.open=id;S.day=null;render()}};
 /* Séances du module Plan (muscu, course, autres) pour le calendrier de l'accueil */
 const planOn=()=>!(S.tabsOff||[]).includes("plan")&&window.PLAN&&typeof PLAN.dayList==="function";
@@ -603,6 +667,7 @@ function vProgres(){
       <b style="font-size:19px;font-family:'Barlow Condensed',sans-serif">${st}</b>
       <span style="font-size:9.5px;color:var(--mute);font-weight:600;letter-spacing:.04em">SEM.</span></div>`:""}
    </div></div>`;
+  h+=todayCard();
 
   /* ─── Bloc calendrier, trois vues au choix ─── */
   const vue=S.hv||"mois";
@@ -723,6 +788,7 @@ function vProgres(){
     <button class="chip" data-act="newday">+ CrossFit</button></div></div>`;
    h+=`</div>`}
 
+  h+=painCard();
   h+=`</div>`;   /* le conteneur d'accueil se referme ici : les sections
                     suivantes ouvrent chacune le leur, sinon les marges s'ajoutent */
   if(ms.length){h+=`<div class="pane" style="padding-bottom:0"><div class="eyebrow" style="margin-bottom:11px">Premières fois</div></div>
@@ -984,6 +1050,11 @@ function vProfil(){
    <div style="font-size:12px;color:var(--mute);line-height:1.6;margin-top:11px">${S.theme==="auto"
     ?"L'application suit le réglage clair ou sombre de ton téléphone."
     :"Réglage fixe, quel que soit celui du téléphone."}</div></div>
+   <div class="card flat" style="margin-top:20px">
+   <div class="eyebrow" style="margin-bottom:11px">Suivi de la douleur</div>
+   <div class="chips">`+PAIN_Z.map(([k,l])=>{const on=((S.pain&&S.pain.zones)||[]).includes(k);
+    return`<button class="chip ${on?"on":""}" data-act="painz" data-v="${k}" aria-pressed="${on}">${l}</button>`}).join("")+`</div>
+   <div style="font-size:12px;color:var(--mute);line-height:1.6;margin-top:11px">Les zones choisies se notent de 0 à 10 après chaque séance et le lendemain matin (carte « Aujourd'hui » de l'accueil). Au-delà des repères, les exercices qui les sollicitent sont allégés dans le plan.</div></div>
    <div class="card flat" style="margin-top:20px">
    <div class="eyebrow" style="margin-bottom:11px">Onglets affichés</div>
    <div class="chips">`+[["plan","Plan"],["niveau","Niveau"]]
@@ -1428,6 +1499,24 @@ function hist_bench(name,curId){
    past.slice(0,4).map(x=>`<div class="row"><span style="font-size:13.5px;color:var(--mute)">${fMid(x.date)}</span>
    <span><span class="dsp" style="font-size:18px">${x.sc.txt}</span>${x.rx?' <span class="badge">Rx</span>':""}</span></div>`).join("")+`</div>`}
 
+/* Carte « Aujourd'hui » : séances prévues du jour et douleur du matin */
+function todayCard(){
+ const pl=planOn()?planDay(TODAY):[],zs=(S.pain&&S.pain.zones)||[],cf=S.sessions.filter(x=>x.date===TODAY);
+ if(!pl.length&&!zs.length&&!cf.length)return"";
+ let h=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+  <div class="eyebrow">Aujourd'hui</div><span style="font-size:12px;color:var(--mute);text-transform:capitalize">${fLong(TODAY)}</span></div>`;
+ if(!pl.length&&!cf.length)h+=`<div style="font-size:13.5px;color:var(--mute);padding:6px 0">Pas de séance prévue : jour de repos ou séance libre.</div>`;
+ cf.forEach(x=>{h+=`<button style="width:100%;text-align:left;border-top:1px solid var(--line);padding:11px 0;display:flex;align-items:center;gap:9px" data-act="openday" data-v="${x.id}">
+  <i class="pdot done" style="--c:var(--aqua)"></i><b style="flex:1;font-size:14px">CrossFit${(x.metcons||[])[0]&&x.metcons[0].name?" · "+esc(x.metcons[0].name):""}</b><span style="font-size:12px;font-weight:600">Faite ›</span></button>`});
+ pl.forEach(x=>{h+=`<button style="width:100%;text-align:left;border-top:1px solid var(--line);padding:11px 0;display:flex;align-items:center;gap:9px" data-act="planopen" data-v="${esc(x.key)}">
+  <i class="pdot${x.done?" done":""}" style="--c:${x.color};flex:none"></i>
+  <span style="flex:1;min-width:0"><b style="display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}</b>
+  <span style="font-size:12px;color:var(--mute)">${esc(x.prog)}${x.dur?" · "+x.dur+" min":""}</span></span>
+  <span style="flex:none;font-size:12.5px;font-weight:700;color:${x.done?"var(--ink)":"var(--aqua)"}">${x.done?"Faite"+(x.rpe?" · RPE "+x.rpe:""):"Démarrer"} ›</span></button>`});
+ if(zs.length){h+=`<div style="border-top:1px solid var(--line);margin-top:2px;padding-top:2px">`+
+  zs.map(z=>painChips(TODAY,z,"matin","Ce matin, douleur "+painZ(z)[1].toLowerCase())).join("")+`</div>`}
+ return h+`</div>`}
+
 /* Rappel des séances lourdes du plan autour de la date du CrossFit */
 function planNear(date){
  if(!planOn())return"";
@@ -1439,9 +1528,13 @@ function planNear(date){
   lines.push(`<b>${l} au plan</b> : ${esc(x.heavy.join(", "))}.${fam.length?` ${n>0?"Évite le gros volume":"Vas-y mollo"} en ${esc(fam.join(", "))}.`:""}`)}));
  return lines.length?`<div class="card" style="margin-top:14px;border-color:var(--melon);font-size:13.5px;line-height:1.6">${lines.join("<br>")}</div>`:""}
 function vNoter(){
-  if(!S.draft){const l=sorted()[0];
-   return`<div class="head"><div class="eyebrow">De retour du box</div><h1>Noter</h1></div><div class="pane">
-    <button class="btn btn-go" data-act="new">Noter une séance</button>
+  if(!S.draft){const l=sorted()[0],pl=planOn()?planDay(TODAY):[];
+   const typ=[["crossfit","CrossFit","WOD, force, haltéro, gym","var(--aqua)"],["muscu","Muscu","Séance du plan ou en plus","var(--pl-or)"],
+    ["course","Course","Sortie du plan ou en plus","var(--pl-te)"],["autre","Autre","Vélo, natation, mobilité…","var(--pl-vi)"]];
+   const sub=k=>{if(k==="crossfit")return"";const x=pl.find(y=>y.kind===k&&!y.done);return x?`<span style="display:block;font-size:11.5px;color:var(--ink);margin-top:6px;font-weight:600">Prévu : ${esc(x.title)}</span>`:""};
+   return`<div class="head"><div class="eyebrow">Qu'as-tu fait ?</div><h1>Noter</h1></div><div class="pane">
+    <div class="ntype">${typ.map(([k,l,d,c])=>`<button data-act="${k==="crossfit"?"new":"notek"}" data-k="${k}" style="--c:${c}">
+     <i></i><b>${l}</b><span>${d}</span>${planOn()||k==="crossfit"?sub(k):""}</button>`).join("")}</div>
     ${l?`<button class="btn btn-quiet" style="margin-top:12px" data-act="repeat">Reprendre celle du ${fMid(l.date)}</button>`:""}
     <div class="empty">Pas besoin de le faire pendant l'entraînement. La date se choisit juste après.</div></div>`}
   const en=entryOf();if(en)return vDetail(en);
@@ -1469,6 +1562,8 @@ function vNoter(){
    <div style="font-size:12.5px;color:var(--mute);margin-top:3px">${mcSummary(mc)}</div></button>
    <button data-act="mcdel" data-i="${i}" aria-label="Retirer" style="color:var(--mute);font-size:22px;padding:0 4px">×</button></div>`).join("")+`</div>`}
   else h+=`<div style="font-size:13px;color:var(--mute);line-height:1.6;margin-bottom:12px">Le conditionnement du jour : AMRAP, For Time, EMOM… avec son format et ton score.</div>`;
+  if((S.pain&&S.pain.zones||[]).length)h+=`<div class="card" style="margin-top:22px"><div class="eyebrow">Douleur</div>`+
+   S.pain.zones.map(z=>painChips(d.date,z,"seance",painZ(z)[1]+" pendant ou après")).join("")+`</div>`;
   h+=`<button class="btn btn-quiet" data-act="mcadd">Ajouter un metcon</button>
    <div class="card" style="margin-top:26px"><div class="eyebrow" style="margin-bottom:11px">Durée et effort</div>
    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><span style="font-size:13.5px;color:var(--mute)">Durée</span>
@@ -1601,13 +1696,36 @@ function backupNudge(){
     :"Tes données n'ont jamais été sauvegardées."}</span>
    <button class="chip" style="flex:none" data-act="export">Exporter</button></div></div>`}
 
-function vHist(){const H=sorted();
+function vHist(){
+ const P=planOn()&&window.PLAN&&PLAN.historyList?(()=>{try{return PLAN.historyList()}catch(e){return[]}})():[];
+ const F=S.hf||"tout",cats=[["tout","Tout"],["crossfit","CrossFit"],["muscu","Muscu"],["course","Course"],["autre","Autre"]];
+ const items=[...(F==="tout"||F==="crossfit"?sorted().map(s=>({cf:1,date:s.date,s})):[]),
+  ...P.filter(x=>F==="tout"||(F==="autre"?!["muscu","course"].includes(x.kind):x.kind===F)).map(x=>({cf:0,date:x.date,x}))]
+  .sort((a,b)=>b.date.localeCompare(a.date)||b.cf-a.cf);
  let h=`<div class="head"><h1>Historique</h1></div>`+backupNudge();
+ if(P.length)h+=`<div class="pane" style="padding-bottom:0"><div class="chips" style="flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:12px">${cats.map(([k,l])=>`<button class="chip ${F===k?"on":""}" data-act="hf" data-v="${k}">${l}</button>`).join("")}</div></div>`;
+ const H=items;
  if(!H.length)h+=`<div class="empty">Tes séances enregistrées s'empileront ici.</div><div class="pane">`;
  else{h+=`<div class="pane">`;
-  H.forEach(s=>{h+=`<div class="card"><button style="width:100%" data-act="open" data-id="${s.id}">
+  H.forEach(it=>{
+   if(!it.cf){const x=it.x,op=S.open===x.key;
+    h+=`<div class="card"><button style="width:100%" data-act="open" data-id="${esc(x.key)}">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+    <div style="min-width:0;text-align:left"><div style="display:flex;align-items:center;gap:8px"><span class="dsp" style="font-size:20px">${fMid(x.date)}</span>
+     <span class="badge" style="color:${x.color};border-color:${x.color}">${x.kind==="muscu"?"Muscu":x.kind==="course"?"Course":"Autre"}</span></div>
+    <div style="font-size:12.5px;color:var(--mute);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}${x.rpe?" · RPE "+x.rpe:""}</div></div>
+    <span style="color:var(--mute);font-size:19px">${op?"−":"+"}</span></div></button>`;
+    if(op){h+=`<div style="margin-top:15px;border-top:1px solid var(--line);padding-top:11px">`+
+     x.lines.map(l=>`<div style="padding:8px 0"><div style="font-weight:600;font-size:14.5px">${esc(l.n)}</div>
+      <div style="font-size:13px;color:var(--mute);margin-top:3px">${esc(l.t)}</div></div>`).join("")+
+     `<div style="font-size:12.5px;color:var(--mute);margin-top:6px">${esc(x.prog)}${x.dur?" · "+x.dur+" min":""}${x.rpe?" · RPE "+x.rpe:""}${x.extra?" · ajoutée":""}</div>`+
+     (x.note?`<div style="font-size:13px;color:var(--mute);margin-top:9px;line-height:1.6">${esc(x.note)}</div>`:"")+
+     `<button class="btn btn-quiet" style="padding:12px;font-size:13px;margin-top:13px" data-act="planopen" data-v="${esc(x.key)}">Ouvrir dans le plan</button></div>`}
+    h+=`</div>`;return}
+   const s=it.s;
+   h+=`<div class="card"><button style="width:100%" data-act="open" data-id="${s.id}">
    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-   <div style="min-width:0"><div class="dsp" style="font-size:20px">${fMid(s.date)}</div>
+   <div style="min-width:0;text-align:left"><div style="display:flex;align-items:center;gap:8px"><span class="dsp" style="font-size:20px">${fMid(s.date)}</span>${P.length?'<span class="badge" style="color:var(--aqua);border-color:var(--aqua)">CrossFit</span>':""}</div>
    <div style="font-size:12.5px;color:var(--mute);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${[...(s.entries||[]).map(e=>esc(mv(e.movementId).n)),...(s.metcons||[]).map(mc=>esc(mc.name||FMT[mc.format].l))].join(" · ")||"—"}</div></div>
    <span style="color:var(--mute);font-size:19px">${S.open===s.id?"−":"+"}</span></div></button>`;
    if(S.open===s.id){h+=`<div style="margin-top:15px;border-top:1px solid var(--line);padding-top:11px">`+
@@ -2732,6 +2850,11 @@ document.addEventListener("click",ev=>{
   case"moff":{S.moff=Math.min(0,(S.moff||0)+(+v));S.day=null;pendingAnchor="calblock";break}
   case"day":S.day=S.day===v?null:v;pendingAnchor="calblock";break;
   case"dayclose":S.day=null;pendingAnchor="calblock";break;
+  case"pain":{const n=+b.dataset.v,z=b.dataset.z,d0=b.dataset.d,w=b.dataset.w;painSet(d0,z,w,painGet(d0,z,w)===n?null:n);break}
+  case"painz":{if(!S.pain)S.pain={zones:[],log:{}};const i=S.pain.zones.indexOf(v);if(i>=0)S.pain.zones.splice(i,1);else S.pain.zones.push(v);S.pain.zt=Date.now();painVer++;break}
+  case"hf":S.hf=v;S.open=null;break;
+  case"notek":{const k=b.dataset.k,x=planOn()?planDay(TODAY).find(y=>y.kind===k&&!y.done):null;
+   if(x&&window.PLAN){PLAN.open(x.key);S.tab="plan"}else if(window.PLAN&&PLAN.add){PLAN.add(TODAY,k);S.tab="plan"}break}
   case"tabtog":{if(!S.tabsOff)S.tabsOff=[];const i=S.tabsOff.indexOf(v);if(i>=0)S.tabsOff.splice(i,1);else S.tabsOff.push(v);break}
   case"planopen":if(window.PLAN&&PLAN.open){PLAN.open(v);S.tab="plan";S.day=null}break;
   case"planadd":if(window.PLAN&&PLAN.add){PLAN.add(S.day||TODAY,b.dataset.k);S.tab="plan";S.day=null}break;
@@ -3054,6 +3177,8 @@ function applyRemote(rec){
  S.decl=mergeHist(S.decl,migrateHistDict(d.decl));
  S.pin=[...new Set([...(S.pin||[]),...(d.pin||[])])];
  if(Array.isArray(d.tabsOff))S.tabsOff=d.tabsOff;
+ const painAvant=JSON.stringify(normPain(d.pain));S.pain=mergePain(S.pain,d.pain);
+ const painDiff=JSON.stringify(S.pain)!==painAvant;painVer++;
  if(d.theme){S.theme=d.theme;applyTheme()}
  /* Mouvements personnalisés : on réunit les deux côtés plutôt que d'en choisir un. */
  const seen=new Set(),merged=[];
@@ -3073,7 +3198,7 @@ function applyRemote(rec){
  seedProfil();
  try{localStorage.setItem(KEY,JSON.stringify(payload(true)))}catch(e){}
  /* Ce que le cloud ne connaissait pas lui est renvoyé. */
- if((!rp&&S.profile)||grew||localSeules||plDiff)pushSoon();}
+ if((!rp&&S.profile)||grew||localSeules||plDiff||painDiff)pushSoon();}
 
 async function cloudSync(){
  if(!window.CLOUD||!S.cloud.user)return;
