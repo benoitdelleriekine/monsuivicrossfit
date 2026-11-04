@@ -315,7 +315,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v63";
+const APP_VERSION="msc-v64";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -2942,7 +2942,7 @@ function createMove(name){const n=(name||"").trim();if(!n)return null;
    sauf si un mouvement perso porte déjà le même nom. */
 window.registerMoves=list=>{let n=0;(list||[]).forEach(x=>{if(!x||BASE[x.id])return;
   const al=(x.al||[x.n]).map(nkey);if(S.custom.some(c=>al.includes(nkey(c.n))))return;
-  const m={id:x.id,n:x.n,k:x.k||"db",g:x.g||"Muscu",d:"",u:"reps",lad:null};M.push(m);BASE[x.id]=m;
+  const m={id:x.id,n:x.n,k:x.k||"db",g:x.g||"Muscu",d:"",u:x.u||"reps",lad:null};M.push(m);BASE[x.id]=m;
   if(x.pat&&!PAT_CF[x.id])PAT_CF[x.id]=[x.pat];n++});if(n)render()};
 
 document.addEventListener("click",ev=>{
