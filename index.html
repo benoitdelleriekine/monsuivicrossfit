@@ -94,6 +94,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .chiprow .chip span{color:var(--mute);font-weight:600;margin-left:2px}
 .chiprow .chip.on span{color:var(--onacc);opacity:.75}
 .tbadge.k-cf{--c:var(--c-cf)}.tbadge.k-muscu{--c:var(--c-mu)}.tbadge.k-course{--c:var(--c-run)}.tbadge.k-autre{--c:var(--c-oth)}
+.odue{display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px 12px;border-radius:var(--r-m);background:color-mix(in srgb,var(--melon) 12%,transparent);border:1px solid color-mix(in srgb,var(--melon) 40%,transparent)}
 .acts{display:flex;gap:var(--sp-2);margin-top:var(--sp-3)}
 .acts .btn{flex:1;padding:12px 10px;font-size:14px;border-radius:var(--r-m)}
 .eyebrow{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--mute);font-weight:600}
@@ -387,7 +388,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v69";
+const APP_VERSION="msc-v70";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -613,7 +614,8 @@ const unitLabel=u=>u==="sec"?"secondes":u==="m"?"mètres":"répétitions";
 let msCache=null,msKey=null;
 /* Records et premières fois de toutes les séances (CrossFit + séries du plan et des séances libres) */
 let msAllKey=null,msAllCache=null;
-function msAll(){const key=String(S.updatedAt||0)+":"+((S.planif&&S.planif.programs)||[]).map(p=>p.updatedAt||0).join(",")+":"+(S.tabsOff||[]).join(",");
+function msKeyNow(){return String(S.updatedAt||0)+":"+S.sessions.length+":"+((S.planif&&S.planif.programs)||[]).map(p=>p.updatedAt||0).join(",")+":"+(S.tabsOff||[]).join(",")+":"+((S.profile&&S.profile.bw)||"")}
+function msAll(){const key=msKeyNow();
  if(msAllCache&&msAllKey===key)return msAllCache;msAllKey=key;msAllCache=milestonesCalc(allSess());return msAllCache}
 function milestones(ss){
  if(ss===S.sessions){
@@ -1258,7 +1260,11 @@ function patternCard(){
    `</div>`:""}</div></div>`}
 
 /* Un point par seance : meilleure charge estimee, meilleure serie, meilleure allure */
-function curveFor(id){
+/* Courbes mémorisées tant que les données ne changent pas (même clé que les jalons) */
+let cvKey=null,cvCache={};
+function curveFor(id){const key=msKeyNow();if(key!==cvKey){cvKey=key;cvCache={}}
+ if(!cvCache[id])cvCache[id]=curveCalc(id);return cvCache[id].slice()}
+function curveCalc(id){
  return allSess().map(s=>{let rm=null,rp=0,pc=null;
    (s.entries||[]).filter(e=>e.movementId===id).forEach(e=>(e.sets||[]).forEach(x=>{
     const v=e1rm(x.weight,x.reps,x.diff);if(v&&(!rm||v>rm))rm=v;
@@ -1629,6 +1635,9 @@ function todayCard(){
    <b style="display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">${esc(nxt.x.title)}</b></span>
    <span style="flex:none;font-size:12.5px;font-weight:700;color:var(--aqua)">Voir ›</span></button>`;
   else h+=`<div style="font-size:13.5px;color:var(--mute);padding:6px 0">Pas de séance prévue : jour de repos ou séance libre.</div>`}
+ let od=[];try{od=planOn()&&PLAN.overdue?PLAN.overdue():[]}catch(e){}
+ od.forEach(o=>{h+=`<div class="odue"><span style="flex:1;min-width:0"><b style="display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.title)}</b><span style="font-size:12px;color:var(--mute)">prévue ${fMid(o.date)}, pas faite</span></span>
+  <button class="btn btn-quiet sm" style="width:auto;flex:none" data-act="odmove" data-v="${esc(o.key)}" aria-label="Reporter ${esc(o.title)} à aujourd'hui">Aujourd'hui</button><button class="btn btn-quiet sm danger" style="width:auto;flex:none" data-act="oddrop" data-v="${esc(o.key)}" aria-label="Supprimer ${esc(o.title)}">✕</button></div>`});
  h+=`<div class="acts">`+(run?`<button class="btn btn-go" data-act="planrun" data-v="${esc(run.key)}">▶ Démarrer</button>`:canFree?`<button class="btn btn-go" data-act="planfree">▶ Séance libre</button>`:"")+
   `<button class="btn ${run||canFree?"btn-quiet":"btn-go"}" data-act="tab" data-v="noter">+ Noter</button></div>`;
  if(zs.length){h+=`<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:2px">`+
@@ -1865,7 +1874,7 @@ function setsCard(en,m,isCar){
 
 function step(k,unit,st,min,sm){return`<div class="step${sm?" sm":""}">
  <button class="step-btn" aria-label="Diminuer" data-act="dec" data-k="${k}" data-s="${st}" data-min="${min||0}">−</button>
- <div class="step-val"><input type="number" inputmode="decimal" id="in-${k}" data-k="${k}" value="${S.d[k]}">
+ <div class="step-val"><input type="number" inputmode="decimal" id="in-${k}" data-k="${k}" value="${S.d[k]}" aria-label="${({age:"Âge (ans)",bw:"Poids de corps (kg)"})[k]||unit}">
  <div class="eyebrow" style="margin-top:3px">${unit}</div></div>
  <button class="step-btn" aria-label="Augmenter" data-act="inc" data-k="${k}" data-s="${st}">+</button></div>`}
 
@@ -3079,6 +3088,8 @@ document.addEventListener("click",ev=>{
   case"tabtog":{if(!S.tabsOff)S.tabsOff=[];const i=S.tabsOff.indexOf(v);if(i>=0)S.tabsOff.splice(i,1);else S.tabsOff.push(v);break}
   case"planopen":if(window.PLAN&&PLAN.open){PLAN.open(v);S.tab="plan";S.day=null}break;
   case"planfree":if(window.PLAN&&PLAN.free){S.tab="plan";S.notePlan=false;S.day=null;setTimeout(()=>PLAN.free(),0)}break;
+  case"odmove":if(window.PLAN&&PLAN.moveToToday){PLAN.moveToToday(v)}break;
+  case"oddrop":if(window.PLAN&&PLAN.drop&&confirm("Supprimer cette séance prévue ?")){PLAN.drop(v)}break;
   case"planrun":if(window.PLAN&&PLAN.open){PLAN.open(v);S.tab="plan";S.day=null;if(PLAN.run)setTimeout(()=>PLAN.run(v),0)}break;
   case"planadd":if(window.PLAN&&PLAN.add){PLAN.add(S.day||TODAY,b.dataset.k);S.tab="plan";S.day=null}break;
   case"openday":S.tab="historique";S.open=v;S.day=null;break;

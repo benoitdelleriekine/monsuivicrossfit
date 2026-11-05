@@ -178,7 +178,7 @@
   var logsFor = function (p, ex, k) {
     var res = [];
     (p.sessions || []).concat(extrasIn(p, k)).forEach(function (s) {
-      var has = (s.exercises || []).some(function (e) { return s.extra ? e.ref === ex.id : e.id === ex.id; }); if (!has) return;
+      var has = (s.exercises || []).some(function (e) { return s.extra ? e.ref === ex.id : e.id === ex.id; }) || (((p.overrides || {})[k + '|' + s.id + '|+add'] || {}).adds || []).some(function (z) { return z.ref === ex.id; }); if (!has) return;
       var lg = (p.logs || {})[k + '|' + s.id]; if (lg && lg.ex && lg.ex[ex.id]) res.push({ raw: lg.ex[ex.id], sess: s });
     });
     cfLifts(p, ex).forEach(function (c) { if (c.w === k) res.push(c); });
@@ -514,6 +514,12 @@
     var adds = ovs[w + '|' + s.id + '|+add'];
     if (adds && (adds.adds || []).length && (s.extra ? s.kind === 'muscu' : p.kind === 'muscu')) adds.adds.forEach(function (z) {
       if (!z || !z.id || g.items.some(function (q) { return q.id === z.id; })) return;
+      if (z.ref) {
+        var b3 = null; (p.sessions || []).forEach(function (s0) { if (b3 || s0.id === s.id || !(s0.exercises || []).some(function (e) { return e.id === z.ref; })) return; var g0 = genMuscu(p, s0, w); if (g0) b3 = g0.items.filter(function (q) { return q.id === z.ref; })[0] || null; });
+        if (b3) { var r3 = clone(b3); r3.added = true; r3.info = 'Ajouté à cette séance' + (r3.info ? ' · ' + r3.info : '');
+          var o4 = ovs[w + '|' + s.id + '|' + r3.id]; if (o4) { if (o4.sets != null) r3.sets = o4.sets; if (o4.reps != null) { r3.reps = o4.reps; r3.repsPlan = o4.reps; } if (o4.kg != null) { r3.loadNum = o4.kg; r3.load = kg(o4.kg); } if (o4.rpe != null) { r3.rpePlan = o4.rpe; r3.rpeTxt = String(o4.rpe); } r3.scheme = r3.sets + '×' + r3.reps; r3.edited = true; }
+          g.items.push(r3); return; }
+      }
       var lb = libFind(z.name), sec = !!(lb && lb[5] === 'sec'), rp = !!(lb && (lb[5] === 'reps' || sec));
       var n3 = { id: z.id, name: z.name, mode: rp ? 'reps' : 'kg', unit: sec ? 's' : '', sets: 3, reps: sec ? 30 : 10, loadNum: null, rpePlan: 8, rpeTxt: '8', rest: '2 min', note: '', added: true, info: 'Ajouté à cette séance' };
       var o3 = ovs[w + '|' + s.id + '|' + z.id];
@@ -535,6 +541,7 @@
       g.title = String(g.title).replace(g.dur + ' min', nd + ' min'); g.dur = nd; g.runMin = nd; g.meta = 'Allégée (douleur ' + fl.course + ') · ' + g.meta;
       g.items.forEach(function (it) { if (/min/.test(it.scheme || '')) it.scheme = nd + ' min'; });
     }
+    var lgd = (p.logs || {})[w + '|' + s.id]; if (lgd && lgd.done && num(lgd.dur, 0) > 0) { g.durPlan = g.dur; g.dur = num(lgd.dur); g.durReal = true; }
     g.ua = Math.round(g.dur * g.rpe);
     return g;
   };
@@ -756,8 +763,9 @@
       persist(p); return z.id;
     }
     p.overrides = p.overrides || {};
-    var k = x.w + '|' + x.s.id + '|+add', o = Object.assign({}, p.overrides[k] || {}), id = 'xa' + uid();
-    o.adds = (o.adds || []).concat([{ id: id, name: nm }]); p.overrides[k] = o; persist(p); return id;
+    var own2 = null; (p.kind === 'muscu' ? (p.sessions || []) : []).forEach(function (s0) { (s0.exercises || []).forEach(function (e) { if (!own2 && normTxt(e.name) === normTxt(nm)) own2 = e; }); });
+    var k = x.w + '|' + x.s.id + '|+add', o = Object.assign({}, p.overrides[k] || {}), id = own2 ? own2.id : 'xa' + uid();
+    o.adds = (o.adds || []).concat([own2 ? { id: id, ref: id, name: own2.name } : { id: id, name: nm }]); p.overrides[k] = o; persist(p); return id;
   };
   var rmAddedEx = function (x, it) {
     var p = x.p, k = x.w + '|' + x.s.id + '|+add', o = (p.overrides || {})[k]; if (!o) return;
@@ -903,10 +911,11 @@
         out.push({ w: w, date: date, mode: ex.mode, plan: it ? it.load : '', planScheme: it ? it.scheme : '', planNum: it ? it.loadNum : null, kg: r.kg, reps: r.reps, rpe: r.rpe, e1: ex.mode === 'pct' ? (it ? adjE1(it, r) : e1rm(r.kg, r.reps, r.rpe || 8)) : null, ex: ex });
       });
       /* exercices remplacés (« ~sw ») et exercices libres des séances ajoutées */
-      if (Object.keys(lg.ex).some(function (k0) { return /~sw$/.test(k0) || /^xa/.test(k0) || (s.extra && !findEx(p, k0)); })) {
+      if ((p.overrides || {})[w + '|' + s.id + '|+add'] || Object.keys(lg.ex).some(function (k0) { return /~sw$/.test(k0) || /^xa/.test(k0) || (s.extra && !findEx(p, k0)); })) {
         var g2 = gen(p, s, w), d2 = s.extra ? parseISO(s.date) : addDays(progStart(p), (w - 1) * 7 + effDay(p, s, w));
         (g2 ? g2.items : []).forEach(function (it2) {
           if (it2.name !== name || !(it2.swapped || it2.added || (s.extra && !findEx(p, it2.id)))) return;
+          if (it2.added && findEx(p, it2.id) && (s.exercises || []).some(function (e0) { return e0.id === it2.id; })) return;
           var r2 = flat(lg.ex[it2.id]); if (r2.kg == null && r2.reps == null) return;
           out.push({ w: w, date: d2, mode: it2.mode, plan: it2.load, planScheme: it2.scheme, planNum: it2.loadNum, kg: r2.kg, reps: r2.reps, rpe: r2.rpe, e1: null, ex: { id: it2.id, name: it2.name, mode: it2.mode } });
         });
@@ -948,9 +957,37 @@
     persist(p);
     return p.id + '|' + nw + '|' + XE.id;
   };
+  /* Séances « à réaliser » dont la date est passée sans qu'elles soient faites */
+  var overdueList = function (days) {
+    var lim = iso(addDays(T0, -(days || 14))), td = iso(T0), out = [];
+    state.programs.forEach(function (p) { (p.extras || []).forEach(function (e) {
+      if (!e || !e.todo || !(e.date < td) || e.date < lim) return; var w = extraW(p, e), lg = (p.logs || {})[w + '|' + e.id];
+      if (lg && lg.done) return; out.push({ key: p.id + '|' + w + '|' + e.id, date: e.date, title: e.name || 'Séance', color: colorOf(p) }); }); });
+    return out.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+  };
+  var moveExtra = function (key, d) {
+    var x = findInst(key), fd = parseISO(d); if (!x || !x.s.extra || !fd) return null;
+    var p = x.p, ow = x.w, E = (p.extras || []).filter(function (z) { return z.id === x.s.id; })[0]; if (!E) return null;
+    var E2 = Object.assign({}, E, { date: d, day: dow(fd) }), nw = extraW(p, E2);
+    p.extras = p.extras.map(function (z) { return z.id === E.id ? E2 : z; });
+    if (nw !== ow) {
+      var pre = ow + '|' + E.id;
+      if (p.logs && p.logs[pre]) { p.logs[nw + '|' + E.id] = p.logs[pre]; delete p.logs[pre]; }
+      Object.keys(p.overrides || {}).forEach(function (k) { if (k.indexOf(pre + '|') === 0) { p.overrides[nw + '|' + E.id + k.slice(pre.length)] = p.overrides[k]; delete p.overrides[k]; } });
+    }
+    persist(p); return p.id + '|' + nw + '|' + E.id;
+  };
+  var dropExtra = function (key) {
+    var x = findInst(key); if (!x || !x.s.extra) return;
+    var p = x.p, id = x.s.id; p.extras = (p.extras || []).filter(function (z) { return z.id !== id; });
+    if (p.logs) delete p.logs[x.w + '|' + id];
+    Object.keys(p.overrides || {}).forEach(function (k) { if (k.indexOf(x.w + '|' + id + '|') === 0) delete p.overrides[k]; });
+    persist(p);
+  };
   var extraBarHtml = function (x) {
     var conf = ui.confirm === 'xdel:' + x.key;
-    if (x.s.todo && !(x.log && x.log.done)) return '<div class="xbar"><span class="small t2">Séance à réaliser, préparée à l’avance : lance-la le jour J (mode séance) ou note-la comme une séance prévue.</span>' +
+    if (x.s.todo && !(x.log && x.log.done)) return '<div class="xbar"><span class="small t2">' + (iso(x.date) < iso(T0) ? '<b style="color:var(--warn)">Prévue le ' + esc(dLabel(x.date)) + ', pas encore faite.</b> Reporte-la à aujourd’hui ou supprime-la.' : 'Séance à réaliser, préparée à l’avance : lance-la le jour J (mode séance) ou note-la comme une séance prévue.') + '</span>' +
+      (iso(x.date) < iso(T0) && !conf ? '<span class="row"><button class="btn sm primary" data-a="x-today" data-key="' + esc(x.key) + '">Reporter à aujourd’hui</button></span>' : '') +
       (conf ? '<span class="row"><b class="small">Supprimer cette séance ?</b><button class="btn sm b-skip" data-a="x-del-yes" data-key="' + esc(x.key) + '">Supprimer</button><button class="btn sm ghost" data-a="del-no">Annuler</button></span>'
         : '<span class="row"><button class="btn sm b-edit" data-a="x-edit" data-key="' + esc(x.key) + '">Modifier</button><button class="btn sm b-skip" data-a="x-del" data-key="' + esc(x.key) + '">Supprimer</button></span>') + '</div>';
     return '<div class="xbar"><span class="small t2">Séance ajoutée à la main : elle compte dans la charge de la semaine' + (x.s.kind === 'autre' ? '' : x.s.kind === 'course' ? ' et le volume de course' : ', le tonnage et l’ajustement des charges (exercices de ton programme)') + '.</span>' +
@@ -1148,7 +1185,7 @@
   };
   var runEndHtml = function (x) {
     var lg = x.log || {}, mins = Math.round((Date.now() - num(ui.run.t0, Date.now())) / 60000), rv = num(lg.rpe, 0);
-    var h = '<h2 class="runname">Bravo, c’est fini</h2>' + (mins > 0 && mins < 300 ? '<p class="t2">' + mins + ' min depuis le début' + (x.s.free ? ' : durée enregistrée pour la charge de la séance' : '') + '.</p>' : '');
+    var h = '<h2 class="runname">Bravo, c’est fini</h2>' + (mins > 0 && mins < 300 ? '<p class="t2">' + mins + ' min depuis le début' + (mins >= 5 ? ' : durée enregistrée pour la charge de la séance' : '') + '.</p>' : '');
     if (x.s.free) h += '<label class="field"><span>Nom de la séance</span><input class="in" data-rf="name" maxlength="60" value="' + esc(ui.run.name != null ? ui.run.name : (x.s.name || '')) + '" placeholder="Séance libre"></label>';
     h += '<div class="col" style="gap:6px"><div class="row between"><span class="small mu">RPE de la séance (effort global)' + (x.g.rpe ? ' · prévu ' + fmtN(x.g.rpe) : '') + '</span><b class="small">' + (rv ? 'RPE ' + rv : 'Touche l’échelle') + '</b></div>' + runScale('run-srpe', rv) + '</div>';
     h += summaryHtml(x);
@@ -1239,7 +1276,9 @@
       case 'run-close': if (runDropEmpty(x)) { runClose(true); toast('Séance vide : rien n’a été enregistré'); return; } runClose(false); return;
       case 'run-finish':
         if (runDropEmpty(x)) { runClose(true); toast('Séance vide : rien n’a été enregistré'); return; }
-        if (x.s.free) { var nm = String(ui.run.name != null ? ui.run.name : (x.s.name || '')).trim() || 'Séance libre', pt = { name: nm }, mn = Math.round((Date.now() - num(ui.run.t0, Date.now())) / 60000); if (!num(x.s.dur, 0) && mn >= 5 && mn < 300) pt.dur = mn; runSetExtra(x, pt); }
+        var mn = Math.round((Date.now() - num(ui.run.t0, Date.now())) / 60000);
+        if (x.s.free) { var nm = String(ui.run.name != null ? ui.run.name : (x.s.name || '')).trim() || 'Séance libre', pt = { name: nm }; if (!num(x.s.dur, 0) && mn >= 5 && mn < 300) pt.dur = mn; runSetExtra(x, pt); }
+        else if (runHasSets(x) && mn >= 5 && mn < 300 && !num((x.log || {}).dur, 0)) setLog(ui.run.key, { done: true, dur: mn });
         runClose(true); toast('Séance enregistrée'); return;
       case 'run-mute': tm.mute = !tm.mute; try { localStorage.setItem('planif-mute', tm.mute ? '1' : '0'); } catch (e) {} break;
       case 'run-go': go(num(b.getAttribute('data-i')) | 0); break;
@@ -1824,6 +1863,7 @@
         var xx = findInst(key); if (xx && xx.s.extra) { var E = xx.s; ui.xf = { id: E.id, todo: E.todo && !(xx.log && xx.log.done) ? 1 : 0, origPid: xx.p.id, kind: E.kind, date: E.date, pid: xx.p.id, name: E.name || '', dur: E.dur == null ? '' : E.dur, rpe: (xx.log && xx.log.rpe) || E.rpe || 0, km: E.km == null ? '' : E.km, note: E.note || '', ex: clone(E.exercises || []), newEx: '' }; }
         break;
       case 'x-del': ui.confirm = 'xdel:' + key; break;
+      case 'x-today': var mk = moveExtra(key, iso(T0)); if (mk) { ui.sel = mk; ui.weekStart = iso(mondayOf(T0)); ui.day = dow(T0); toast('Reportée à aujourd’hui'); } break;
       case 'x-del-yes':
         var xd2 = findInst(key); if (xd2 && xd2.s.extra) { var PP = xd2.p, did2 = xd2.s.id; PP.extras = (PP.extras || []).filter(function (z) { return z.id !== did2; }); if (PP.logs) delete PP.logs[xd2.w + '|' + did2]; Object.keys(PP.overrides || {}).forEach(function (k) { if (k.indexOf(xd2.w + '|' + did2 + '|') === 0) delete PP.overrides[k]; }); persist(PP); ui.sel = null; toast('Séance supprimée'); }
         ui.confirm = null; break;
@@ -1997,6 +2037,10 @@
     unmount: function () { mainRoot = null; },
     /* Minuteur de repos, utilisable depuis la saisie CrossFit */
     timer: function (txt) { startTimer(txt || '2 min'); },
+    /* Séances « à réaliser » passées non faites (carte Aujourd'hui) : reporter ou supprimer */
+    overdue: function () { return overdueList(14); },
+    moveToToday: function (key) { editBegin(); var k = moveExtra(key, iso(today0())); if (k) open2(k); return k; },
+    drop: function (key) { editBegin(); dropExtra(key); },
     /* Mode séance plein écran (bouton « Démarrer » de la carte Aujourd'hui) */
     run: function (key) { if (futureOk(key)) runOpen(key); },
     /* Séance de muscu libre : créée vide aujourd'hui, remplie dans le mode séance */
@@ -2092,12 +2136,13 @@
       return out;
     },
     /* Accès au moteur pour les tests automatiques (lecture seule, aucune interface ne s'en sert) */
-    engine: { editBegin: function () { editBegin(); }, persist: function (p) { persist(p); }, gen: gen, tmTrace: tmTrace, kgShift: kgShift, findEx: findEx, findInst: findInst, muscuSpec: muscuSpec, logsFor: logsFor, cfIdOf: cfIdOf, exPattern: exPattern, libFind: libFind, LIB: LIB, progStart: progStart, instancesOn: instancesOn, weekStats: weekStats, parseISO: parseISO, iso: iso, addDays: addDays, rstep: rstep, e1rm: e1rm },
+    engine: { doSwap: function (x, it, n, all) { doSwap(x, it, n, all); }, copyInst: function (x, d) { return copyInst(x, d); }, addExTo: function (x, n) { return addExTo(x, n); }, saveNote: function (x, it, t) { saveNote(x, it, t); }, lastNote: function (n, d) { return lastNote(n, d); }, overdue: function () { return overdueList(14); }, moveExtra: function (k, d) { return moveExtra(k, d); }, editBegin: function () { editBegin(); }, persist: function (p) { persist(p); }, gen: gen, tmTrace: tmTrace, kgShift: kgShift, findEx: findEx, findInst: findInst, muscuSpec: muscuSpec, logsFor: logsFor, cfIdOf: cfIdOf, exPattern: exPattern, libFind: libFind, LIB: LIB, progStart: progStart, instancesOn: instancesOn, weekStats: weekStats, parseISO: parseISO, iso: iso, addDays: addDays, rstep: rstep, e1rm: e1rm },
     library: function () { return LIB.map(function (l) { return { id: l[0], n: libName(l), k: l[2], g: l[3], pat: l[4], mode: l[5] }; }); },
     programs: function () { return state.programs.map(function (p) { return { id: p.id, name: p.name || KIND[p.kind].label, color: colorOf(p), kind: p.kind }; }); },
     open: function (key) { var x = findInst(key); if (!x) return; ui.view = 'semaine'; ui.weekStart = iso(mondayOf(x.date)); ui.day = dow(x.date); ui.sel = key; ui.xf = null; ui.edit = null; },
     add: function (d, kind) { var dt = parseISO(d); if (!dt) return; ui.view = 'semaine'; ui.weekStart = iso(mondayOf(dt)); ui.day = dow(dt); ui.sel = null; var k = kind || 'muscu', xp = xfPrograms(k, d)[0]; ui.xf = { kind: k, date: d, pid: xp ? xp.id : null, name: '', dur: '', rpe: 0, km: '', note: '', ex: [], newEx: '' }; }
   };
+  function open2(key) { var x = findInst(key); if (!x) return; ui.view = 'semaine'; ui.weekStart = iso(mondayOf(x.date)); ui.day = dow(x.date); ui.sel = key; ui.xf = null; ui.edit = null; }
   // Les mouvements de musculation de la bibliothèque rejoignent la liste du suivi CrossFit
   if (typeof window.registerMoves === 'function') window.registerMoves(LIB.filter(function (l) { return /^mu-/.test(l[0]); }).map(function (l) { return { id: l[0], n: libName(l), al: l[1].split('|'), k: l[2], g: 'Muscu · ' + l[3], pat: l[4], u: l[5] === 'sec' ? 'sec' : 'reps' }; }));
   runResume();
