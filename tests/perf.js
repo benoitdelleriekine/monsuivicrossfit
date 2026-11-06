@@ -65,7 +65,7 @@ const t0=process.hrtime.bigint();
 S.tab='progres';S.hv='annee';render();
 const dt=Number(process.hrtime.bigint()-t0)/1e6;
 const unSeul=chrono(()=>milestones(S.sessions),3);
-console.log(`  rendu "année" complet          : ${dt.toFixed(0)} ms`);
+console.log(`  ${dt<500?'✓':'✗'} rendu "année" complet          : ${dt.toFixed(0)} ms (seuil 500 ms)`);
 console.log(`  un seul appel à milestones()   : ${unSeul.toFixed(1)} ms`);
 console.log(`  ratio                          : ~${Math.round(dt/unSeul)} appels équivalents`);
 console.log('\n  (statsRange() appelle milestones(toutes les séances) ;');

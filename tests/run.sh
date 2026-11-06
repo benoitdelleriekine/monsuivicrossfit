@@ -4,8 +4,9 @@ cd "$(dirname "$0")"
 ko=0
 for f in [!_]*.js; do
   out=$(node "$f" 2>&1)
-  e=$(echo "$out" | grep -cE "✗|ERREUR|CASSÉ|PERDU|SyntaxError|TypeError|ReferenceError")
-  o=$(echo "$out" | grep -cE "✓|Aucune erreur|exacts|conforme")
+  e=$(echo "$out" | grep -cE "✗|ERREUR|CASSÉ|PERDU|ABSENT|ÉCRASÉ|CORROMPU|\(bug\)|: NON|tronqués|SyntaxError|TypeError|ReferenceError")
+  o=$(echo "$out" | grep -cE "✓|Aucune erreur|exacts|conforme|: oui|: conservé|: OK|accepté|réinitialisé|repli OK|complets")
+  [ "$o" -eq 0 ] && [ "$e" -eq 0 ] && { e=1; out="✗ aucune vérification reconnue dans la sortie"; }
   if [ "$e" -eq 0 ]; then printf "  ✓ %-14s %s\n" "${f%.js}" "$o vérifications"
   else ko=$((ko+1)); printf "  ✗ %-14s %s\n" "${f%.js}" "$e problème(s)"; echo "$out" | grep -E "✗|Error" | head -3 | sed 's/^/      /'; fi
 done

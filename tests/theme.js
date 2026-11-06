@@ -13,11 +13,12 @@ global.window={addEventListener(){},dispatchEvent(){},matchMedia:()=>({matches:d
 global.navigator={};
 let store={};global.localStorage={getItem:k=>store[k]||null,setItem:(k,v)=>store[k]=v,removeItem:k=>delete store[k]};
 const {S,applyTheme,render}=new Function(code+"\n;return {S,applyTheme,render};")();
+const EXP={dark:'#0D0F12',light:'#F4F5F6',auto:'#F4F5F6'};
 for(const t of ['dark','light','auto']){
- S.theme=t;applyTheme();
- console.log(`  thème ${t.padEnd(6)} → data-theme="${root.getAttribute('data-theme')}"  meta ${meta.c}`);}
+ S.theme=t;applyTheme();const ok=root.getAttribute('data-theme')===t&&meta.c===EXP[t];
+ console.log(`  ${ok?'✓':'✗'} thème ${t.padEnd(6)} → data-theme="${root.getAttribute('data-theme')}"  meta ${meta.c}`);}
 dark=true;S.theme='auto';applyTheme();
-console.log(`  auto + système sombre → meta ${meta.c}`);
+console.log(`  ${meta.c==='#0D0F12'?'✓':'✗'} auto + système sombre → meta ${meta.c}`);
 // persistance
 S.theme='light';S.sessions=[];require('assert')(JSON.parse(store['cf-progres']||'{}')||true);
-render();console.log('  rendu après bascule : OK');
+render();console.log('  ✓ rendu après bascule : OK');

@@ -9,18 +9,19 @@ function el(){const o={innerHTML:'',textContent:'',style:{},dataset:{},children:
  querySelector(){return null},querySelectorAll(){return[]},getElementById(){return null},closest(){return null},contains(){return false},
  focus(){},blur(){},click(){},scrollIntoView(){},setSelectionRange(){},getBoundingClientRect(){return{top:0,height:0,width:0}},
  attachShadow(){const r=el();r.host=this;return r}};return o}
-function boot(store){
- store=store||{};
- const nodes={};
- global.document={addEventListener(){},removeEventListener(){},getElementById:i=>nodes[i]||(nodes[i]=el()),createElement:()=>el(),
+function boot(store,opt){
+ store=store||{};opt=opt||{};
+ const nodes={},L={};const on=(t,f)=>{(L[t]=L[t]||[]).push(f)};
+ global.document={addEventListener:on,removeEventListener(){},getElementById:i=>nodes[i]||(nodes[i]=el()),createElement:()=>el(),
   documentElement:Object.assign(el(),{scrollHeight:1000}),head:el(),body:el(),querySelector:()=>null,querySelectorAll:()=>[],activeElement:null,
   fonts:{load:()=>Promise.resolve()},visibilityState:'visible'};
- global.window={addEventListener(){},removeEventListener(){},dispatchEvent(){},matchMedia:()=>({matches:false,addEventListener(){}}),
+ global.window={addEventListener:on,removeEventListener(){},dispatchEvent(){},matchMedia:q=>({matches:!!(opt.coarse&&/coarse/.test(q)),addEventListener(){}}),
   scrollTo(){},scrollBy(){},innerWidth:390};
- global.navigator={vibrate(){}};
+ /* Node 21+ expose un navigator en lecture seule : on le remplace explicitement. */
+ Object.defineProperty(global,'navigator',{value:Object.assign({vibrate(){}},opt.navigator||{}),configurable:true,writable:true});
  global.localStorage={getItem:k=>store[k]===undefined?null:store[k],setItem:(k,v)=>{store[k]=String(v)},removeItem:k=>{delete store[k]}};
  global.alert=()=>{};global.confirm=()=>true;global.prompt=()=>null;
  global.Blob=function(){};global.URL={createObjectURL:()=>'',revokeObjectURL(){}};
- const R=new Function(host+'\n;'+planif+'\n;return {S,render,save,load,payload,applyRemote,backupData,restoreData,snapshotOnUpdate,backups,mergePlanif,normPlanif,APP_VERSION,suggestFor,recordList,mv,PLAN:window.PLAN,HOST:window.PLAN_HOST};')();
- global.PLAN=global.window.PLAN;R.store=store;return R}
+ const R=new Function(host+'\n;'+planif+'\n;return {S,render,save,load,payload,applyRemote,cloudSync,wipeAll,stripBefore,downloadJSON,backupData,restoreData,snapshotOnUpdate,backups,mergePlanif,normPlanif,APP_VERSION,suggestFor,recordList,mv,PLAN:window.PLAN,HOST:window.PLAN_HOST};')();
+ global.PLAN=global.window.PLAN;R.store=store;R.fire=(t,e)=>(L[t]||[]).forEach(f=>f(e||{}));R.doc=global.document;return R}
 module.exports={boot};

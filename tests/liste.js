@@ -67,7 +67,7 @@ console.log('\n═══ Premières fois cliquables ═══');
 const ms=milestones(S.sessions);
 console.log('  jalons avec identifiant : '+ms.filter(x=>x.id).length+'/'+ms.length);
 S.progG=null;render();
-console.log('  cartes cliquables  : '+(/class="ms-card"[^>]*data-act="fiche"/.test(H())?'✓':'✗'));
+console.log('  cartes cliquables  : '+(/class="ms2"[^>]*data-act="fiche"/.test(H())?'✓':'✗'));
 const cible=ms[0];
 click({act:'fiche',v:cible.id});render();
 console.log('  ouvre la fiche de « '+mv(cible.id).n+' » : '+(H().includes(mv(cible.id).n)?'✓':'✗'));
