@@ -388,7 +388,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v70";
+const APP_VERSION="msc-v71";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -519,12 +519,12 @@ function weeksGrid(n){const rows=[],m=new Date();m.setDate(m.getDate()-((m.getDa
 
 /* ══════════ ÉTAT ══════════ */
 let S={sessions:[],custom:[],planif:{programs:[],deleted:[]},bar:15,tab:"progres",draft:null,focus:null,picker:false,q:"",prog:null,open:null,
- profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},pin:[],tabsOff:["niveau"],delSessions:[],pain:{zones:[],log:{}},hf:"tout",histOpen:null,nchain:null,nfilt:"tout",share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
+ profile:null,psex:"f",pname:"",mc:null,pickFor:"entry",done:null,pat:false,lastExport:null,progG:null,fiche:null,msort:"recent",mq:"",tests:{},decl:{},pin:[],tabsOff:["niveau"],delSessions:[],wipedAt:0,pain:{zones:[],log:{}},hf:"tout",histOpen:null,nchain:null,nfilt:"tout",share:null,sharePhoto:null,drag:null,hv:"mois",moff:0,day:null,theme:"dark",
  updatedAt:0,cloud:{enabled:false,user:null,status:"",busy:false,sent:false},email:"",otp:"",
  d:{w:0,reps:5,diff:"juste",level:0,dist:500,min:2,sec:0,age:30,bw:60}};
 /* Instantané des données, avec horodatage pour arbitrer la synchronisation */
 function payload(local){return{sessions:S.sessions,custom:S.custom,planif:S.planif,bar:S.bar,profile:S.profile,
- lastExport:S.lastExport,theme:S.theme,tests:S.tests,decl:S.decl,pin:S.pin,tabsOff:S.tabsOff,delSessions:S.delSessions,pain:S.pain,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
+ lastExport:S.lastExport,theme:S.theme,tests:S.tests,decl:S.decl,pin:S.pin,tabsOff:S.tabsOff,delSessions:S.delSessions,wipedAt:S.wipedAt||0,pain:S.pain,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
 const save=()=>{S.updatedAt=Date.now();pushSoon();try{localStorage.setItem(KEY,JSON.stringify(
  payload(true)))}catch(e){alert("Sauvegarde impossible : la mémoire du navigateur est pleine ou bloquée.")}};
 /* ══════════ SAUVEGARDE COMPLÈTE ══════════
@@ -555,8 +555,19 @@ function snapshotOnUpdate(){try{
   const b=backups();b.unshift({ver:prev||"ancienne version",at:new Date().toISOString(),data:backupData()});
   localStorage.setItem(BKEY,JSON.stringify(b.slice(0,3)))}
  localStorage.setItem(VKEY,APP_VERSION)}catch(e){}}
+/* Sur téléphone, l'app installée ne sait pas toujours suivre un lien de téléchargement :
+   on ouvre la feuille « Partager » (Enregistrer dans Fichiers, AirDrop, mail). Sur ordinateur,
+   ou si le partage de fichier n'est pas possible, téléchargement classique. Renvoie "share"
+   ou "download", pour les tests. */
 function downloadJSON(obj,name){const bl=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
- const u=URL.createObjectURL(bl),l=document.createElement("a");l.href=u;l.download=name;l.click();
+ try{const tactile=window.matchMedia&&window.matchMedia("(pointer:coarse)").matches;
+  if(tactile&&typeof File==="function"&&navigator.canShare&&navigator.share){
+   const f=new File([bl],name,{type:"application/json"});
+   if(navigator.canShare({files:[f]})){
+    navigator.share({files:[f],title:name}).catch(e=>{if(!e||e.name!=="AbortError")dlLink(bl,name)});
+    return"share"}}}catch(e){}
+ dlLink(bl,name);return"download"}
+function dlLink(bl,name){const u=URL.createObjectURL(bl),l=document.createElement("a");l.href=u;l.download=name;l.click();
  setTimeout(()=>URL.revokeObjectURL(u),2000)}
 function load(){let raw=null;
  try{raw=localStorage.getItem(KEY)}catch(e){}
@@ -573,6 +584,7 @@ function load(){let raw=null;
   /* L'onglet Niveau est masqué par défaut ; il se réactive dans Profil. */
   S.tabsOff=Array.isArray(d.tabsOff)?d.tabsOff:["niveau"];
   S.delSessions=normTomb(d.delSessions);
+  S.wipedAt=Number(d.wipedAt)||0;
   S.pain=normPain(d.pain);
   S.planif=normPlanif(d.planif)}catch(e){}
  /* Réparation des profils écrits par une version antérieure défectueuse :
@@ -1148,7 +1160,7 @@ function vProfil(){
    <div style="font-size:13px;color:var(--mute);line-height:1.6;margin-bottom:14px">« Exporter » télécharge un fichier avec toutes tes données : séances, plan, douleur et réglages. « Importer » le recharge, par exemple sur un nouveau téléphone.</div>
    <div style="display:flex;gap:10px"><button class="btn btn-quiet sm" data-act="export">Exporter</button>
    <button class="btn btn-quiet sm" data-act="import">Importer</button></div>`+
-   (()=>{const b=backups();return b.length?`<div style="font-size:12.5px;color:var(--mute);line-height:1.6;margin:16px 0 4px">Copies gardées automatiquement avant chaque mise à jour de l'app :</div>`+
+   (()=>{const b=backups();return b.length?`<div style="font-size:12.5px;color:var(--mute);line-height:1.6;margin:16px 0 4px">Copies gardées automatiquement avant chaque mise à jour de l'app et avant un effacement :</div>`+
     b.map((x,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)">
      <span style="font-size:13px">${fMid(x.at.slice(0,10))} <span style="color:var(--mute)">· ${(x.data.sessions||[]).length} séances, ${((x.data.planif||{}).programs||[]).length} programmes</span></span>
      <button class="chip" data-act="bkdl" data-v="${i}">Télécharger</button></div>`).join(""):""})()+`</div>`;
@@ -3152,15 +3164,15 @@ document.addEventListener("click",ev=>{
   case"resync":cloudSync();return;
   case"theme":S.theme=v;applyTheme();break;
   case"wipe":{
-    if(!confirm("Effacer définitivement toutes tes séances, ton profil et tes mouvements personnalisés ?\n\nCette action est irréversible. Pense à exporter avant."))return;
-    if(!confirm("Confirmation : tout sera perdu. Continuer ?"))return;
-    (async()=>{
-      try{if(S.cloud.user&&window.CLOUD.wipe)await window.CLOUD.wipe()}catch(e){}
-      S.sessions=[];S.custom=[];S.profile=null;S.draft=null;S.focus=null;S.mc=null;
-      S.done=null;S.lastExport=null;S.pname="";S.updatedAt=Date.now();
-      try{localStorage.removeItem(KEY);OLDKEYS.forEach(k=>localStorage.removeItem(k))}catch(e){}
-      openProfil();render();
-    })();
+    /* Connecté : l'effacement est daté et propagé au compte et aux autres appareils.
+       Non connecté : seul cet appareil est vidé ; le compte, s'il existe, n'est pas touché
+       et rendra ses données à la prochaine connexion (comme avant). */
+    const cloud=!!(S.cloud&&S.cloud.user);
+    if(!confirm("Effacer définitivement toutes tes données : séances, plan, douleur, profil, mouvements perso ?\n\n"+
+     (cloud?"L'effacement s'appliquera aussi à ton compte et à tes autres appareils.":"Ton compte n'est pas connecté : seul cet appareil sera vidé.")+
+     " Une copie complète reste sur cet appareil (Profil, rubrique Sauvegarde), mais pense aussi à exporter."))return;
+    if(!confirm(cloud?"Confirmation : tout sera effacé, ici et sur tes autres appareils. Continuer ?":"Confirmation : tout sera effacé sur cet appareil. Continuer ?"))return;
+    wipeAll(cloud);openProfil();render();
     return}
   case"psex":S.psex=v;break;
   case"psave":{const a=Number(S.d.age),b=Number(S.d.bw);
@@ -3353,7 +3365,7 @@ function openProfil(){seedProfil();S.tab="profil"}
 /* ══════════ SYNCHRONISATION ══════════
    Le stockage local reste la source de vérité immédiate : l'application
    fonctionne hors ligne, et pousse vers le cloud dès que possible. */
-let syncTimer=null;
+let syncTimer=null,lastPull=0;
 function pushSoon(){
  if(!S.cloud||!S.cloud.user||!window.CLOUD)return;
  S.cloud.status="pending";clearTimeout(syncTimer);
@@ -3415,8 +3427,43 @@ function mergePlanif(a,b){a=normPlanif(a);b=normPlanif(b);
  const programs=Object.values(by).filter(p=>!(del[p.id]&&del[p.id]>=(p.updatedAt||0)))
   .sort((x,y)=>(x.createdAt||0)-(y.createdAt||0));
  return{programs,deleted:Object.keys(del).map(id=>({id,at:del[id]}))}}
+/* Efface tout sur cet appareil. Avec propager (compte connecté), l'effacement est daté :
+   la synchro le propage au compte puis aux autres appareils (voir stripBefore). Une copie complète est gardée d'abord
+   dans les sauvegardes de l'appareil, comme avant une mise à jour. */
+function wipeAll(propager){
+ try{const b=backups();b.unshift({ver:"avant effacement",at:new Date().toISOString(),data:backupData()});
+  localStorage.setItem(BKEY,JSON.stringify(b.slice(0,3)))}catch(e){}
+ const now=Date.now(),pl=normPlanif(S.planif);
+ S.sessions=[];S.custom=[];S.profile=null;S.draft=null;S.focus=null;S.mc=null;S.fiche=null;
+ S.done=null;S.lastExport=null;S.pname="";S.tests={};S.decl={};S.pin=[];S.delSessions=[];
+ S.planif={programs:[],deleted:pl.deleted.concat(pl.programs.filter(p=>p&&p.id).map(p=>({id:p.id,at:now})))};
+ S.pain={zones:[],zt:now,log:{}};painVer++;
+ if(propager!==false)S.wipedAt=now;
+ try{OLDKEYS.concat(["planif-run"]).forEach(k=>localStorage.removeItem(k))}catch(e){}
+ save()}
+/* « Tout effacer » : l'appareil qui efface pose une date (wipedAt). Tout ce qui est antérieur
+   est retiré des deux côtés, sinon l'autre appareil renverrait ses données à la synchro suivante.
+   Les séances, programmes et notes de douleur postérieurs à l'effacement sont gardés ;
+   les mouvements perso ne sont gardés que s'ils servent encore dans une séance gardée. */
+function stripBefore(d,W){
+ const sessions=(d.sessions||[]).filter(x=>x&&(x.updatedAt||0)>W),used=new Set();
+ sessions.forEach(x=>{(x.entries||[]).forEach(e=>used.add(e.movementId));
+  (x.metcons||[]).forEach(m=>(m.items||[]).forEach(i=>used.add(i.movementId)))});
+ const pl=normPlanif(d.planif),pn=normPain(d.pain),log={};
+ Object.keys(pn.log).forEach(k=>{if(pn.log[k].t>W)log[k]=pn.log[k]});
+ return{...d,sessions,custom:(d.custom||[]).filter(c=>c&&used.has(c.id)),
+  planif:{programs:pl.programs.filter(p=>p&&(p.updatedAt||0)>W),deleted:pl.deleted},
+  pain:pn.zt>W?{zones:pn.zones,zt:pn.zt,log}:{zones:[],zt:0,log},
+  tests:{},decl:{},pin:[],profile:null,lastExport:null,wipedAt:W}}
 function applyRemote(rec){
- const d=rec&&rec.payload?rec.payload:(rec||{});
+ let d=rec&&rec.payload?rec.payload:(rec||{}),wipedNow=false;
+ const rW=Number(d.wipedAt)||0,lW=Number(S.wipedAt)||0;
+ if(rW>lW){/* effacé sur un autre appareil : on applique ici */
+  const st=stripBefore(payload(true),rW);
+  S.sessions=st.sessions;S.custom=st.custom;S.planif=st.planif;S.pain=st.pain;
+  S.tests={};S.decl={};S.pin=[];S.profile=null;S.lastExport=null;S.wipedAt=rW;
+  S.delSessions=[];S.focus=null;S.mc=null;S.fiche=null;painVer++;wipedNow=true}
+ else if(lW>rW)d=stripBefore(d,lW);/* effacé ici : ce qui reste sur le compte est périmé */
  if(rec&&rec.serverUpdatedAt)S.cloud.serverUpdatedAt=rec.serverUpdatedAt;
  const remoteSessions=(d.sessions||[]).map(x=>({metcons:[],entries:[],...x}));
  /* Une séance qui n'existait que sur ce téléphone (pas encore poussée)
@@ -3456,18 +3503,21 @@ function applyRemote(rec){
     l'app sans la moindre modification locale ferait paraître ce téléphone
     "plus récent" que le compte au prochain lancement. */
  S.updatedAt=(rec&&rec.serverUpdatedAt)?new Date(rec.serverUpdatedAt).getTime():Date.now();
- seedProfil();
+ seedProfil();if(wipedNow&&!S.profile)openProfil();
  try{localStorage.setItem(KEY,JSON.stringify(payload(true)))}catch(e){}
  /* Ce que le cloud ne connaissait pas lui est renvoyé. */
  if((!rp&&S.profile)||grew||localSeules||plDiff||painDiff)pushSoon();}
 
 async function cloudSync(){
  if(!window.CLOUD||!S.cloud.user)return;
+ lastPull=Date.now();
  S.cloud.busy=true;S.cloud.status="pending";render();
  try{
   const r=await window.CLOUD.pull();
   const remote=r&&r.payload?r.payload:null;
-  const remoteHas=remote&&((remote.sessions||[]).length>0||(remote.planif&&(remote.planif.programs||[]).length>0));
+  /* Une ligne vidée par « Tout effacer » porte wipedAt : elle doit être fusionnée (pour propager
+     l'effacement), pas écrasée par les données de cet appareil. */
+  const remoteHas=remote&&((remote.sessions||[]).length>0||(remote.planif&&(remote.planif.programs||[]).length>0)||Number(remote.wipedAt)>0);
   if(!r||!remoteHas){
    const res=await window.CLOUD.push(payload());
    if(res&&res.serverUpdatedAt)S.cloud.serverUpdatedAt=res.serverUpdatedAt}
@@ -3489,12 +3539,25 @@ window.addEventListener("cloud-auth",async()=>{
  S.cloud.enabled=!!(window.CLOUD&&window.CLOUD.enabled);
  S.cloud.user=window.CLOUD?window.CLOUD.user:null;
  if(S.cloud.user)await cloudSync();else{S.cloud.status="";render()}});
-window.addEventListener("online",()=>{if(S.cloud.user)pushSoon()});
+/* Retour au premier plan, retour du réseau : on relit le compte (au plus une fois par minute).
+   Sur iPhone, l'app installée reste ouverte en mémoire des heures ; sans cette relecture,
+   une séance notée sur l'ordinateur n'apparaissait qu'après avoir fermé puis rouvert l'app.
+   cloudSync() fusionne sans rien perdre, puis renvoie ce que le compte ne connaissait pas. */
+function resync(force){
+ if(!S.cloud||!S.cloud.user||S.cloud.busy)return;
+ if(!force&&Date.now()-lastPull<60000)return;
+ cloudSync()}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")resync(false)});
+window.addEventListener("online",()=>resync(true));
 if(window.matchMedia)window.matchMedia("(prefers-color-scheme:dark)")
  .addEventListener("change",()=>{if(S.theme==="auto")applyTheme()});
 
 load();
 snapshotOnUpdate();
+/* Demande à l'appareil de ne jamais effacer de lui-même les données de l'app (accordé par iOS
+   surtout pour une app ajoutée à l'écran d'accueil). Sans effet visible, sans risque si refusé. */
+try{if(navigator.storage&&navigator.storage.persisted&&navigator.storage.persist)
+ navigator.storage.persisted().then(p=>p||navigator.storage.persist()).catch(()=>{})}catch(e){}
 if(!S.profile)openProfil();
 render();
 /* Mise à jour du "service worker" : sur iPhone, une appli ajoutée à l'écran
@@ -3515,6 +3578,8 @@ if("serviceWorker" in navigator){
 }
 </script>
 <script src="planif.js"></script>
+<!-- Bibliothèque Supabase hébergée avec l'app : la synchro reste possible après un lancement hors ligne. -->
+<script src="vendor/supabase.js" defer></script>
 <script type="module">
 /* ═══════════ CONNEXION AU CLOUD (Supabase) ═══════════
    Remplace les deux valeurs ci-dessous par celles de ton projet.
@@ -3530,7 +3595,9 @@ window.CLOUD = CLOUD;
 
 if (configured) {
   try {
-    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    /* Copie locale (vendor/supabase.js) en priorité ; l'ancien chargement en ligne reste en secours. */
+    const createClient = (window.supabase && window.supabase.createClient)
+      || (await import("https://esm.sh/@supabase/supabase-js@2")).createClient;
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     CLOUD.client = sb;
 
