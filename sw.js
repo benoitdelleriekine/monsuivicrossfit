@@ -1,7 +1,7 @@
 /* Service worker : l'application reste utilisable hors connexion.
    Les appels au cloud passent toujours par le réseau. */
-const CACHE = "msc-v73";
-const SHELL = ["./", "./index.html", "./planif.js", "./vendor/supabase.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png", "./favicon-32.png"];
+const CACHE = "msc-v74";
+const SHELL = ["./", "./index.html", "./planif.js", "./vendor/supabase.js", "./fonts/barlow-condensed-latin-500-normal.woff2", "./fonts/barlow-condensed-latin-600-normal.woff2", "./fonts/barlow-condensed-latin-700-normal.woff2", "./fonts/barlow-condensed-latin-800-normal.woff2", "./fonts/barlow-latin-400-normal.woff2", "./fonts/barlow-latin-500-normal.woff2", "./fonts/barlow-latin-600-normal.woff2", "./fonts/barlow-latin-700-normal.woff2", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png", "./favicon-32.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
