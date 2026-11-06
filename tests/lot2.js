@@ -11,7 +11,7 @@ console.log('═══ Records : réel ou estimé ═══\n');
 {const R=boot({});R.S.profile={sex:'m',age:36,bw:81,name:'B'};
  R.S.sessions=[sq('s1','2026-10-01',[[80,5]]),sq('s2','2026-10-08',[[90,3]]),sq('s3','2026-10-15',[[85,6]]),sq('s4','2026-10-22',[[70,5]])];
  R.S.planif={programs:[],deleted:[]};R.save();
- R.S.tab='progres';R.render();
+ R.S.tab='progres';R.S.records=true;R.render(); /* cartes en tête de la page Records (lot 5) */
  const L=R.doc.getElementById('app').innerHTML,all=R.recordList();
  T('90 kg × 3 après 80 kg × 5 : record de charge réel, affiché tel quel',/90 kg × 3/.test(L)&&/charge la plus lourde/.test(L));
  T('85 kg × 6 : record estimé, marqué « max estimé » avec la série d\'origine',/max estimé · 85 kg × 6/.test(L));
@@ -20,7 +20,7 @@ console.log('═══ Records : réel ou estimé ═══\n');
  const bs=all.find(r=>r.id==='back-squat');
  T('page Records : max estimé et plus lourd soulevé côte à côte',bs&&/max estimé · plus lourd soulevé : 90 kg × 3/.test(bs.sub),bs&&bs.sub);
  {const hier=new Date(Date.now()-864e5).toISOString().slice(0,10);
-  R.S.sessions=[sq('h1','2026-10-01',[[90,1]]),sq('h2',hier,[[85,6]])];R.save();R.render();
+  R.S.sessions=[sq('h1','2026-10-01',[[90,1]]),sq('h2',hier,[[85,6]])];R.S.records=false;R.save();R.render();
   const h=R.doc.getElementById('app').innerHTML;
   T('accroche de l\'accueil : « Nouveau record » estimé suivi de « max estimé, sur 85 kg × 6 »',/Nouveau record cette semaine/.test(h)&&/max estimé, sur 85 kg × 6/.test(h));}}
 

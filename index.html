@@ -410,7 +410,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v74";
+const APP_VERSION="msc-v75";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -821,7 +821,7 @@ const planOn=()=>!(S.tabsOff||[]).includes("plan")&&window.PLAN&&typeof PLAN.day
 const planDay=d=>{try{return planOn()?PLAN.dayList(d):[]}catch(e){return[]}};
 function vProgres(){
   const hasPlan=planOn()&&S.planif&&(S.planif.programs||[]).length>0;
-  if(!S.sessions.length&&!hasPlan)return`<div class="head"><div class="eyebrow">Bienvenue</div><h1>Tes progrès</h1></div>
+  if(!S.sessions.length&&!hasPlan)return`<div class="head"><div class="eyebrow">Bienvenue</div><h1>Tes progrès</h1></div><div class="pane" style="padding-bottom:0">${installCard()}</div>
    <div class="pane"><div class="empty">Ici s'afficheront tes records, tes paliers franchis et tes premières fois.<br>Tout commence par une séance notée.</div>
    <button class="btn btn-go" data-act="new">Noter ma première séance</button></div>`;
   const ms=msAll(),st=streak(allDone()),msDays=new Set(ms.map(x=>x.date));
@@ -835,6 +835,7 @@ function vProgres(){
    <button class="hpill" data-act="records" aria-label="Records"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>Records</button></div></div>
    <h1>${prenom?"Bonjour "+esc(prenom):"Progrès"}</h1>
    <div class="hello">${titre} <span>${sous}</span></div></div><div class="pane">`;
+  h+=installCard();
   h+=todayCard();
 
   /* ─── Bloc calendrier, trois vues au choix ─── */
@@ -946,20 +947,60 @@ function vProgres(){
     <button class="chip" data-act="newday">+ CrossFit</button></div></div>`;
    h+=`</div>`}
 
-  h+=painCard();
+  /* La courbe de douleur reste sur l'accueil seulement quand une zone est à surveiller ;
+     sinon elle est dans « Douleur », à un geste, comme les autres analyses. */
+  if(painAlert())h+=painCard();
   h+=`</div>`;   /* le conteneur d'accueil se referme ici : les sections
                     suivantes ouvrent chacune le leur, sinon les marges s'ajoutent */
+  h+=exploreCard(ms);
+  return h+`<div style="height:24px"></div>`}
+/* Aide à l'installation : seulement sur téléphone, dans le navigateur (pas dans l'app installée).
+   L'app installée garde mieux ses données, reste allumée en séance et peut recevoir des notifications. */
+function installCard(){
+ try{const inst=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true;
+  const tactile=window.matchMedia&&window.matchMedia("(pointer:coarse)").matches;
+  const off=+localStorage.getItem("cf-install-hide")||0;
+  if(inst||!tactile||Date.now()-off<30*864e5)return""}catch(e){return""}
+ return`<div class="card" style="border-color:var(--aqua)"><b style="display:block;font-size:var(--fs-md)">Installe l'app sur ton écran d'accueil</b>
+  <div style="font-size:var(--fs-sm);color:var(--mute);line-height:1.5;margin-top:6px">Sur iPhone : bouton Partager de Safari, puis « Sur l'écran d'accueil ». Tes données y sont mieux protégées, l'écran reste allumé en séance et l'app s'ouvre en plein écran.</div>
+  <button class="btn btn-quiet sm" style="margin-top:12px" data-act="insthide">Plus tard</button></div>`}
+/* Accueil court : Aujourd'hui, Cette semaine et le calendrier ; le reste à un geste. */
+function painAlert(){return((S.pain&&S.pain.zones)||[]).some(z=>painStatus(z,TODAY))}
+function exploreCard(ms){
+ const rec=ms.filter(x=>x.t==="Record"),wk=ms.filter(x=>(new Date(TODAY)-new Date(x.date))/864e5<=7).length;
+ const nMov=new Set(allSess().flatMap(s=>(s.entries||[]).filter(e=>e.sets&&e.sets.length).map(e=>e.movementId))).size;
+ const bench=benchCard(),zones=(S.pain&&S.pain.zones)||[],pat=patternCard();
+ const row=(act,v,t,sub,extra)=>`<button class="row-link" data-act="${act}"${v?` data-v="${v}"`:""}><span style="flex:1;min-width:0"><b style="display:block;font-size:var(--fs-md)">${t}</b><span style="display:block;font-size:var(--fs-cap);color:var(--mute);margin-top:2px">${sub}</span></span>${extra||""}<span style="color:var(--mute);font-size:18px;flex:none">›</span></button>`;
+ let r="";
+ if(ms.length)r+=row("records","","Records et premières fois",rec.length+" record"+(rec.length>1?"s":"")+(wk?" · "+wk+" nouveauté"+(wk>1?"s":"")+" cette semaine":""));
+ if(nMov)r+=row("psub","mouvements","Mes mouvements",nMov+" mouvement"+(nMov>1?"s":"")+" · recherche, records, courbes");
+ if(bench)r+=row("psub","metcons","Metcons refaits","Benchmarks et WOD notés plusieurs fois");
+ if(zones.length)r+=row("psub","douleur","Douleur",painAlert()?"À surveiller":"4 dernières semaines · RAS");
+ if(pat)r+=row("psub","travail","Ce que tu travailles","Équilibre des familles de mouvements");
+ return r?`<div class="pane" style="padding-bottom:0"><div class="eyebrow" style="margin-bottom:10px">Explorer</div><div class="card" style="padding:2px 16px">${r}</div></div>`:""}
+/* Bandeau des records et premières fois (en tête de la page Records) */
+function msStrip(ms){let h="";
   if(ms.length){
    const MSI={"Record":[IC_TROPHY,"Record","var(--c-rec)"],"Découvert":["✦","Découverte","var(--c-first)"],"Nouveau palier":["▲","Palier","var(--c-cf)"]};
    h+=`<div class="pane" style="padding-bottom:0"><div class="card-h" style="margin-bottom:10px"><div class="eyebrow">Records et premières fois</div>
-    <button class="hpill" style="font-size:13.5px" data-act="records">Tout voir ›</button></div></div>
+    </div></div>
    <div class="scroll">`+ms.slice(0,12).map(x=>{const I=MSI[x.t]||["★",x.t,"var(--c-rec)"],pr=String(x.v).split(" — "),nm=pr[0],val=pr.slice(1).join(" — ");
     const q=x.rk==="estime"?"max estimé · "+x.set:x.rk==="charge"?"charge la plus lourde":"";
     return`<button class="ms2" style="--c:${I[2]}" ${x.id?`data-act="fiche" data-v="${x.id}"`:""} aria-label="${esc(I[1]+" : "+msTxt(x)+", "+fMid(x.date))}">
      <span class="tbadge">${I[0]} ${I[1]}</span>${val?`<b class="v">${esc(val)}</b><span class="n">${esc(nm)}</span>`:`<b class="v sm">${esc(nm)}</b><span class="n">1ʳᵉ fois</span>`}
      ${q?`<span class="q">${esc(q)}</span>`:""}<small>${fMid(x.date)}</small></button>`}).join("")+`</div><div style="height:16px"></div>`}
 
-  h+=benchCard();
+ return h}
+/* Sous-pages de Progrès : mêmes blocs qu'avant, chacun sur sa page */
+const PSUB={mouvements:"Mes mouvements",metcons:"Metcons refaits",douleur:"Douleur",travail:"Ce que tu travailles"};
+function vPSub(k){
+ let h=`<div class="head" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px"><div><div class="eyebrow">Progrès</div><h1>${PSUB[k]||""}</h1></div><button class="chip" style="white-space:nowrap;flex:none" data-act="psclose">‹ Progrès</button></div>`;
+ if(k==="mouvements")h+=movesBlock();
+ else if(k==="metcons")h+=benchCard();
+ else if(k==="douleur")h+=`<div class="pane">${painCard()||'<div class="empty">La courbe apparaît après quelques notes de douleur.</div>'}</div>`;
+ else if(k==="travail")h+=patternCard();
+ return h+`<div style="height:24px"></div>`}
+function movesBlock(){let h="";
   /* Mes mouvements : CrossFit, plan et séances libres réunis ; mêmes valeurs que la page Records */
   const AS=allSess();
   const inE=[...new Set(AS.flatMap(s=>(s.entries||[]).filter(e=>e.sets&&e.sets.length).map(e=>e.movementId)))].filter(id=>mv(id).k!=="wod");
@@ -1005,7 +1046,7 @@ function vProgres(){
     if(!q&&inG.length>LIM)h+=`<button class="btn btn-quiet sm" style="margin-top:-4px" data-act="mall">${S.mall?"Afficher moins":"Voir les "+(inG.length-LIM)+" autres"}</button>`}
    h+=`</div>`}
 
-  return h+patternCard()+`<div style="height:24px"></div>`}
+ return h}
 
 /* Chiffre clé d'un mouvement pour l'affichage en liste */
 function movStat(id){
@@ -1734,7 +1775,7 @@ function vRecords(){
   rows.push({id:x.id,m,val:x.work,txt:fr(x.work)+" kg",sub:"1RM de travail du plan",date:null,k:0,wmOnly:true,wm:x})});
  let h=`<div class="head" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
   <div><div class="eyebrow">Tous tes meilleurs résultats</div><h1>Records</h1></div>
-  <button class="chip" style="white-space:nowrap;flex:none" data-act="recclose">‹ Progrès</button></div><div class="pane">`;
+  <button class="chip" style="white-space:nowrap;flex:none" data-act="recclose">‹ Progrès</button></div>`+msStrip(msAll())+`<div class="pane">`;
  if(!rows.length)h+=`<div class="empty">Tes records apparaîtront ici dès tes premières séries notées.</div>`;
  else if(wm.length)h+=`<div style="font-size:12px;color:var(--mute);margin:-4px 2px 12px;line-height:1.45">Chaque mouvement réunit tes séries de CrossFit, du plan et des séances libres. « Plan » = 1RM de travail qui sert à calculer tes charges.</div>`;
  const groups=[...new Set(allMoves().map(m=>m.g))].filter(g=>rows.some(r=>r.m.g===g));
@@ -1959,11 +2000,17 @@ function vHist(){
  const items=[...(F==="tout"||F==="crossfit"?sorted().map(s=>({cf:1,date:s.date,s})):[]),
   ...P.filter(x=>F==="tout"||(F==="autre"?!["muscu","course"].includes(x.kind):x.kind===F)).map(x=>({cf:0,date:x.date,x}))]
   .sort((a,b)=>b.date.localeCompare(a.date)||b.cf-a.cf);
+ /* Recherche : mouvement, metcon, titre de séance, note ou date (« fran », « squat », « oct. ») */
+ const nrm=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+ const hq=nrm(S.hq).trim(),txtOf=it=>it.cf?[fMid(it.s.date),...(it.s.entries||[]).map(e=>mv(e.movementId).n),...(it.s.metcons||[]).map(m=>m.name),it.s.note].join(" ")
+  :[fMid(it.x.date),it.x.title,it.x.prog,...(it.x.lines||[]).map(l=>l.n),it.x.note].join(" ");
+ const found=hq?items.filter(it=>nrm(txtOf(it)).includes(hq)):items;
  let h=`<div class="head"><div class="eyebrow">Toutes tes séances${items.length?" · "+items.length:""}</div><h1>Suivi</h1></div>`+backupNudge();
  if(P.length){const all=[...sorted().map(()=>"crossfit"),...P.map(x=>["muscu","course"].includes(x.kind)?x.kind:"autre")],nOf=k=>k==="tout"?all.length:all.filter(z=>z===k).length;
   h+=`<div class="pane" style="padding-bottom:0"><div class="chiprow" role="group" aria-label="Filtrer les séances">${cats.filter(([k])=>k==="tout"||nOf(k)).map(([k,l])=>`<button class="chip ${F===k?"on":""}" data-act="hf" data-v="${k}" aria-pressed="${F===k}">${l} <span>${nOf(k)}</span></button>`).join("")}</div></div>`}
- const H=items;
- if(!H.length)h+=`<div class="empty">Tes séances enregistrées s'empileront ici.</div><div class="pane">`;
+ if(items.length>3)h+=`<div class="pane" style="padding-bottom:0"><input class="inp" id="hq" type="search" enterkeyhint="search" autocomplete="off" style="padding:11px 14px;font-size:16px" placeholder="Chercher un mouvement, un WOD, une note…" value="${esc(S.hq||"")}" aria-label="Chercher dans tes séances">${hq?`<div style="font-size:var(--fs-cap);color:var(--mute);margin:8px 2px 0">${found.length} séance${found.length>1?"s":""} trouvée${found.length>1?"s":""}</div>`:""}</div>`;
+ const H=found;
+ if(!H.length)h+=`<div class="empty">${hq?"Aucune séance ne correspond à « "+esc(S.hq)+" ».":"Tes séances enregistrées s'empileront ici."}</div><div class="pane">`;
  else{h+=`<div class="pane">`;
   let curM="";
   H.forEach(it=>{
@@ -3031,7 +3078,7 @@ function render(){
     h0=document.documentElement.scrollHeight}}catch(e){}}
  if((S.tabsOff||[]).includes(S.tab))S.tab="progres";
  document.getElementById("app").innerHTML=
-  S.tab==="plan"?(typeof vPlan==="function"?vPlan():""):S.tab==="progres"?(S.fiche?vFiche(S.fiche):S.records?vRecords():vProgres()):S.tab==="noter"?vNoter()
+  S.tab==="plan"?(typeof vPlan==="function"?vPlan():""):S.tab==="progres"?(S.fiche?vFiche(S.fiche):S.records?vRecords():S.ps?vPSub(S.ps):vProgres()):S.tab==="noter"?vNoter()
   :S.tab==="niveau"?vNiveau():S.tab==="profil"?vProfil():vHist();
  const planHere=S.tab==="plan"||(S.tab==="noter"&&S.notePlan&&!S.draft);
  try{document.body.classList.toggle("wideplan",planHere)}catch(e){}
@@ -3048,7 +3095,7 @@ function render(){
  if(S.share)shReady().then(paintShare).catch(()=>{});
  /* Changer d'écran doit repartir du haut : sans cela on arrive au milieu
     de la nouvelle page, à la hauteur où l'on avait laissé la précédente. */
- const clef=[S.tab,S.fiche||"",S.focus||"",S.mc==null?"":S.mc,S.picker?1:0].join("|");
+ const clef=[S.tab,S.fiche||"",S.focus||"",S.mc==null?"":S.mc,S.picker?1:0,S.records?1:0,S.ps||""].join("|");
  if(clef!==lastView){lastView=clef;
   if(sp)sp.style.height="0px";
   try{window.scrollTo({top:0,behavior:"instant"})}catch(e){try{window.scrollTo(0,0)}catch(e2){}}}
@@ -3102,7 +3149,7 @@ document.addEventListener("click",ev=>{
  if(/^(push|pop|sadd|scycle)$/.test(a)&&!en)return;
  if(a==="add"&&!S.draft)return;
  switch(a){
-  case"tab":S.records=false;if(S.notePlan&&window.PLAN&&PLAN.closeForm)PLAN.closeForm();S.tab=v;S.focus=null;S.fiche=null;S.notePlan=false;break;
+  case"tab":S.records=false;S.ps=null;if(S.notePlan&&window.PLAN&&PLAN.closeForm)PLAN.closeForm();S.tab=v;S.focus=null;S.fiche=null;S.notePlan=false;break;
   case"prog":S.prog=v;break;
   case"progg":S.progG=v;S.prog=null;S.mq="";S.mall=false;pendingAnchor="movblock";break;
   case"mall":S.mall=!S.mall;pendingAnchor="movblock";break;
@@ -3111,6 +3158,9 @@ document.addEventListener("click",ev=>{
   case"sugg":if(S.d)S.d.w=+v;break;
   case"records":S.records=true;S.fiche=null;break;
   case"recclose":S.records=false;break;
+  case"psub":S.ps=v;S.records=false;S.fiche=null;if(v==="travail")S.pat=true;break;
+  case"psclose":S.ps=null;break;
+  case"insthide":try{localStorage.setItem("cf-install-hide",String(Date.now()))}catch(e){}break;
   case"nchain":S.nchain=S.nchain===v?null:v;pendingAnchor=null;break;
   case"nfilt":S.nfilt=v;pendingAnchor=null;break;
   case"pin":{if(!S.pin)S.pin=[];const i=S.pin.indexOf(v);
@@ -3351,6 +3401,7 @@ document.addEventListener("input",ev=>{const t=ev.target;
   r.onload=()=>{S.sharePhoto=r.result;render()};
   r.readAsDataURL(f);return}
  if(t.id==="mq"){S.mq=t.value;pendingAnchor="movblock";render();return}
+ if(t.id==="hq"){S.hq=t.value;render();return}
  if(t.id==="mail"){S.email=t.value;return}
  if(t.id==="pw"){S.pw=t.value;return}
  const MC=S.draft&&S.mc!=null?(S.draft.metcons||[])[S.mc]:null;
@@ -3591,6 +3642,7 @@ if(window.matchMedia)window.matchMedia("(prefers-color-scheme:dark)")
 
 load();
 snapshotOnUpdate();
+try{const tq=new URLSearchParams(location.search).get("tab");if(["progres","noter","plan","historique","profil"].includes(tq))S.tab=tq}catch(e){}
 /* Demande à l'appareil de ne jamais effacer de lui-même les données de l'app (accordé par iOS
    surtout pour une app ajoutée à l'écran d'accueil). Sans effet visible, sans risque si refusé. */
 try{if(navigator.storage&&navigator.storage.persisted&&navigator.storage.persist)

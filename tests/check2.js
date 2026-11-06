@@ -21,7 +21,7 @@ S.sessions=[{id:'a',date:'2026-08-04',feel:4,note:'',
   items:[{movementId:'bike',dist:1600},{movementId:'t2b',reps:50},{movementId:'thruster',reps:25,weight:25}],
   res:{mode:'time',secs:1123,rounds:0,reps:0,done:true}}]}];
 
-S.tab='progres';render();
+S.tab='progres';S.ps='mouvements';render(); /* « Mes mouvements » a sa page depuis le lot 5 */
 const html=nodes.app.innerHTML;
 const cats=[...html.matchAll(/data-act="progg" data-v="([^"]+)"/g)].map(m=>m[1]);
 console.log('  catégories détectées : '+cats.join(' · '));

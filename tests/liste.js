@@ -38,7 +38,7 @@ console.log('═══ Passage à l\'échelle ═══');
 console.log('  séances simulées   : '+S.sessions.length);
 console.log('  mouvements suivis  : '+new Set(S.sessions.flatMap(s=>s.entries.map(e=>e.movementId))).size);
 
-S.tab='progres';S.progG='Haltéro';render();
+S.tab='progres';S.ps='mouvements';S.progG='Haltéro';render(); /* page « Mes mouvements » (lot 5) */
 let h=H();
 const lignes=(h.match(/data-act="fiche" data-v=/g)||[]).length;
 console.log('\n  catégorie Haltéro  : '+lignes+' lignes de liste');
@@ -66,7 +66,7 @@ console.log('  catégorie Gym      : '+(H().match(/data-act="fiche" data-v=/g)||
 console.log('\n═══ Premières fois cliquables ═══');
 const ms=milestones(S.sessions);
 console.log('  jalons avec identifiant : '+ms.filter(x=>x.id).length+'/'+ms.length);
-S.progG=null;render();
+S.progG=null;S.records=true;render(); /* les cartes sont en tête de la page Records (lot 5) */
 console.log('  cartes cliquables  : '+(/class="ms2"[^>]*data-act="fiche"/.test(H())?'✓':'✗'));
 const cible=ms[0];
 click({act:'fiche',v:cible.id});render();

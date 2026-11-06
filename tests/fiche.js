@@ -43,7 +43,7 @@ console.log('\n═══ Historique du Pull-Up (metcon uniquement) ═══');
 histFor('pull-up').forEach(r=>console.log(`  ${r.date}  séries:${r.sets.length}  metcons:${r.mcs.map(x=>x.name+' '+x.txt).join(', ')}`));
 
 console.log('\n═══ Navigation ═══');
-S.tab='progres';render();
+S.tab='progres';S.ps='mouvements';render(); /* « Mes mouvements » a sa page depuis le lot 5 */
 console.log('  bouton d\'accès présent : '+(/data-act="fiche"/.test(nodes.app.innerHTML)?'✓':'✗'));
 click({act:'fiche',v:'front-squat'});render();
 const H=nodes.app.innerHTML;
