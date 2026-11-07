@@ -40,6 +40,8 @@ console.log('\n═══ Écran ═══\n');
 {const fs=require('fs'),path=require('path'),src=fs.readFileSync(path.join(__dirname,'..','planif.js'),'utf8');
  T('rond à cocher 44 px, même action que « Comme prévu »',/\.ckc\{flex:none;width:44px;height:44px/.test(src)&&/'<button class="ckc" data-a="lg-plan"/.test(src));
  T('rond plein ou partiel : ouvre l\'exercice (pas d\'annulation par erreur)',/class="ckc on" data-a="ex-tog"/.test(src)&&/class="ckc part" data-a="ex-tog"/.test(src));
+ T('rond coché « comme prévu » : décochable ; séries notées une à une : s\'ouvrent pour corriger',/ss\.length >= nS && raw\.plan \? '<button class="ckc on" data-a="lg-unplan"/.test(src)&&/case 'lg-unplan':[\s\S]{0,200}ru\.plan/.test(src));
+ T('rond dessiné en 28 px dans une zone tactile de 44 px',/\.ckc::before\{[^}]*width:28px;height:28px/.test(src));
  T('pastille de charge et numéro',/class="ldpill"/.test(src)&&/class="exnum"/.test(src));
  T('liste des séries : Extra, écart à la cible, ajouter une série',/>Extra</.test(src)&&/var dTag = function/.test(src)&&/data-a="run-more">' \+ ICON\.plus \+ 'Ajouter une série/.test(src));}
 process.exitCode=ko?1:0;console.log(ko?`\n${ko} échec(s)`:'\nAucune erreur.');
