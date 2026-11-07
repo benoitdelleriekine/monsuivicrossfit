@@ -13,8 +13,9 @@
  img-src 'self' data: blob:;
  form-action 'none';
  base-uri 'self';
- object-src 'none';
- frame-ancestors 'none'">
+ object-src 'none'">
+<!-- frame-ancestors est ignoré dans une balise meta : la protection contre l'intégration dans un
+     cadre est envoyée par Vercel en en-tête HTTP (vercel.json). -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mon Suivi">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -428,7 +429,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v82";
+const APP_VERSION="msc-v83";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -1352,9 +1353,9 @@ function vProfil(){
     <button class="chip ${S.psex==="f"?"on":""}" data-act="psex" data-v="f">Femme</button>
     <button class="chip ${S.psex==="m"?"on":""}" data-act="psex" data-v="m">Homme</button></div>
    <div style="font-size:12px;color:var(--mute);line-height:1.6;margin-bottom:22px">Sert aux barèmes de force, qui diffèrent nettement entre les deux, et à l'accord des textes.</div>
-   <div style="display:flex;gap:12px">
-    <div style="flex:1;min-width:0">${step("age","ans",1,14,1)}</div>
-    <div style="flex:1;min-width:0">${step("bw","kg",1,30,1)}</div></div>
+   <div style="display:flex;flex-wrap:wrap;gap:12px">
+    <div style="flex:1 1 150px;min-width:0">${step("age","ans",1,14,1)}</div>
+    <div style="flex:1 1 150px;min-width:0">${step("bw","kg",1,30,1)}</div></div>
    <div style="font-size:12px;color:var(--mute);line-height:1.6;margin-top:14px">Le poids de corps sert à calculer les seuils de niveau. Pense à le mettre à jour s'il change nettement.</div>
    </div>
    <button class="btn btn-go" data-act="psave">${first?"C'est parti":"Enregistrer"}</button>`;
