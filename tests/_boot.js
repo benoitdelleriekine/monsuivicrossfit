@@ -22,6 +22,6 @@ function boot(store,opt){
  global.localStorage={getItem:k=>store[k]===undefined?null:store[k],setItem:(k,v)=>{store[k]=String(v)},removeItem:k=>{delete store[k]}};
  global.alert=()=>{};global.confirm=()=>true;global.prompt=()=>null;
  global.Blob=function(){};global.URL={createObjectURL:()=>'',revokeObjectURL(){}};
- const R=new Function(host+'\n;'+planif+'\n;return {S,render,save,load,payload,applyRemote,cloudSync,wipeAll,stripBefore,downloadJSON,backupData,restoreData,snapshotOnUpdate,backups,mergePlanif,normPlanif,APP_VERSION,suggestFor,recordList,mv,PLAN:window.PLAN,HOST:window.PLAN_HOST};')();
+ const R=new Function(host+'\n;'+planif+'\n;return {S,render,save,load,payload,applyRemote,cloudSync,wipeAll,stripBefore,downloadJSON,repMaxes,setStats,plateauOf,suggestOf,famWeekly,uaOnDay,loadRatio,benchSeries,weekReview,monOf,backupData,restoreData,snapshotOnUpdate,backups,mergePlanif,normPlanif,APP_VERSION,suggestFor,recordList,mv,PLAN:window.PLAN,HOST:window.PLAN_HOST};')();
  global.PLAN=global.window.PLAN;R.store=store;R.fire=(t,e)=>(L[t]||[]).forEach(f=>f(e||{}));R.doc=global.document;return R}
 module.exports={boot};

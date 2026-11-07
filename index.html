@@ -95,7 +95,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .hpill svg{width:18px;height:18px}
 .btn.sm{padding:12px 14px;font-size:13.5px;border-radius:var(--r-m)}
 .btn.danger{color:var(--lava)}
-.chip.sm{min-height:40px;padding:6px 12px;font-size:12px}
+.chip.sm{min-height:44px;padding:6px 12px;font-size:12px}
 .chiprow{display:flex;gap:7px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -22px 12px;padding:0 22px}
 .chiprow::-webkit-scrollbar{display:none}
 .chiprow .chip{flex:none;min-height:40px;padding:7px 13px;font-size:13.5px}
@@ -410,7 +410,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v75";
+const APP_VERSION="msc-v76";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -837,6 +837,7 @@ function vProgres(){
    <div class="hello">${titre} <span>${sous}</span></div></div><div class="pane">`;
   h+=installCard();
   h+=todayCard();
+  if(new Date(TODAY+"T12:00").getDay()===1){const rv=weekReview(dShift(monOf(TODAY),-7));if(rv.n||rv.pt)h+=`<div style="margin-top:12px">${reviewCard(rv,true).replace('<div class="card"','<div class="card" data-act="psub" data-v="bilan" role="button" tabindex="0"')}</div>`}
 
   /* ─── Bloc calendrier, trois vues au choix ─── */
   const vue=S.hv||"mois";
@@ -972,6 +973,10 @@ function exploreCard(ms){
  const bench=benchCard(),zones=(S.pain&&S.pain.zones)||[],pat=patternCard();
  const row=(act,v,t,sub,extra)=>`<button class="row-link" data-act="${act}"${v?` data-v="${v}"`:""}><span style="flex:1;min-width:0"><b style="display:block;font-size:var(--fs-md)">${t}</b><span style="display:block;font-size:var(--fs-cap);color:var(--mute);margin-top:2px">${sub}</span></span>${extra||""}<span style="color:var(--mute);font-size:18px;flex:none">›</span></button>`;
  let r="";
+ const lw=dShift(monOf(TODAY),-7),rv=(S.sessions.length||planOn())?weekReview(lw):null;
+ if(rv&&(rv.n||rv.pt))r+=row("psub","bilan","Bilan de la semaine",`Semaine du ${fMid(lw)} · ${rv.n} séance${rv.n>1?"s":""}`+(rv.rec?` · ${rv.rec} record${rv.rec>1?"s":""}`:""));
+ const lr=loadRatio(),ln=lr[lr.length-1];
+ if(ln.c>0)r+=row("psub","charge","Charge d'entraînement",`7 jours : ${ln.a.toLocaleString("fr-FR")} UA · ${fx(ln.r,2)} × ta moyenne`);
  if(ms.length)r+=row("records","","Records et premières fois",rec.length+" record"+(rec.length>1?"s":"")+(wk?" · "+wk+" nouveauté"+(wk>1?"s":"")+" cette semaine":""));
  if(nMov)r+=row("psub","mouvements","Mes mouvements",nMov+" mouvement"+(nMov>1?"s":"")+" · recherche, records, courbes");
  if(bench)r+=row("psub","metcons","Metcons refaits","Benchmarks et WOD notés plusieurs fois");
@@ -991,14 +996,70 @@ function msStrip(ms){let h="";
      ${q?`<span class="q">${esc(q)}</span>`:""}<small>${fMid(x.date)}</small></button>`}).join("")+`</div><div style="height:16px"></div>`}
 
  return h}
+/* Bilan : la semaine dernière en grand, les trois précédentes en dessous */
+function reviewCard(rv,big){return`<div class="card"${big?' style="border-color:var(--aqua)"':""}>${big?`<div class="eyebrow" style="margin-bottom:8px">Semaine dernière</div>`:""}`+
+ rv.txt.map((t,i)=>`<p style="margin:${i?"8px":"0"} 0 0;font-size:${big?"var(--fs-md)":"var(--fs-sm)"};line-height:1.55;color:${i?"var(--mute)":"var(--ink)"}">${t}</p>`).join("")+`</div>`}
+function bilanPage(){const m0=monOf(TODAY);let h=`<div class="pane">`;
+ h+=reviewCard(weekReview(dShift(m0,-7)),true);
+ [-14,-21,-28].forEach(o=>{const rv=weekReview(dShift(m0,o));if(rv.n||rv.pt)h+=reviewCard(rv,false)});
+ return h+`<div style="font-size:var(--fs-cap);color:var(--mute);line-height:1.5;margin:4px 2px 0">Calculé sur ton téléphone à partir de tes séances : rien n'est envoyé ailleurs.</div></div>`}
+/* Charge d'entraînement : 7 derniers jours comparés à la moyenne des 4 dernières semaines */
+function chargePage(){const pts=loadRatio(),now=pts[pts.length-1],mx=Math.max(1,...pts.map(p=>Math.max(p.a,p.c)));
+ const W=300,H=120,bw=W/pts.length,y=v=>H-v/mx*(H-8);
+ const bars=pts.map((p,i)=>`<rect x="${i*bw+bw*.18}" y="${y(p.a)}" width="${bw*.64}" height="${H-y(p.a)}" rx="3" fill="${i===pts.length-1?"var(--aqua)":"var(--track)"}"/>`).join("");
+ const line=pts.map((p,i)=>`${i?"L":"M"}${(i+.5)*bw} ${y(p.c)}`).join(" ");
+ const lab=r=>r==null?"—":fx(r,2);
+ let h=`<div class="pane"><div class="card"><div class="eyebrow">7 derniers jours</div>
+  <div class="dsp" style="font-size:var(--fs-xl,30px);margin-top:6px">${now.a.toLocaleString("fr-FR")} <span style="font-size:var(--fs-md);color:var(--mute);font-weight:500">UA</span></div>
+  <div style="font-size:var(--fs-sm);color:var(--mute);margin-top:4px;line-height:1.5">Soit <b style="color:var(--ink)">${lab(now.r)} ×</b> ta moyenne hebdomadaire des 4 dernières semaines (${Math.round(now.c).toLocaleString("fr-FR")} UA).</div>
+  <svg viewBox="0 0 ${W} ${H+18}" width="100%" role="img" aria-label="Charge des 7 jours à chaque fin de semaine, comparée à la moyenne sur 28 jours" style="margin-top:14px;display:block">${bars}<path d="${line}" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="4 3"/>`+
+  pts.map((p,i)=>{const z=new Date(p.d+"T12:00");return`<text x="${(i+.5)*bw}" y="${H+15}" text-anchor="middle" font-size="12" fill="var(--mute)">${z.getDate()}/${z.getMonth()+1}</text>`}).join("")+`</svg>
+  <div class="legend" style="margin-top:8px"><span><i style="background:var(--aqua)"></i>7 jours</span><span><i style="background:transparent;border-top:2px dashed var(--ink);border-radius:0;height:0;width:14px"></i>moyenne 28 jours</span></div></div>
+  <div class="card flat"><div style="font-size:var(--fs-sm);color:var(--mute);line-height:1.6">Charge = durée × RPE (UA) de tes séances faites, CrossFit et Plan. Un rapport proche de 1 veut dire une semaine dans tes habitudes ; nettement au-dessus, une semaine plus chargée que d'habitude. C'est un repère pour doser, <b style="color:var(--ink)">pas une prédiction de blessure</b>.</div></div></div>`;
+ return h}
+/* Volume hebdomadaire par famille, 8 semaines */
+function famPage(){const fw=famWeekly(8),rows=fw.rows.filter(r=>r.tot>0).sort((a,b)=>b.tot-a.tot);if(!rows.length)return"";
+ const mx=Math.max(1,...rows.flatMap(r=>r.w));
+ return`<div class="pane"><div class="card"><div class="eyebrow" style="margin-bottom:6px">Volume par famille, semaine par semaine</div>
+  <div style="font-size:var(--fs-cap);color:var(--mute);line-height:1.5;margin-bottom:10px">8 dernières semaines (la plus récente à droite), CrossFit et Plan réunis. Répétitions ; 50 m comptent pour 1 rep.</div>`+
+  rows.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)"><span style="flex:0 0 112px;font-size:var(--fs-cap);color:var(--ink);font-weight:600">${r.n}</span>
+   <span aria-hidden="true" style="flex:1;display:flex;align-items:flex-end;gap:3px;height:28px">${r.w.map((v,i)=>`<span style="flex:1;height:${v?Math.max(3,Math.round(v/mx*28)):1}px;border-radius:2px;background:${i===r.w.length-1?"var(--aqua)":v?"var(--mute)":"var(--track)"}"></span>`).join("")}</span>
+   <span class="dsp" style="flex:0 0 48px;text-align:right;font-size:var(--fs-md)" aria-label="${r.n} : ${r.w[r.w.length-1]} cette semaine, ${r.tot} sur 8 semaines">${r.w[r.w.length-1]}</span></div>`).join("")+
+  `<div style="font-size:var(--fs-cap);color:var(--mute);margin-top:8px">Chiffre de droite : cette semaine.</div></div></div>`}
+/* Metcons refaits : courbe par benchmark, RX et scalé distingués */
+function benchPage(){const rows=benchSeries();if(!rows.length)return`<div class="empty">Refais un metcon avec le même nom pour voir ta progression.</div>`;
+ return`<div class="pane">`+rows.map(r=>{const L=r.l,lower=L[0].sc.lower,vs=L.map(z=>z.sc.v),mn=Math.min(...vs),mx=Math.max(...vs),W=300,H=64;
+  const X=i=>L.length<2?W/2:12+i*(W-24)/(L.length-1),Y=v=>mx===mn?H/2:(lower?8+(v-mn)/(mx-mn)*(H-16):H-8-(v-mn)/(mx-mn)*(H-16));
+  const dots=L.map((z,i)=>z.rx?`<circle cx="${X(i)}" cy="${Y(z.sc.v)}" r="5" fill="var(--aqua)"/>`:`<circle cx="${X(i)}" cy="${Y(z.sc.v)}" r="4.5" fill="var(--card)" stroke="var(--mute)" stroke-width="2"/>`).join("");
+  const tr=r.trend,tc=tr==="progression"?"var(--alex)":tr==="en baisse"?"var(--lava)":"var(--cloud)";
+  return`<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div style="min-width:0"><b style="font-size:var(--fs-md)">${esc(r.n)}</b>
+   <div style="font-size:var(--fs-cap);color:var(--mute);margin-top:3px">${r.count} passages · dernier ${r.last.rx?"RX":"scalé"} ${r.last.sc.txt}</div></div>
+   ${tr?`<span class="badge" style="background:${tc};color:${tr==="stable"?"var(--mute)":"var(--onacc)"}">${tr}</span>`:""}</div>
+   <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(r.n)} : ${r.count} passages" style="display:block;margin-top:10px"><path d="${L.map((z,i)=>(i?"L":"M")+X(i)+" "+Y(z.sc.v)).join(" ")}" fill="none" stroke="var(--line)" stroke-width="1.5"/>${dots}</svg>
+   <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:var(--fs-cap);color:var(--mute);margin-top:6px"><span><b style="color:var(--ink)">RX</b> ${r.bestRx?"meilleur "+r.bestRx.sc.txt:"—"}</span><span><b style="color:var(--ink)">Scalé</b> ${r.bestSc?"meilleur "+r.bestSc.sc.txt:"—"}</span></div>
+   <div style="font-size:var(--fs-cap);color:var(--mute);margin-top:4px">Point plein : RX · point creux : scalé. ${lower?"Plus haut = plus rapide.":"Plus haut = plus de travail."} La tendance compare au dernier passage de même catégorie.</div></div>`}).join("")+`</div>`}
+/* Records réels par nombre de répétitions, en tuiles */
+function rmTiles(id){const o=repMaxes(id);if(![1,3,5,10].some(n=>o[n]))return"";
+ return`<div class="card"><div class="eyebrow" style="margin-bottom:10px">Records réels par répétitions</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">`+
+  [1,3,5,10].map(n=>{const x=o[n];return`<div style="background:var(--sunk);border-radius:var(--r-sm,10px);padding:10px 8px;text-align:center"><div style="font-size:var(--fs-cap);color:var(--mute);font-weight:600">${n} RM</div><div class="dsp" style="font-size:var(--fs-lg);margin-top:4px">${x?fr(x.w):"—"}</div><div style="font-size:var(--fs-cap);color:var(--mute);margin-top:2px">${x?fMid(x.date):"kg"}</div></div>`}).join("")+
+  `</div><div style="font-size:var(--fs-cap);color:var(--mute);margin-top:10px;line-height:1.5">La barre la plus lourde soulevée au moins 1, 3, 5 ou 10 fois. Le max estimé, lui, est calculé.</div></div>`}
+function rmTxt(id){const o=repMaxes(id),p=[1,3,5,10].filter(n=>o[n]).map(n=>n+" RM "+fr(o[n].w));return p.length?p.join(" · ")+" kg":""}
+/* « par rapport à la fois précédente » pour une séance d'un mouvement */
+function cmpLine(sets,prev){const a=setStats(sets),b=prev?setStats(prev.sets):null;if(!a||!b)return"";
+ const dv=Math.round((a.vol-b.vol)/b.vol*100),da=Math.round((a.avg-b.avg)*10)/10,sg=v=>(v>0?"+":v<0?"−":"")+fx(Math.abs(v),Number.isInteger(v)?0:1);
+ const parts=[`volume ${sg(dv)} %`,`charge moyenne ${da===0?"identique":sg(da)+" kg"}`];
+ if(a.rpe!=null&&b.rpe!=null)parts.push(`RPE ${fx(a.rpe)} (${fx(b.rpe)} avant)`);
+ return`<div style="font-size:var(--fs-cap);color:var(--mute);margin:-4px 0 10px;line-height:1.5">Par rapport au ${fMid(prev.date)} : ${parts.join(" · ")}</div>`}
 /* Sous-pages de Progrès : mêmes blocs qu'avant, chacun sur sa page */
-const PSUB={mouvements:"Mes mouvements",metcons:"Metcons refaits",douleur:"Douleur",travail:"Ce que tu travailles"};
+const PSUB={mouvements:"Mes mouvements",metcons:"Metcons refaits",douleur:"Douleur",travail:"Ce que tu travailles",bilan:"Bilan de la semaine",charge:"Charge d'entraînement"};
 function vPSub(k){
  let h=`<div class="head" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px"><div><div class="eyebrow">Progrès</div><h1>${PSUB[k]||""}</h1></div><button class="chip" style="white-space:nowrap;flex:none" data-act="psclose">‹ Progrès</button></div>`;
  if(k==="mouvements")h+=movesBlock();
- else if(k==="metcons")h+=benchCard();
+ else if(k==="metcons")h+=benchPage();
+ else if(k==="bilan")h+=bilanPage();
+ else if(k==="charge")h+=chargePage();
  else if(k==="douleur")h+=`<div class="pane">${painCard()||'<div class="empty">La courbe apparaît après quelques notes de douleur.</div>'}</div>`;
- else if(k==="travail")h+=patternCard();
+ else if(k==="travail")h+=famPage()+patternCard();
  return h+`<div style="height:24px"></div>`}
 function movesBlock(){let h="";
   /* Mes mouvements : CrossFit, plan et séances libres réunis ; mêmes valeurs que la page Records */
@@ -1035,7 +1096,7 @@ function movesBlock(){let h="";
    if(!inG.length)h+=`<div class="card"><div style="font-size:13.5px;color:var(--mute)">Aucun mouvement ne correspond.</div></div>`;
    else{h+=`<div class="card" style="padding:2px 16px">`+shown.map(id=>{
     const m2=mv(id),r=recOf(id),c=curveFor(id),nb=c.length,wk=wm[id];
-    const sub=nb?`${nb} séance${nb>1?"s":""} · ${fMid(lastUse[id]||c[nb-1].date)}`:"vu en metcon";
+    const sub=(nb?`${nb} séance${nb>1?"s":""} · ${fMid(lastUse[id]||c[nb-1].date)}`:"vu en metcon")+(plateauOf(id)?" · plateau":"");
     const cap=r?(r.k===0?"max estimé":r.k===2?r.sub:/× /.test(r.txt)?"meilleure série":(m2.u==="sec"?"meilleure tenue":"meilleure série")):"";
     return`<button class="row-link" data-act="fiche" data-v="${id}">
      <div style="flex:1;min-width:0">
@@ -1082,6 +1143,9 @@ function vFiche(id){
  if(hero)h+=`<div class="card"><div class="eyebrow">${hero[0]}</div>
   <div class="dsp" style="font-size:46px;margin-top:6px">${hero[1]}<span style="font-size:18px;color:var(--mute);font-weight:500"> ${hero[2]}</span></div>
   ${volLine(id)}</div>`;
+ h+=rmTiles(id);
+ const pla=plateauOf(id);
+ if(pla)h+=`<div class="card" style="border-color:var(--c-rec)"><b style="display:block;font-size:var(--fs-md)">Plateau</b><div style="font-size:var(--fs-sm);color:var(--mute);line-height:1.5;margin-top:4px">${pla.why} (meilleur : ${fx(pla.best.rm)} kg le ${fMid(pla.best.date)}). Un repère pour ajuster la programmation, pas une alerte.</div></div>`;
 
  /* Courbe d'évolution */
  const src=wr.length>1?[wr,"rm"," kg",false]:wp.length>1?[wp,"pace","",true]
@@ -1097,12 +1161,13 @@ function vFiche(id){
  /* Historique séance par séance */
  h+=`<div class="eyebrow" style="margin:22px 0 12px">Historique · ${hist.length} séance${hist.length>1?"s":""}</div>`;
  if(!hist.length)h+=`<div class="card"><div style="font-size:13.5px;color:var(--mute)">Aucune séance enregistrée avec ce mouvement.</div></div>`;
- hist.forEach(r=>{
+ hist.forEach((r,ri)=>{
+  const cmp=cmpLine(r.sets,ri+1<hist.length?hist[ri+1]:null);
   const bestSet=r.sets.reduce((a,x)=>{const v=e1rm(x.weight,x.reps,x.diff);
    return v&&(!a.v||v>a.v)?{x,v}:a},{x:null,v:null}).x;
   h+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${r.sets.length?"12px":"0"}">
    <b style="font-size:15px">${fLong(r.date)}${r.plan?' <span style="font-size:12px;color:var(--mute);font-weight:600">· Plan muscu</span>':""}</b>
-   ${r.pr?'<span class="badge hot">Record</span>':r.rm!=null?`<span class="badge">${fx(r.rm)} kg est.</span>`:""}</div>`;
+   ${r.pr?'<span class="badge hot">Record</span>':r.rm!=null?`<span class="badge">${fx(r.rm)} kg est.</span>`:""}</div>${cmp}`;
   if(r.sets.length){
    h+=`<div style="border-top:1px solid var(--line)">`+r.sets.map((x,i)=>{
     const v=e1rm(x.weight,x.reps,x.diff),top=bestSet&&x===bestSet;
@@ -1522,6 +1587,88 @@ function patternShare(days){
  const r=PATTERNS.map(([n])=>({n,v:tot[n],pct:tot[n]/max}));
  patCache[key]=r;return r}
 
+/* ══════════ ANALYSES (lot 6) ══════════
+   Uniquement des calculs sur tes données, refaits à chaque affichage : rien n'est enregistré
+   ni synchronisé en plus, et aucune IA n'intervient. */
+const monOf=d=>{const t=new Date(d+"T12:00");t.setDate(t.getDate()-((t.getDay()+6)%7));return iso(t)};
+let anKey=null,anCache={};
+function anMemo(k,f){const key=(S.updatedAt||0)+"|"+TODAY+"|"+((S.planif&&S.planif.programs||[]).map(p=>p.updatedAt||0).join(","));
+ if(key!==anKey){anKey=key;anCache={}}if(!(k in anCache))anCache[k]=f();return anCache[k]}
+/* Records par nombre de répétitions : la barre la plus lourde soulevée au moins N fois */
+function repMaxes(id){return anMemo("rm:"+id,()=>{const o={1:null,3:null,5:null,10:null};
+ eachSet(id,(x,s)=>{const w=Number(x.weight)||0,r=Number(x.reps)||0;if(w<=0||r<=0)return;
+  [1,3,5,10].forEach(n=>{if(r>=n&&(!o[n]||w>o[n].w||(w===o[n].w&&s.date<o[n].date)))o[n]={w,reps:r,date:s.date}})});return o})}
+/* Résumé d'une séance pour un mouvement : volume (kg × reps), charge moyenne, RPE moyen */
+function setStats(sets){let vol=0,reps=0,rr=0,nr=0;
+ (sets||[]).forEach(x=>{const w=Number(x.weight)||0,r=Number(x.reps)||0;if(w>0&&r>0){vol+=w*r;reps+=r}
+  if(x.diff!=null&&w>0){rr+=10-rirOf(x.diff);nr++}});
+ return reps?{vol,reps,avg:vol/reps,rpe:nr?rr/nr:null}:null}
+/* Plateau : le max estimé n'a pas monté sur les 3 dernières séances, ou sur 4 semaines
+   (au moins 2 séances dans ces 4 semaines). Seulement pour un mouvement travaillé ce mois-ci. */
+function plateauOf(id){return anMemo("pl:"+id,()=>{const c=curveFor(id).filter(x=>x.rm!=null);if(c.length<4)return null;
+ const last=c[c.length-1];if(last.date<dShift(TODAY,-28))return null;
+ const best=a=>Math.max(...a.map(x=>x.rm)),top=c.reduce((a,x)=>x.rm>a.rm?x:a);
+ const since=c.length-1-c.lastIndexOf(top);
+ if(best(c.slice(-3))<=best(c.slice(0,-3)))return{n:since,best:top,why:since+" séances sans hausse du max estimé"};
+ const lim=dShift(TODAY,-28),r=c.filter(x=>x.date>=lim),b=c.filter(x=>x.date<lim);
+ if(r.length>=2&&b.length&&best(r)<=best(b))return{n:since,best:top,why:"pas de hausse du max estimé en 4 semaines"};
+ return null})}
+/* Suggestion de charge (double progression simplifiée) : si toutes les séries à la charge la plus
+   lourde de la dernière séance étaient à RPE 8 ou moins (« Facile »), on propose +2,5 kg. */
+function suggestOf(id){const l=lastFor(id);if(!l)return null;
+ const ss=l.e.sets.filter(x=>(Number(x.weight)||0)>0&&(Number(x.reps)||0)>0);if(!ss.length)return null;
+ const top=Math.max(...ss.map(x=>Number(x.weight))),ts=ss.filter(x=>Number(x.weight)===top);
+ if(!ts.every(x=>x.diff!=null&&rirOf(x.diff)>=2))return null;
+ return{w:top+2.5,reps:Math.min(...ts.map(x=>Number(x.reps))),last:top,date:l.s.date,n:ts.length}}
+/* Volume hebdomadaire par famille de mouvements (8 semaines, CrossFit et Plan réunis).
+   Même unité que « Ce que tu travailles » : répétitions, 50 m comptant pour 1 rep, calories. */
+function famWeekly(n){return anMemo("fw:"+n,()=>{const m0=monOf(TODAY),wk=[];for(let i=n-1;i>=0;i--)wk.push(dShift(m0,-7*i));
+ const rows=PATTERNS.map(([name,ids])=>({n:name,ids:new Set(ids),w:wk.map(()=>0)}));
+ const add=(id,d,v)=>{if(!v)return;const i=wk.indexOf(monOf(d));if(i<0)return;rows.forEach(o=>{if(o.ids.has(id))o.w[i]+=v})};
+ allSess().forEach(s=>{(s.entries||[]).forEach(e=>(e.sets||[]).forEach(x=>add(e.movementId,s.date,x.dist!=null?Math.round((Number(x.dist)||0)/50):(Number(x.reps)||0))));
+  (s.metcons||[]).forEach(mc=>mcTotals(mc).forEach(t=>add(t.id,s.date,t.reps+Math.round(t.dist/50)+t.cal)))});
+ return{weeks:wk,rows:rows.map(o=>({n:o.n,w:o.w,tot:o.w.reduce((a,b)=>a+b,0)}))}})}
+/* Charge d'un jour (UA = durée × RPE) : CrossFit noté (60 min et RPE 7 par défaut, comme le Plan)
+   et séances du Plan faites (durée et RPE notés quand ils existent). */
+function uaOnDay(d){let u=0;
+ S.sessions.forEach(s=>{if(s.date===d)u+=Math.round((Number(s.dur)||60)*(Number(s.rpe)||7))});
+ if(planOn()&&window.PLAN&&PLAN.engine){try{const E=PLAN.engine;E.instancesOn(E.parseISO(d),true).forEach(x=>{
+  if(x.log&&x.log.done)u+=Math.round((Number(x.g.dur)||0)*(Number(x.log.rpe)||Number(x.g.rpe)||0))})}catch(e){}}
+ return u}
+function uaDays(n){return anMemo("ua:"+n,()=>{const o={};for(let i=0;i<n;i++){const d=dShift(TODAY,-i);o[d]=uaOnDay(d)}return o})}
+/* Charge aiguë (7 jours) et chronique (moyenne hebdo des 28 jours) au jour D, plus l'historique
+   à la même date les 7 semaines précédentes. Un repère, pas une prédiction de blessure. */
+function loadRatio(){return anMemo("acwr",()=>{const U=uaDays(7*7+28),sum=(d,k)=>{let t=0;for(let i=0;i<k;i++)t+=U[dShift(d,-i)]||0;return t};
+ const pts=[];for(let w=7;w>=0;w--){const d=dShift(TODAY,-7*w),a=sum(d,7),c=sum(d,28)/4;pts.push({d,a,c,r:c>0?a/c:null})}
+ return pts})}
+/* Séries d'un benchmark (même nom de metcon), RX et scalé séparés */
+function benchSeries(){return anMemo("bench",()=>{const g={};
+ /* Les noms génériques (« WOD du jour », « AMRAP »…) recouvrent des séances différentes : pas de courbe pour eux. */
+ const GEN=/^(wod|metcon|amrap|emom|for time|chipper|séance|seance|entraînement|entrainement)( du jour| \d+)?$/i;
+ S.sessions.forEach(s=>(s.metcons||[]).forEach(mc=>{const n=(mc.name||"").trim();if(!n||GEN.test(n))return;const sc=mcScore(mc);if(!sc)return;
+  const key=n.toLowerCase()+"|"+(sc.lower?"t":"w");(g[key]=g[key]||{n,l:[]}).l.push({date:s.date,sc,rx:!!mc.rx})}));
+ return Object.values(g).filter(x=>x.l.length>1).map(x=>{x.l.sort((a,b)=>a.date.localeCompare(b.date));
+  const better=(a,b)=>a.sc.lower?a.sc.v<b.sc.v:a.sc.v>b.sc.v;
+  const bestIn=arr=>arr.reduce((a,z)=>!a||better(z,a)?z:a,null);
+  const last=x.l[x.l.length-1],same=x.l.filter(z=>z.rx===last.rx),prev=same.length>1?same[same.length-2]:null;
+  return{n:x.n,l:x.l,count:x.l.length,last,prev,bestRx:bestIn(x.l.filter(z=>z.rx)),bestSc:bestIn(x.l.filter(z=>!z.rx)),
+   trend:!prev?null:last.sc.v===prev.sc.v?"stable":better(last,prev)?"progression":"en baisse"}})})}
+/* Bilan d'une semaine (lundi → dimanche), en trois phrases */
+function weekReview(mon){const sun=dShift(mon,6),inW=d=>d>=mon&&d<=sun;
+ const cf=S.sessions.filter(s=>inW(s.date)).length;
+ let pd=0,pt=0,ua=0;for(let i=0;i<7;i++)ua+=uaOnDay(dShift(mon,i));
+ if(planOn()&&window.PLAN&&PLAN.engine){try{const st=PLAN.engine.weekStats(PLAN.engine.parseISO(mon),true);pd=st.done;pt=st.total}catch(e){}}
+ const n=cf+pd,pl=x=>x>1?"s":"";
+ const p1=`Semaine du ${fMid(mon)} au ${fMid(sun)} : ${n} séance${pl(n)} faite${pl(n)}`+(pt?` (${cf} CrossFit, ${pd} du plan sur ${pt} prévue${pl(pt)})`:cf?` (CrossFit)`:"")+`, charge ${ua.toLocaleString("fr-FR")} UA.`;
+ const rec=msAll().filter(x=>x.t==="Record"&&inW(x.date));
+ const p2=rec.length?`${rec.length} record${pl(rec.length)} : ${rec.slice(0,2).map(x=>esc(msTxt(x))).join(", ")}${rec.length>2?"…":""}.`:"Pas de nouveau record cette semaine-là.";
+ const plats=[...new Set(allSess().flatMap(s=>(s.entries||[]).map(e=>e.movementId)))].filter(id=>mv(id).k!=="wod").map(id=>[id,plateauOf(id)]).filter(x=>x[1]);
+ const pa=plats.length?`Plateau sur ${plats.slice(0,2).map(([id,p])=>esc(mv(id).n)+" ("+p.why+")").join(", ")}${plats.length>2?"…":""}.`:"Aucun plateau repéré.";
+ const avg=(z,a)=>{const v=[];for(let i=0;i<7;i++){const d=dShift(a,i);["matin","seance"].forEach(t=>{const x=painGet(d,z,t);if(x!=null)v.push(x)})}return v.length?v.reduce((q,w)=>q+w,0)/v.length:null};
+ const pz=((S.pain&&S.pain.zones)||[]).map(z=>{const a=avg(z,mon),b=avg(z,dShift(mon,-7));return a==null?null:`douleur ${(painZ(z)||[z,z])[1].toLowerCase()} ${fx(a)}/10 en moyenne`+(b!=null?` (${fx(b)} la semaine d'avant)`:"")}).filter(Boolean);
+ const p3=pa+(pz.length?" "+pz.join(", ").replace(/^./,c=>c.toUpperCase())+".":"");
+ return{mon,sun,n,cf,pd,pt,ua,rec:rec.length,plats:plats.map(x=>x[0]),txt:[p1,p2,p3]}}
+
 function itemLabel(it,st){const m=mv(it.movementId),car=m.k==="cardio";
  if(car&&st&&st.sch&&it.lad!==false)return`${st.label} ${it.ladU==="m"?"m":"cal"} ${esc(m.n)}`;
  if(it.cal)return`${it.cal} cal ${esc(m.n)}`;
@@ -1782,7 +1929,7 @@ function vRecords(){
  rows.filter(r=>!groups.includes(r.m.g)).forEach(r=>{if(!groups.includes(r.m.g||""))groups.push(r.m.g||"")});
  groups.forEach(g=>{const rs=rows.filter(r=>(r.m.g||"")===g).sort((a,b)=>b.val-a.val);
   h+=`<div class="card"><div class="eyebrow" style="margin-bottom:6px">${esc(g||"Autres")}</div>`+rs.map(r=>`<button style="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line)" data-act="fiche" data-v="${esc(r.id)}">
-   <span style="min-width:0"><b style="font-size:15px">${esc(r.m.n)}</b><span style="display:block;font-size:12px;color:var(--mute);margin-top:2px">${r.sub}${r.date?" · "+fMid(r.date):""}</span>${r.wm&&!r.wmOnly?`<span style="display:block;font-size:12px;color:var(--ink);margin-top:2px;font-weight:600">Plan : 1RM de travail ${fr(r.wm.work)} kg</span>`:r.wmOnly?`<span style="display:block;font-size:12px;color:var(--mute);margin-top:2px">référence ${fr(r.wm.ref)} kg · pas encore de série notée</span>`:""}</span>
+   <span style="min-width:0"><b style="font-size:15px">${esc(r.m.n)}</b><span style="display:block;font-size:12px;color:var(--mute);margin-top:2px">${r.sub}${r.date?" · "+fMid(r.date):""}</span>${r.k===0&&!r.wmOnly&&rmTxt(r.id)?`<span style="display:block;font-size:12px;color:var(--mute);margin-top:2px">${rmTxt(r.id)}</span>`:""}${r.wm&&!r.wmOnly?`<span style="display:block;font-size:12px;color:var(--ink);margin-top:2px;font-weight:600">Plan : 1RM de travail ${fr(r.wm.work)} kg</span>`:r.wmOnly?`<span style="display:block;font-size:12px;color:var(--mute);margin-top:2px">référence ${fr(r.wm.ref)} kg · pas encore de série notée</span>`:""}</span>
    <span class="dsp" style="font-size:24px;white-space:nowrap">${r.txt}</span></button>`).join("")+`</div>`});
  return h+`<div style="height:24px"></div></div>`}
 
@@ -1919,6 +2066,8 @@ function vDetail(en){
   }
   h+=`<button class="btn btn-go" style="margin-top:18px" data-act="push">Ajouter cette série</button></div>`;
   h+=setsCard(en,m,isCar);
+  const sug=!isCar?suggestOf(m.id):null;
+  if(sug)h+=`<div class="card flat" style="margin-bottom:12px;border-color:var(--aqua)"><div class="eyebrow" style="margin-bottom:4px">Suggestion</div><div style="font-size:var(--fs-md)"><b>${fr(sug.w)} kg × ${sug.reps}</b> <span style="color:var(--mute)">(+2,5 kg)</span></div><div style="font-size:var(--fs-cap);color:var(--mute);margin-top:4px;line-height:1.5">Le ${fMid(sug.date)}, tes séries à ${fr(sug.last)} kg étaient toutes « Facile ». C'est une proposition : tu choisis la charge.</div></div>`;
   if(prev){h+=`<div class="card flat" style="margin-bottom:26px"><div class="eyebrow" style="margin-bottom:4px">La dernière fois — ${fMid(prev.s.date)}</div>`+
    prev.e.sets.map((s,i)=>`<div class="row"><div style="display:flex;align-items:center;gap:12px">
    <span class="pill">${i+1}</span><span class="dsp" style="font-size:18px;color:var(--mute)">${setLabel(s,m)}</span></div>
