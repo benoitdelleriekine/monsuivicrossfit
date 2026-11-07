@@ -166,7 +166,7 @@
   var orderedEx = function (p, sess, w) {
     var list = (sess.exercises || []).slice(), ord = (p.orders || {})[w + '|' + sess.id];
     if (!ord) return list;
-    var pos = {}; ord.forEach(function (id, i) { pos[id] = i; });
+    var pos = {}; ord.forEach(function (id, i) { pos[id] = i; if (/~sw$/.test(id) && pos[id.slice(0, -3)] == null) pos[id.slice(0, -3)] = i; });
     return list.sort(function (a, b) { return (pos[a.id] != null ? pos[a.id] : 999) - (pos[b.id] != null ? pos[b.id] : 999); });
   };
   // ---------- Autorégulation ----------
@@ -549,6 +549,13 @@
       n3.ton = num(n3.sets, 0) * num(n3.reps, 0) * num(n3.loadNum, 0);
       g.items.push(n3);
     });
+    /* Ordre choisi pour cette séance (orders[semaine|séance]) appliqué à la liste finale : exercices
+       du plan, remplacés, ajoutés, et séances copiées / ajoutées. Tri stable : un exercice absent de
+       l'ordre garde sa place relative, en fin de liste. */
+    var ordF = (p.orders || {})[w + '|' + s.id];
+    if (ordF && ordF.length) { var pf = {}; ordF.forEach(function (id, i) { pf[id] = i; });
+      var pk = function (it) { return pf[it.id] != null ? pf[it.id] : pf[it.origId] != null ? pf[it.origId] : 999; };
+      g.items = g.items.map(function (it, i) { return [it, i]; }).sort(function (a, b) { return pk(a[0]) - pk(b[0]) || a[1] - b[1]; }).map(function (z) { return z[0]; }); }
     var dD = s.extra ? parseISO(s.date) : addDays(progStart(p), (w - 1) * 7 + effDay(p, s, w)), fl = dD ? painFlags(dD) : {};
     var isM = s.extra ? s.kind === 'muscu' : p.kind === 'muscu', isR = s.extra ? s.kind === 'course' : p.kind === 'course';
     if (fl.pats && isM) g.items.forEach(function (it) {
@@ -1055,6 +1062,7 @@
       var pre = ow + '|' + E.id;
       if (p.logs && p.logs[pre]) { p.logs[nw + '|' + E.id] = p.logs[pre]; delete p.logs[pre]; }
       Object.keys(p.overrides || {}).forEach(function (k) { if (k.indexOf(pre + '|') === 0) { p.overrides[nw + '|' + E.id + k.slice(pre.length)] = p.overrides[k]; delete p.overrides[k]; } });
+      if (p.orders && p.orders[pre]) { p.orders[nw + '|' + E.id] = p.orders[pre]; delete p.orders[pre]; }
     }
     persist(p); return p.id + '|' + nw + '|' + E.id;
   };
@@ -1458,7 +1466,7 @@
     var rpeLab = log.rpe ? 'RPE ' + log.rpe + ' · ' + Math.max(0, 10 - log.rpe) + ' en réserve' : 'Touche l’échelle';
     var tparts = String(x.g.title).split(' — ');
     return '<div class="card col" style="gap:10px">' + pillHtml(x.p) + '<h2>' + esc(tparts[0]) + '</h2>' + (tparts.length > 1 ? '<span class="t2" style="font-size:13.5px;font-weight:600;margin-top:-6px">' + esc(tparts.slice(1).join(' — ')) + '</span>' : '') + '<span class="mu" style="font-size:13.5px">' + esc(dLabel(x.date)) + ' · semaine ' + x.w + '/' + progLen(x.p) + ' · ' + esc(x.g.meta) + '</span>' + (x.s.extra ? '<span class="small mu">Durée ' + x.g.dur + ' min · RPE ' + fmtN(x.g.rpe) + ' · charge ' + x.g.ua + ' UA</span>' : '<span class="small mu">Durée prévue ' + x.g.dur + ' min · charge prévue ' + x.g.ua + ' UA</span>') +
-      summaryHtml(x) + runBtnHtml(x) + crossAlert(x) + '<div class="acts2">' + (x.s.extra ? extraBarHtml(x) : moveHtml(x)) + copyHtml(x) + '</div>' + (x.s.extra && isMuscuInst(x) ? '<b class="small" style="margin-top:4px">Exercices · note tes séries réelles</b>' : '') + (x.p.kind === 'muscu' && !x.s.extra ? '<div class="row between" style="margin-top:4px"><b class="small">Exercices</b>' + (ui.reorder === x.key ? '<span class="row">' + ((x.p.orders || {})[x.w + '|' + x.s.id] ? '<button class="btn sm ghost" data-a="ord-all" data-key="' + esc(x.key) + '">Garder cet ordre pour tout le cycle</button><button class="btn sm ghost" data-a="ord-reset" data-key="' + esc(x.key) + '">Ordre du plan</button>' : '') + '<button class="btn sm primary" data-a="reorder" data-key="">Terminé</button></span>' : '<span class="row" style="gap:6px"><button class="btn sm ghost" data-a="ex-all" data-key="' + esc(x.key) + '">' + (x.g.items.every(function (it) { return (ui.exOpen || {})[x.key + '|' + it.id]; }) ? 'Tout replier' : 'Tout ouvrir') + '</button><button class="btn sm b-order" data-a="reorder" data-key="' + esc(x.key) + '">Réorganiser</button></span>') + '</div>' : '') + '<div class="items">' + items + '</div>' +
+      summaryHtml(x) + runBtnHtml(x) + crossAlert(x) + '<div class="acts2">' + (x.s.extra ? extraBarHtml(x) : moveHtml(x)) + copyHtml(x) + '</div>' + (isMuscuInst(x) ? '<div class="row between" style="margin-top:4px"><b class="small">' + (x.s.extra ? 'Exercices · note tes séries réelles' : 'Exercices') + '</b>' + (ui.reorder === x.key ? '<span class="row">' + ((x.p.orders || {})[x.w + '|' + x.s.id] ? (x.s.extra ? '' : '<button class="btn sm ghost" data-a="ord-all" data-key="' + esc(x.key) + '">Garder cet ordre pour tout le cycle</button>') + '<button class="btn sm ghost" data-a="ord-reset" data-key="' + esc(x.key) + '">' + (x.s.extra ? 'Ordre d’origine' : 'Ordre du plan') + '</button>' : '') + '<button class="btn sm primary" data-a="reorder" data-key="">Terminé</button></span>' : '<span class="row" style="gap:6px"><button class="btn sm ghost" data-a="ex-all" data-key="' + esc(x.key) + '">' + (x.g.items.every(function (it) { return (ui.exOpen || {})[x.key + '|' + it.id]; }) ? 'Tout replier' : 'Tout ouvrir') + '</button><button class="btn sm b-order" data-a="reorder" data-key="' + esc(x.key) + '">Réorganiser</button></span>') + '</div>' : '') + '<div class="items">' + items + '</div>' +
       '<div class="col" style="border-top:1px solid var(--bd);padding-top:12px;gap:10px">' +
       '<button class="btn" data-a="done" data-key="' + esc(x.key) + '" aria-pressed="' + !!log.done + '" style="min-height:48px;' + (log.done ? 'border-color:var(--ok);color:#0F1215;background:var(--ok)' : 'border-color:rgba(127,224,201,.6);color:var(--ok);background:rgba(127,224,201,.10)') + '">' + ICON.check + (log.done ? 'Séance faite' : 'Marquer comme faite') + '</button>' +
       '<div class="col" style="gap:6px"><div class="row between"><span class="small mu">' + (x.s.extra ? 'RPE ressenti' : 'RPE ressenti · repère blanc = prévu (' + fmtN(x.g.rpe) + ')') + '</span><b class="small">' + rpeLab + '</b></div><div class="rpe" role="group" aria-label="RPE ressenti, de 1 à 10">' + rpe + '</div><div class="rpe-ends small mu"><span>Très facile</span><span>Maximal</span></div></div>' +
@@ -2021,7 +2029,7 @@
       case 'ex-tog': var tk = b.getAttribute('data-k'); ui.exOpen = ui.exOpen || {}; ui.exOpen[tk] = !ui.exOpen[tk]; break;
       case 'ex-all': var xe = findInst(key); ui.exOpen = ui.exOpen || {}; if (xe) { var allO = xe.g.items.every(function (it) { return ui.exOpen[key + '|' + it.id]; }); xe.g.items.forEach(function (it) { ui.exOpen[key + '|' + it.id] = !allO; }); } break;
       case 'mv-up': case 'mv-down':
-        var xo2 = findInst(key); if (xo2) { var p2 = xo2.p, okk = xo2.w + '|' + xo2.s.id, ids = orderedEx(p2, xo2.s, xo2.w).map(function (e) { return e.id; }), ix = ids.indexOf(b.getAttribute('data-ex')), jx = a === 'mv-up' ? ix - 1 : ix + 1;
+        var xo2 = findInst(key); if (xo2) { var p2 = xo2.p, okk = xo2.w + '|' + xo2.s.id, ids = xo2.g.items.map(function (e) { return e.id; }), ix = ids.indexOf(b.getAttribute('data-ex')), jx = a === 'mv-up' ? ix - 1 : ix + 1;
           if (ix >= 0 && jx >= 0 && jx < ids.length) { var tmp = ids[ix]; ids[ix] = ids[jx]; ids[jx] = tmp; p2.orders = p2.orders || {}; p2.orders[okk] = ids; persist(p2); } }
         break;
       case 'ord-all': var xa = findInst(key); if (xa) { var oa = orderedEx(xa.p, xa.s, xa.w); xa.s.exercises = oa; var pref = '|' + xa.s.id; Object.keys(xa.p.orders || {}).forEach(function (k2) { if (k2.slice(-pref.length) === pref) delete xa.p.orders[k2]; }); persist(xa.p); toast('Nouvel ordre appliqué à toutes les semaines'); } break;
