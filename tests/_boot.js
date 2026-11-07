@@ -16,12 +16,14 @@ function boot(store,opt){
   documentElement:Object.assign(el(),{scrollHeight:1000}),head:el(),body:el(),querySelector:()=>null,querySelectorAll:()=>[],activeElement:null,
   fonts:{load:()=>Promise.resolve()},visibilityState:'visible'};
  global.window={addEventListener:on,removeEventListener(){},dispatchEvent(){},matchMedia:q=>({matches:!!(opt.coarse&&/coarse/.test(q)),addEventListener(){}}),
-  scrollTo(){},scrollBy(){},innerWidth:390};
+  scrollTo(){},scrollBy(){},innerWidth:390,__IDBX:opt.idb};
  /* Node 21+ expose un navigator en lecture seule : on le remplace explicitement. */
  Object.defineProperty(global,'navigator',{value:Object.assign({vibrate(){}},opt.navigator||{}),configurable:true,writable:true});
- global.localStorage={getItem:k=>store[k]===undefined?null:store[k],setItem:(k,v)=>{store[k]=String(v)},removeItem:k=>{delete store[k]}};
+ global.localStorage={getItem:k=>store[k]===undefined?null:store[k],setItem:(k,v)=>{if(opt.lsFull)throw new Error('QuotaExceededError');store[k]=String(v)},removeItem:k=>{delete store[k]}};
+ /* PLAN est global dans le navigateur (window.PLAN) : même chose ici, dès le chargement. */
+ Object.defineProperty(global,'PLAN',{get:()=>global.window.PLAN,set:v=>{global.window.PLAN=v},configurable:true});
  global.alert=()=>{};global.confirm=()=>true;global.prompt=()=>null;
  global.Blob=function(){};global.URL={createObjectURL:()=>'',revokeObjectURL(){}};
- const R=new Function(host+'\n;'+planif+'\n;return {S,render,save,load,payload,applyRemote,cloudSync,wipeAll,stripBefore,downloadJSON,repMaxes,setStats,plateauOf,suggestOf,famWeekly,uaOnDay,loadRatio,benchSeries,weekReview,monOf,backupData,restoreData,snapshotOnUpdate,backups,mergePlanif,normPlanif,APP_VERSION,suggestFor,recordList,mv,PLAN:window.PLAN,HOST:window.PLAN_HOST};')();
+ const R=new Function(host+'\n;'+planif+'\n;return {S,render,save,load,payload,applyRemote,cloudSync,wipeAll,stripBefore,downloadJSON,repMaxes,setStats,plateauOf,suggestOf,famWeekly,uaOnDay,loadRatio,benchSeries,weekReview,monOf,backupData,restoreData,snapshotOnUpdate,backups,idbReady,idbFlush:()=>idbFlushP,storeInfo,mergePlanif,normPlanif,APP_VERSION,suggestFor,recordList,mv,PLAN:window.PLAN,HOST:window.PLAN_HOST};')();
  global.PLAN=global.window.PLAN;R.store=store;R.fire=(t,e)=>(L[t]||[]).forEach(f=>f(e||{}));R.doc=global.document;return R}
 module.exports={boot};

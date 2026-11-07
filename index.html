@@ -59,7 +59,15 @@ button,input,textarea,label,.chip,.tab,.gtab button,.step-btn{touch-action:manip
 ::selection{background:rgba(109,156,235,.3)}
 html,body{background:var(--cloud)}
 body{font-family:Barlow,system-ui,-apple-system,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
-@media(min-width:1000px){body.wideplan #app{max-width:1180px}}
+@media(min-width:1000px){body.wideplan #app{max-width:1180px}
+ body.wide2 #app{max-width:1180px}
+ .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:24px;align-items:start;padding:0 22px}
+ .split-l>.pane{padding-left:0;padding-right:0}
+ .split-r{position:sticky;top:84px;max-height:calc(100vh - 100px);overflow-y:auto;padding:16px 0 24px}
+ .split-r .head{padding-top:0}
+ .split-r .pane{padding-left:0;padding-right:0}
+ .hcard.sel{border-color:var(--aqua);box-shadow:0 0 0 1px var(--aqua)}
+ .split-l .row-link[aria-current="true"]{box-shadow:inset 3px 0 0 var(--aqua);background:var(--sunk)}}
 #app{max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:calc(98px + env(safe-area-inset-bottom))}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;text-align:left}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px solid var(--aqua);outline-offset:2px}
@@ -272,6 +280,14 @@ input.chip{font-size:16px}
 .lvnames{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);font-weight:500}
 .lvnames span{flex:1;text-align:center}
 .hero-n{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:48px;letter-spacing:-.02em;line-height:.86}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+#app.v-in{animation:fadein .2s ease-out}
+.split-r.d-in{animation:fadein .15s ease-out}
+#overlay.ov-in .sheet{animation:fadein .2s ease-out}
+/* Une seule animation de célébration : la première étape franchie (record…) à l'enregistrement */
+@keyframes mspop{0%{opacity:0;transform:scale(.94)}60%{opacity:1;transform:scale(1.02)}100%{transform:scale(1)}}
+.ms-pop{animation:mspop .32s ease-out .08s both}
+.hcard,.chip,.btn,.row-link{transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* Tablette et ordinateur : colonne plus large, navigation en haut */
 @media (min-width:820px){
@@ -410,7 +426,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v76";
+const APP_VERSION="msc-v77";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -547,8 +563,47 @@ let S={sessions:[],custom:[],planif:{programs:[],deleted:[]},bar:15,tab:"progres
 /* Instantané des données, avec horodatage pour arbitrer la synchronisation */
 function payload(local){return{sessions:S.sessions,custom:S.custom,planif:S.planif,bar:S.bar,profile:S.profile,
  lastExport:S.lastExport,theme:S.theme,tests:S.tests,decl:S.decl,pin:S.pin,tabsOff:S.tabsOff,delSessions:S.delSessions,wipedAt:S.wipedAt||0,pain:S.pain,updatedAt:S.updatedAt,...(local?{draft:S.draft}:{})}}
-const save=()=>{S.updatedAt=Date.now();pushSoon();try{localStorage.setItem(KEY,JSON.stringify(
- payload(true)))}catch(e){alert("Sauvegarde impossible : la mémoire du navigateur est pleine ou bloquée.")}};
+/* ══════════ STOCKAGE DE L'APPAREIL (lot 7) ══════════
+   Deux copies à chaque enregistrement : IndexedDB (la base du navigateur, plus grande et moins
+   exposée au ménage automatique) et localStorage, gardé tel quel en secours. Une version plus
+   ancienne de l'app relit donc toujours localStorage : retour arrière possible, aucune clé supprimée.
+   Au démarrage, on garde la copie la plus récente des deux (champ updatedAt). */
+const IDB_NAME="msc-store",IDB_ST="kv";
+let idbState="off",lsFail=false,bkMem=[];
+function idbNative(){let dbp=null;
+ const db=()=>dbp||(dbp=new Promise((res,rej)=>{try{
+  if(typeof indexedDB==="undefined"||!indexedDB)return rej(new Error("absent"));
+  const q=indexedDB.open(IDB_NAME,1);q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains(IDB_ST))q.result.createObjectStore(IDB_ST)};
+  q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);q.onblocked=()=>rej(new Error("bloqué"))}catch(e){rej(e)}}));
+ const tx=(mode,f)=>db().then(d=>new Promise((res,rej)=>{const t=d.transaction(IDB_ST,mode),st=t.objectStore(IDB_ST),r=f(st);
+  t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)}));
+ return{get:k=>tx("readonly",st=>st.get(k)),put:(k,v)=>tx("readwrite",st=>st.put(v,k))}}
+/* window.__IDBX : remplacement par les tests (Node n'a pas d'IndexedDB) */
+let IDBX=window.__IDBX||idbNative();
+function storeInfo(){return{idb:idbState,lsFail,bk:bkMem.length}}
+/* Écritures groupées : une seule en attente à la fois, la dernière gagne. */
+let idbPend=null,idbBusy=false;
+function idbWrite(raw,at){idbPend={v:raw,at,ver:APP_VERSION};if(idbBusy)return idbFlushP;
+ idbBusy=true;return idbFlushP=(async()=>{try{while(idbPend){const x=idbPend;idbPend=null;await IDBX.put("state",x)}idbState="ok"}
+  catch(e){idbState="err";if(lsFail)alert("Sauvegarde impossible : la mémoire de l'appareil est pleine ou bloquée.")}
+  finally{idbBusy=false}})()}
+let idbFlushP=Promise.resolve();
+const save=()=>{S.updatedAt=Date.now();pushSoon();const raw=JSON.stringify(payload(true));
+ try{localStorage.setItem(KEY,raw);lsFail=false}catch(e){lsFail=true;
+  if(idbState!=="ok")alert("Sauvegarde impossible : la mémoire du navigateur est pleine ou bloquée.")}
+ idbWrite(raw,S.updatedAt)};
+/* Démarrage : la copie IndexedDB remplace l'état chargé depuis localStorage seulement si elle est
+   plus récente (localStorage plein, ou vidé par le système). Sinon elle est (re)créée à partir de lui. */
+async function idbBoot(){try{
+ const r=await IDBX.get("state"),b=await IDBX.get("backups");idbState="ok";
+ if(Array.isArray(b))bkMem=b;
+ if(r&&typeof r.v==="string"&&(Number(r.at)||0)>(S.updatedAt||0)){
+  const wasProfil=!S.profile;load(r.v);
+  try{localStorage.setItem(KEY,r.v)}catch(e){lsFail=true}
+  if(wasProfil&&S.profile&&S.tab==="profil")S.tab="progres";
+  render();return"idb"}
+ if(S.updatedAt||S.sessions.length||S.profile){await IDBX.put("state",{v:JSON.stringify(payload(true)),at:S.updatedAt||0,ver:APP_VERSION})}
+ return"ls"}catch(e){idbState="err";return"err"}}
 /* ══════════ SAUVEGARDE COMPLÈTE ══════════
    Toutes les données : séances, mouvements perso, profil, plan (programmes et suivi),
    douleur, tests et déclarations de niveau, épinglages, réglages. */
@@ -569,13 +624,17 @@ function restoreData(d){
   if(Array.isArray(d.pin))S.pin=d.pin;if(Array.isArray(d.tabsOff))S.tabsOff=d.tabsOff;
   if(d.bar)S.bar=d.bar;if(d.theme){S.theme=d.theme;applyTheme()}}
  S.draft=null;S.focus=null;S.mc=null}
-function backups(){try{const b=JSON.parse(localStorage.getItem(BKEY)||"[]");return Array.isArray(b)?b:[]}catch(e){return[]}}
+function backups(){let b=[];try{b=JSON.parse(localStorage.getItem(BKEY)||"[]");if(!Array.isArray(b))b=[]}catch(e){b=[]}
+ /* localStorage plein : les copies écrites seulement dans IndexedDB restent disponibles */
+ const t=x=>x&&x[0]&&x[0].at||"";return t(bkMem)>t(b)?bkMem:b}
+function setBackups(b){b=b.slice(0,3);bkMem=b;try{IDBX.put("backups",b).catch(()=>{})}catch(e){}
+ try{localStorage.setItem(BKEY,JSON.stringify(b))}catch(e){}}
 /* Au premier lancement d'une nouvelle version, garde une copie des données (3 au plus). */
 function snapshotOnUpdate(){try{
  const prev=localStorage.getItem(VKEY);
  if(prev!==APP_VERSION&&(S.sessions.length||(S.planif&&S.planif.programs.length))){
   const b=backups();b.unshift({ver:prev||"ancienne version",at:new Date().toISOString(),data:backupData()});
-  localStorage.setItem(BKEY,JSON.stringify(b.slice(0,3)))}
+  setBackups(b)}
  localStorage.setItem(VKEY,APP_VERSION)}catch(e){}}
 /* Sur téléphone, l'app installée ne sait pas toujours suivre un lien de téléchargement :
    on ouvre la feuille « Partager » (Enregistrer dans Fichiers, AirDrop, mail). Sur ordinateur,
@@ -591,8 +650,8 @@ function downloadJSON(obj,name){const bl=new Blob([JSON.stringify(obj,null,2)],{
  dlLink(bl,name);return"download"}
 function dlLink(bl,name){const u=URL.createObjectURL(bl),l=document.createElement("a");l.href=u;l.download=name;l.click();
  setTimeout(()=>URL.revokeObjectURL(u),2000)}
-function load(){let raw=null;
- try{raw=localStorage.getItem(KEY)}catch(e){}
+function load(src){let raw=src||null;
+ if(!raw)try{raw=localStorage.getItem(KEY)}catch(e){}
  if(!raw){/* reprise des données d'une version antérieure */
   for(const k of OLDKEYS){try{const o=localStorage.getItem(k);
    if(o&&o!=="{}"){raw=o;localStorage.setItem(KEY,o);break}}catch(e){}}}
@@ -1054,7 +1113,9 @@ function cmpLine(sets,prev){const a=setStats(sets),b=prev?setStats(prev.sets):nu
 const PSUB={mouvements:"Mes mouvements",metcons:"Metcons refaits",douleur:"Douleur",travail:"Ce que tu travailles",bilan:"Bilan de la semaine",charge:"Charge d'entraînement"};
 function vPSub(k){
  let h=`<div class="head" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px"><div><div class="eyebrow">Progrès</div><h1>${PSUB[k]||""}</h1></div><button class="chip" style="white-space:nowrap;flex:none" data-act="psclose">‹ Progrès</button></div>`;
- if(k==="mouvements")h+=movesBlock();
+ if(k==="mouvements"){if(wide2()){const det=S.fiche?vFiche(S.fiche,true):"";
+   return h+`<div class="split"><div class="split-l">${S.fiche?movesBlock().split(`class="row-link" data-act="fiche" data-v="${S.fiche}"`).join(`class="row-link" aria-current="true" data-act="fiche" data-v="${S.fiche}"`):movesBlock()}</div><div class="split-r" aria-live="polite">${det||'<div class="empty">Choisis un mouvement pour voir sa fiche.</div>'}</div></div><div style="height:24px"></div>`}
+  h+=movesBlock()}
  else if(k==="metcons")h+=benchPage();
  else if(k==="bilan")h+=bilanPage();
  else if(k==="charge")h+=chargePage();
@@ -1124,14 +1185,14 @@ function movStat(id){
  return{txt:"",sub}}
 
 /* ══════════ FICHE MOUVEMENT ══════════ */
-function vFiche(id){
+function vFiche(id,inSplit){
  const m=mv(id),isCar=m.k==="cardio"||PACE[id];
  const curve=curveFor(id),hist=histFor(id);
  const wr=curve.filter(c=>c.rm!=null),wp=curve.filter(c=>c.pace!=null),wn=curve.filter(c=>c.reps>0);
  const best=bestOf(id);
  let h=`<div class="head" style="padding-bottom:12px">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-  <button class="chip" data-act="fclose">← Progrès</button>
+  <button class="chip" data-act="fclose">${inSplit?"Fermer la fiche":"← Progrès"}</button>
   ${bestOf(id)!=null?`<button class="chip" data-act="share" data-t="record" data-v="${id}">Partager</button>`:""}</div>
   <div class="eyebrow">${esc(m.g)}</div><h1 style="font-size:34px">${esc(m.n)}</h1></div><div class="pane">`;
 
@@ -1227,7 +1288,7 @@ function vDone(){
    <div style="width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 20px"></div>
    <div class="eyebrow">${t}</div>
    <div class="dsp" style="font-size:30px;margin:8px 0 20px">${S.done.length>1?"Tu as franchi "+S.done.length+" étapes":"Tu as franchi une étape"}</div>`+
-   S.done.map(x=>`<button class="ms-card" style="width:100%;margin-bottom:11px;background:${MSC[x.t]};text-align:left"
+   S.done.map((x,i)=>`<button class="ms-card${i===0?" ms-pop":""}" style="width:100%;margin-bottom:11px;background:${MSC[x.t]};text-align:left"
     ${x.id?`data-act="ficheclose" data-v="${x.id}"`:""}>
     <span class="tag">${x.t}</span><b>${esc(msTxt(x))}</b>${x.id?'<small style="opacity:.75">Voir l\'historique ›</small>':""}</button>`).join("")+
    `${S.done[0]&&S.done[0].id&&S.done[0].t==="Record"
@@ -1299,7 +1360,8 @@ function vProfil(){
   if(p)h+=`<div class="card flat" style="margin-top:20px"><div class="eyebrow" style="margin-bottom:10px">Sauvegarde</div>
    <div style="font-size:13.5px;color:var(--mute);line-height:1.6;margin-bottom:14px">« Exporter » télécharge un fichier avec toutes tes données : séances, plan, douleur et réglages. « Importer » le recharge, par exemple sur un nouveau téléphone.</div>
    <div style="display:flex;gap:10px"><button class="btn btn-quiet sm" data-act="export">Exporter</button>
-   <button class="btn btn-quiet sm" data-act="import">Importer</button></div>`+
+   <button class="btn btn-quiet sm" data-act="import">Importer</button></div>
+   <div style="font-size:12px;color:var(--mute);line-height:1.6;margin-top:12px">Sur cet appareil : ${idbState==="ok"?(lsFail?"base de l'appareil (IndexedDB). La copie de secours n'a plus de place, l'export reste conseillé.":"base de l'appareil (IndexedDB) et copie de secours."):"copie locale du navigateur."}</div>`+
    (()=>{const b=backups();return b.length?`<div style="font-size:12px;color:var(--mute);line-height:1.6;margin:16px 0 4px">Copies gardées automatiquement avant chaque mise à jour de l'app et avant un effacement :</div>`+
     b.map((x,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)">
      <span style="font-size:13.5px">${fMid(x.at.slice(0,10))} <span style="color:var(--mute)">· ${(x.data.sessions||[]).length} séances, ${((x.data.planif||{}).programs||[]).length} programmes</span></span>
@@ -2143,6 +2205,12 @@ function backupNudge(){
     :"Tes données n'ont jamais été sauvegardées."}</span>
    <button class="chip" style="flex:none" data-act="export">Exporter</button></div></div>`}
 
+/* Vue deux colonnes sur ordinateur (lot 7) : Suivi, Mes mouvements et la fiche d'un mouvement.
+   Le téléphone garde une seule colonne, inchangée. */
+const wide2=()=>!!(window.matchMedia&&window.matchMedia("(min-width:1000px)").matches);
+function splitWrap(list,det){const i=list.indexOf('<div class="pane">');
+ const head=i>=0?list.slice(0,i):"",body=i>=0?list.slice(i+18):list;
+ return head+`<div class="split"><div class="split-l"><div class="pane">${body}</div></div><div class="split-r" aria-live="polite">${det?`<div class="card">${det}</div>`:'<div class="empty">Choisis un élément dans la liste.</div>'}</div></div><div>`}
 function vHist(){
  const P=planOn()&&window.PLAN&&PLAN.historyList?(()=>{try{return PLAN.historyList()}catch(e){return[]}})():[];
  const F=S.hf||"tout",cats=[["tout","Tout"],["crossfit","CrossFit"],["muscu","Muscu"],["course","Course"],["autre","Autre"]];
@@ -2161,31 +2229,41 @@ function vHist(){
  const H=found;
  if(!H.length)h+=`<div class="empty">${hq?"Aucune séance ne correspond à « "+esc(S.hq)+" ».":"Tes séances enregistrées s'empileront ici."}</div><div class="pane">`;
  else{h+=`<div class="pane">`;
-  let curM="";
+  let curM="";const W2=wide2();S._hP=P;
+  /* Ordinateur (≥ 1 000 px) : liste à gauche, détail de la séance choisie à droite */
+  const keyOf=it=>it.cf?it.s.id:it.x.key,sel=W2?(H.find(it=>keyOf(it)===S.open)||H[0]):null;
+  if(sel&&S.open!==keyOf(sel))S.open=keyOf(sel);
   H.forEach(it=>{
    const mk=it.date.slice(0,7);if(mk!==curM){curM=mk;const nM=H.filter(z=>z.date.slice(0,7)===mk).length;
     h+=`<div class="card-h" style="margin:${h.endsWith('<div class="pane">')?"2px":"18px"} 2px 9px"><div class="eyebrow">${MOIS[+mk.slice(5,7)-1]} ${mk.slice(0,4)}</div><span style="font-size:12px;color:var(--mute);font-weight:600">${nM} séance${nM>1?"s":""}</span></div>`}
    if(!it.cf){const x=it.x,op=S.open===x.key;
-    h+=`<div class="card hcard"><button style="width:100%" data-act="open" data-id="${esc(x.key)}" aria-expanded="${op}">
+    h+=`<div class="card hcard${W2&&op?" sel":""}"><button style="width:100%" data-act="open" data-id="${esc(x.key)}" aria-expanded="${op}">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
     <div style="min-width:0;text-align:left"><div style="display:flex;align-items:center;gap:8px"><span class="dsp" style="font-size:18px">${fMid(x.date)}</span>
      <span class="tbadge k-${["muscu","course"].includes(x.kind)?x.kind:"autre"}">${x.kind==="muscu"?"Muscu":x.kind==="course"?"Course":"Autre"}</span></div>
     <div style="font-size:12px;color:var(--mute);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}${x.rpe?" · RPE "+x.rpe:""}</div></div>
-    <span style="color:var(--mute);font-size:18px">${op?"−":"+"}</span></div></button>`;
-    if(op){h+=`<div style="margin-top:15px;border-top:1px solid var(--line);padding-top:11px">`+
+    <span style="color:var(--mute);font-size:18px">${W2?"›":op?"−":"+"}</span></div></button>`;
+    if(op&&!W2)h+=detPlan(x);
+    h+=`</div>`;return}
+   const s=it.s;
+   h+=cfCard(s)});
+  if(W2)h=splitWrap(h,sel?(sel.cf?detCF(sel.s,true):detPlan(sel.x,true)):"")}
+ return h+`<div style="height:24px"></div></div>`}
+function detPlan(x,big){return`<div style="${big?"":"margin-top:15px;border-top:1px solid var(--line);padding-top:11px"}">`+(big?`<div class="eyebrow">${fMid(x.date)}</div><h2 class="dsp" style="font-size:var(--fs-xl,30px);margin:4px 0 8px">${esc(x.title)}</h2>`:"")+
      x.lines.map(l=>`<div style="padding:8px 0"><div style="font-weight:600;font-size:15px">${esc(l.n)}</div>
       <div style="font-size:13.5px;color:var(--mute);margin-top:3px">${esc(l.t)}</div></div>`).join("")+
      `<div style="font-size:12px;color:var(--mute);margin-top:6px">${esc(x.prog)}${x.dur?" · "+x.dur+" min":""}${x.rpe?" · RPE "+x.rpe:""}${x.extra?" · ajoutée":""}</div>`+
      (x.note?`<div style="font-size:13.5px;color:var(--mute);margin-top:9px;line-height:1.6">${esc(x.note)}</div>`:"")+
      `<button class="btn btn-quiet sm" style="margin-top:13px" data-act="planopen" data-v="${esc(x.key)}">Ouvrir dans le plan</button></div>`}
-    h+=`</div>`;return}
-   const s=it.s;
-   h+=`<div class="card hcard"><button style="width:100%" data-act="open" data-id="${s.id}" aria-expanded="${S.open===s.id}">
+function cfCard(s){const W2=wide2(),P=S._hP||[];let h="";
+   h+=`<div class="card hcard${W2&&S.open===s.id?" sel":""}"><button style="width:100%" data-act="open" data-id="${s.id}" aria-expanded="${S.open===s.id}">
    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
    <div style="min-width:0;text-align:left"><div style="display:flex;align-items:center;gap:8px"><span class="dsp" style="font-size:18px">${fMid(s.date)}</span>${P.length?'<span class="tbadge k-cf">CrossFit</span>':""}</div>
    <div style="font-size:12px;color:var(--mute);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${!(s.entries||[]).length&&!(s.metcons||[]).length?"Séance CrossFit"+(s.dur?" · "+s.dur+" min":"")+(s.rpe?" · RPE "+s.rpe:""):""}${[...(s.entries||[]).map(e=>esc(mv(e.movementId).n)),...(s.metcons||[]).map(mc=>esc(mc.name||FMT[mc.format].l))].join(" · ")||"—"}</div></div>
-   <span style="color:var(--mute);font-size:18px">${S.open===s.id?"−":"+"}</span></div></button>`;
-   if(S.open===s.id){h+=`<div style="margin-top:15px;border-top:1px solid var(--line);padding-top:11px">`+
+   <span style="color:var(--mute);font-size:18px">${W2?"›":S.open===s.id?"−":"+"}</span></div></button>`;
+   if(S.open===s.id&&!W2)h+=detCF(s);
+   return h+`</div>`}
+function detCF(s,big){let h=`<div style="${big?"":"margin-top:15px;border-top:1px solid var(--line);padding-top:11px"}">`+(big?`<div class="eyebrow">CrossFit</div><h2 class="dsp" style="font-size:var(--fs-xl,30px);margin:4px 0 8px">${fMid(s.date)}</h2>`:"")+
     (s.entries||[]).map(e=>{const m=mv(e.movementId);
      return`<div style="padding:9px 0"><div style="font-weight:600;font-size:15px">${esc(m.n)}
      ${e.sets&&e.sets[0]&&e.sets[0].level!=null&&m.lad?`<span class="badge" style="margin-left:8px">${m.lad[e.sets[0].level]}</span>`:""}</div>
@@ -2202,9 +2280,8 @@ function vHist(){
     h+=`<div style="display:flex;gap:10px;margin-top:15px">
     <button class="btn btn-quiet sm" data-act="share" data-t="seance" data-v="${s.id}">Partager</button>
     <button class="btn btn-quiet sm" data-act="edit" data-id="${s.id}">Modifier</button>
-    <button class="btn btn-quiet sm danger" data-act="del" data-id="${s.id}">Supprimer</button></div></div>`}
-   h+=`</div>`})}
- return h+`<div style="height:24px"></div></div>`}
+    <button class="btn btn-quiet sm danger" data-act="del" data-id="${s.id}">Supprimer</button></div></div>`;
+ return h}
 
 /* ══════════ VUE : SÉLECTEUR ══════════ */
 function vPicker(){
@@ -3205,6 +3282,7 @@ function nextUpHTML(N){
 
 /* ══════════ RENDU ══════════ */
 let lastView=null,pendingAnchor=null;
+let animView=null,lastOpen=null,vinT=null;
 function render(){
  if(window.PLAN&&window.PLAN.hold())return;
  /* On mémorise le texte exact en cours de frappe. Sans cela, la valeur
@@ -3227,10 +3305,18 @@ function render(){
     h0=document.documentElement.scrollHeight}}catch(e){}}
  if((S.tabsOff||[]).includes(S.tab))S.tab="progres";
  document.getElementById("app").innerHTML=
-  S.tab==="plan"?(typeof vPlan==="function"?vPlan():""):S.tab==="progres"?(S.fiche?vFiche(S.fiche):S.records?vRecords():S.ps?vPSub(S.ps):vProgres()):S.tab==="noter"?vNoter()
+  S.tab==="plan"?(typeof vPlan==="function"?vPlan():""):S.tab==="progres"?(S.fiche&&!(S.ps==="mouvements"&&wide2())?vFiche(S.fiche):S.records?vRecords():S.ps?vPSub(S.ps):vProgres()):S.tab==="noter"?vNoter()
   :S.tab==="niveau"?vNiveau():S.tab==="profil"?vProfil():vHist();
+ /* Transitions courtes (lot 7) : seulement quand on change d'écran ou de détail, jamais à chaque
+    rendu ; fondu seul (pas de transform, qui décrocherait les éléments fixes). Coupées si
+    « réduire les animations » est activé (règle globale prefers-reduced-motion). */
+ {const vk=[S.tab,S.ps||"",S.fiche||"",S.records?1:0].join("|"),ap=document.getElementById("app");
+  if(ap.classList){if(animView!==null&&vk!==animView){ap.classList.remove("v-in");void ap.offsetWidth;ap.classList.add("v-in");clearTimeout(vinT);vinT=setTimeout(()=>ap.classList.remove("v-in"),260)}
+   const sr=ap.querySelector&&ap.querySelector(".split-r");if(sr&&lastOpen!==null&&S.open!==lastOpen&&vk===animView)sr.classList.add("d-in")}
+  animView=vk;lastOpen=S.open}
  const planHere=S.tab==="plan"||(S.tab==="noter"&&S.notePlan&&!S.draft);
- try{document.body.classList.toggle("wideplan",planHere)}catch(e){}
+ try{document.body.classList.toggle("wideplan",planHere);
+  document.body.classList.toggle("wide2",S.tab==="historique"||(S.tab==="progres"&&S.ps==="mouvements"&&!S.records))}catch(e){}
  if(window.PLAN){if(planHere)window.PLAN.mount(document.getElementById("pl-host"));else window.PLAN.unmount()}
  /* La barre d'onglets et les feuilles vivent hors de #app : un `position:fixed`
     se rattache au premier ancêtre transformé, ce qui le décrocherait de l'écran. */
@@ -3240,7 +3326,9 @@ function render(){
     <svg viewBox="0 0 16 16" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.6"
      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TABICON[k]}</svg>
     <span>${l}</span></button>`).join("");
- document.getElementById("overlay").innerHTML=(S.picker?vPicker():"")+(S.done?vDone():"")+(S.share?vShare():"");
+ {const ov=document.getElementById("overlay"),was=!!ov.innerHTML;
+  ov.innerHTML=(S.picker?vPicker():"")+(S.done?vDone():"")+(S.share?vShare():"");
+  if(!was&&ov.innerHTML&&ov.classList){ov.classList.add("ov-in");setTimeout(()=>ov.classList.remove("ov-in"),220)}}
  if(S.share)shReady().then(paintShare).catch(()=>{});
  /* Changer d'écran doit repartir du haut : sans cela on arrive au milieu
     de la nouvelle page, à la hauteur où l'on avait laissé la précédente. */
@@ -3521,7 +3609,7 @@ document.addEventListener("click",ev=>{
   case"donecl":case"doneclbg":S.done=null;break;
   case"pat":S.pat=!S.pat;pendingAnchor="movblock";break;
   case"drop":if(confirm("Abandonner cette saisie ?")){S.draft=null;S.focus=null;S.mc=null}break;
-  case"open":S.open=S.open===b.dataset.id?null:b.dataset.id;break;
+  case"open":S.open=wide2()&&S.tab==="historique"?b.dataset.id:S.open===b.dataset.id?null:b.dataset.id;break;
   case"edit":{const s=S.sessions.find(x=>x.id===b.dataset.id);if(!s)break;
     S.draft={...s,entries:s.entries.map(e=>({...e,sets:e.sets.map(x=>({...x}))})),
       metcons:(s.metcons||[]).map(x=>({...x,items:x.items.map(i=>({...i})),res:{...x.res}}))};
@@ -3669,7 +3757,7 @@ function mergePlanif(a,b){a=normPlanif(a);b=normPlanif(b);
    dans les sauvegardes de l'appareil, comme avant une mise à jour. */
 function wipeAll(propager){
  try{const b=backups();b.unshift({ver:"avant effacement",at:new Date().toISOString(),data:backupData()});
-  localStorage.setItem(BKEY,JSON.stringify(b.slice(0,3)))}catch(e){}
+  setBackups(b)}catch(e){}
  const now=Date.now(),pl=normPlanif(S.planif);
  S.sessions=[];S.custom=[];S.profile=null;S.draft=null;S.focus=null;S.mc=null;S.fiche=null;
  S.done=null;S.lastExport=null;S.pname="";S.tests={};S.decl={};S.pin=[];S.delSessions=[];
@@ -3741,11 +3829,12 @@ function applyRemote(rec){
     "plus récent" que le compte au prochain lancement. */
  S.updatedAt=(rec&&rec.serverUpdatedAt)?new Date(rec.serverUpdatedAt).getTime():Date.now();
  seedProfil();if(wipedNow&&!S.profile)openProfil();
- try{localStorage.setItem(KEY,JSON.stringify(payload(true)))}catch(e){}
+ {const raw=JSON.stringify(payload(true));try{localStorage.setItem(KEY,raw);lsFail=false}catch(e){lsFail=true}idbWrite(raw,S.updatedAt)}
  /* Ce que le cloud ne connaissait pas lui est renvoyé. */
  if((!rp&&S.profile)||grew||localSeules||plDiff||painDiff)pushSoon();}
 
 async function cloudSync(){
+ try{await idbReady}catch(e){}
  if(!window.CLOUD||!S.cloud.user)return;
  lastPull=Date.now();
  S.cloud.busy=true;S.cloud.status="pending";render();
@@ -3786,11 +3875,13 @@ function resync(force){
  cloudSync()}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")resync(false)});
 window.addEventListener("online",()=>resync(true));
+try{window.matchMedia&&window.matchMedia("(min-width:1000px)").addEventListener("change",()=>render())}catch(e){}
 if(window.matchMedia)window.matchMedia("(prefers-color-scheme:dark)")
  .addEventListener("change",()=>{if(S.theme==="auto")applyTheme()});
 
 load();
 snapshotOnUpdate();
+const idbReady=idbBoot();
 try{const tq=new URLSearchParams(location.search).get("tab");if(["progres","noter","plan","historique","profil"].includes(tq))S.tab=tq}catch(e){}
 /* Demande à l'appareil de ne jamais effacer de lui-même les données de l'app (accordé par iOS
    surtout pour une app ajoutée à l'écran d'accueil). Sans effet visible, sans risque si refusé. */
