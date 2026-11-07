@@ -1,0 +1,156 @@
+{
+ "programs": [
+  {
+   "id": "fanny-muscu-14s",
+   "kind": "muscu",
+   "name": "Fanny · Muscu du samedi",
+   "start": "2026-11-09",
+   "color": "#F59BC0",
+   "preset": null,
+   "blocks": [
+    {
+     "goal": "hyp",
+     "weeks": 4,
+     "end": "deload"
+    },
+    {
+     "goal": "force",
+     "weeks": 4,
+     "end": "deload"
+    },
+    {
+     "goal": "max",
+     "weeks": 4,
+     "end": "deload"
+    },
+    {
+     "goal": "max",
+     "weeks": 1,
+     "end": "test"
+    },
+    {
+     "goal": "max",
+     "weeks": 1,
+     "end": "test"
+    }
+   ],
+   "sessions": [
+    {
+     "id": "fsam",
+     "name": "Muscu samedi — Full body",
+     "day": 5,
+     "dur": 75,
+     "exercises": [
+      {
+       "id": "ftra",
+       "name": "Tractions australiennes",
+       "mode": "reps",
+       "sets": 3,
+       "reps": 10,
+       "incReps": 0.5,
+       "maxReps": 12,
+       "testMax": 1,
+       "testOn": 1,
+       "rest": "2 min",
+       "note": "Corps gainé en planche, poitrine vers la barre · Omoplates serrées en haut, 1 s · Quand 3×12 passe facilement : barre plus basse ou pieds surélevés · Semaine test : max de reps unbroken"
+      },
+      {
+       "id": "fsq",
+       "name": "Squat",
+       "mode": "pct",
+       "orm": 45,
+       "offset": 0,
+       "step": 1,
+       "alt": 1,
+       "subs": [
+        {
+         "name": "Pendlay row",
+         "orm": 45,
+         "note": "Si le CrossFit a chargé les jambes · Dos plat, barre posée au sol à chaque rep · Tire vers le bas du sternum"
+        }
+       ],
+       "note": "Semaines impaires · Genoux dans l'axe des pieds · Descends au moins à la parallèle · Jambes chargées au CrossFit cette semaine : remplace par le Pendlay row ou retire l'exercice"
+      },
+      {
+       "id": "fdl",
+       "name": "Soulevé de terre",
+       "mode": "pct",
+       "orm": 65,
+       "offset": 0,
+       "step": 1,
+       "alt": 2,
+       "subs": [
+        {
+         "name": "Pendlay row",
+         "orm": 45,
+         "note": "Si le CrossFit a chargé les jambes ou le dos · Dos plat, barre posée au sol à chaque rep · Tire vers le bas du sternum"
+        }
+       ],
+       "note": "Semaines paires · Barre contre les tibias, dos plat · Pousse le sol avec les jambes · Jambes ou dos chargés au CrossFit cette semaine : remplace par le Pendlay row ou retire l'exercice"
+      },
+      {
+       "id": "fbp",
+       "name": "Développé couché",
+       "mode": "pct",
+       "orm": 35,
+       "offset": 0,
+       "step": 1,
+       "testOn": 1,
+       "note": "Omoplates serrées, pieds ancrés au sol · Barre au bas de la poitrine, sans rebond"
+      },
+      {
+       "id": "fpd",
+       "name": "Tirage vertical poulie",
+       "mode": "pct",
+       "orm": 45,
+       "offset": 0,
+       "step": 2.5,
+       "testOn": 2,
+       "note": "Tire la barre vers le haut de la poitrine, coudes vers les hanches · Pas d'élan avec le buste · Remonte en contrôlant"
+      },
+      {
+       "id": "fmp",
+       "name": "Développé militaire assis haltères",
+       "mode": "pct",
+       "orm": 10,
+       "offset": 0,
+       "step": 1,
+       "testOn": 2,
+       "note": "Charge par haltère · Dos collé au dossier, abdos serrés · Haltères qui se rejoignent au-dessus de la tête"
+      },
+      {
+       "id": "fext",
+       "name": "Extension dos (lestée)",
+       "mode": "kg",
+       "sets": 3,
+       "reps": 12,
+       "repsMax": 15,
+       "startKg": 5,
+       "incKg": 2.5,
+       "rest": "90 s",
+       "note": "Disque contre la poitrine · Monte jusqu'à l'alignement du corps, pas au-delà · 12 → 15 reps, puis +2,5 kg"
+      },
+      {
+       "id": "fcr",
+       "name": "Crunch décliné",
+       "mode": "reps",
+       "sets": 3,
+       "reps": 12,
+       "incReps": 0.5,
+       "maxReps": 15,
+       "rest": "60 s",
+       "note": "Enroule le dos vertèbre par vertèbre · Expire en montant · Descente lente"
+      }
+     ]
+    }
+   ],
+   "logs": {},
+   "overrides": {},
+   "moves": {},
+   "orders": {},
+   "extras": [],
+   "createdAt": 1794076800000,
+   "updatedAt": 1794076800000
+  }
+ ]
+}

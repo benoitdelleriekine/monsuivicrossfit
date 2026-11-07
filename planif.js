@@ -137,7 +137,7 @@
 
   var muscuSpec = function (p, w) {
     if (!(w >= 1)) return null;
-    var acc = 0, seen = {}, blocks = p.blocks || [];
+    var acc = 0, seen = {}, blocks = p.blocks || [], tNo = 0;
     for (var bi = 0; bi < blocks.length; bi++) {
       var b = blocks[bi], n = Math.max(1, num(b.weeks, 1) | 0), G = GOALS[b.goal] || GOALS.force;
       var rep = seen[b.goal] || 0; seen[b.goal] = rep + 1;
@@ -152,9 +152,10 @@
         var info = { r0: base(0).r, bi: bi, k: k, n: n, nWork: nWork, goal: b.goal, blockLabel: 'Bloc ' + (bi + 1) + ' · ' + G.label, color: G.color, rest: G.rest };
         if (k < nWork) { var x = base(k); return Object.assign(info, x, { ph: G.label, sh: G.sh }); }
         var last = base(Math.max(0, nWork - 1));
-        if (b.end === 'test') return Object.assign(info, { s: 1, r: 1, p: 100, rpe: '10', ph: 'Test 1RM', sh: 'Test', test: true, rest: '4–5 min' });
+        if (b.end === 'test') return Object.assign(info, { s: 1, r: 1, p: 100, rpe: '10', ph: 'Test 1RM', sh: 'Test', test: true, testNo: tNo + 1, rest: '4–5 min' });
         return Object.assign(info, { s: Math.max(2, last.s - 2), r: last.r, p: Math.max(40, last.p - 12.5), rpe: '6', ph: 'Décharge', sh: 'Déch.', deload: true, color: '#6B7680' });
       }
+      if (b.end === 'test') tNo++;
       acc += n;
     }
     return null;
@@ -398,17 +399,21 @@
   var genMuscu = function (p, sess, w) {
     var sp = muscuSpec(p, w); if (!sp) return null;
     var kEff = workBefore(w, muscuLight(p));
-    var items = orderedEx(p, sess, w).map(function (ex) {
+    /* ex.alt : 1 = semaines impaires seulement, 2 = semaines paires (ex. squat / soulevé de terre en alternance).
+       ex.testOn : n° de la semaine de test où cet exercice est testé (tests répartis sur plusieurs semaines) ;
+       les autres semaines de test il est fait léger. */
+    var testHere = function (ex) { return !num(ex.testOn, 0) || num(ex.testOn, 0) === num(sp.testNo, 1); };
+    var items = orderedEx(p, sess, w).filter(function (ex) { var a = num(ex.alt, 0); return !a || (a === 1 ? w % 2 === 1 : w % 2 === 0); }).map(function (ex) {
       var it = { id: ex.id, name: ex.name || 'Exercice', scheme: '', load: '', note: ex.note || '', ton: 0, loadNum: null, mode: ex.mode, rpePlan: rpeNum(sp.rpe), repsPlan: null, main: ex.mode === 'pct' && num(ex.offset, 0) === 0, orm: num(ex.orm, 0) };
       if (ex.mode === 'pct') {
         var off = num(ex.offset, 0), orm0 = num(ex.orm, 0), tr = tmTrace(p, ex, w), orm = orm0 * tr.f;
         it.tmFrom = orm0; it.tmF = tr.f; it.orm = orm;
         if (sp.test) {
-          if (off === 0) { it.scheme = '1RM'; it.load = orm ? 'visé ' + kg(rstep(orm * 1.025, ex)) : ''; it.note = 'Montée progressive, 3–5 essais'; it.loadNum = orm ? rstep(orm * 1.025, ex) : null; it.repsPlan = 1; it.rpePlan = 10; it.sets = '3–5'; it.reps = 1; it.rpeTxt = '9–10'; it.rest = '4–5 min'; it.info = 'Test : montée progressive par paliers'; }
+          if (off === 0 && testHere(ex)) { it.scheme = '1RM'; it.load = orm ? 'visé ' + kg(rstep(orm * 1.025, ex)) : ''; it.note = 'Montée progressive, 3–5 essais'; it.loadNum = orm ? rstep(orm * 1.025, ex) : null; it.repsPlan = 1; it.rpePlan = 10; it.sets = '3–5'; it.reps = 1; it.rpeTxt = '9–10'; it.rest = '4–5 min'; it.info = 'Test : montée progressive par paliers'; }
           else { it.scheme = '3×3'; it.load = orm ? kg(r25(orm * 0.6)) : ''; it.note = 'Léger, garde de la fraîcheur pour le test'; it.loadNum = orm ? r25(orm * 0.6) : null; it.repsPlan = 3; it.rpePlan = 6; it.sets = 3; it.reps = 3; it.rpeTxt = '6'; it.rest = '2 min'; it.info = 'Léger avant le test'; }
         } else {
           var prm = pctParams(sp, ex), rc = prm.rc, rr0 = prm.r, pAdj = prm.pAdj, s = prm.s;
-          var pp = prm.pp, L = rstep(orm * pp / 100, ex), L0 = rstep(orm0 * pp / 100, ex);
+          var pp = prm.pp, L = rstep(orm * pp / 100, ex), L0 = rstep(orm0 * pp / 100, ex); it.pp = pp;
           it.adjKg = L - L0;
           it.scheme = s + '×' + rr0; it.load = orm ? kg(L) : fmtN(pp) + ' %';
           it.note = fmtN(pp) + ' % 1RM · RPE ' + sp.rpe + ' · repos ' + sp.rest + (pAdj ? ' · reps plafonnées à ' + rc + ', intensité ajustée' : '') + (ex.note ? ' · ' + ex.note : '');
@@ -434,7 +439,7 @@
         var dlInfo = sp.deload ? 'Semaine allégée : 1 série en moins' : '';
         it.scheme = s3 + '×' + Math.max(1, r3); it.load = 'Poids du corps'; it.loadNum = r3; it.repsPlan = Math.max(1, r3); it.rpePlan = 8; it.sets = s3; it.reps = Math.max(1, r3); it.rpeTxt = '8'; it.rest = '2 min'; it.info = num(ex.incReps, 0) ? 'Reps qui augmentent au fil des semaines' + (num(ex.maxReps, 0) ? ' (jusqu’à ' + num(ex.maxReps) + ')' : '') : '';
         if (dlInfo) it.info = dlInfo + (it.info ? ' · ' + it.info : '');
-        if (sp.test && (ex.testMax === true || num(ex.testMax, 0) > 0)) {
+        if (sp.test && (ex.testMax === true || num(ex.testMax, 0) > 0) && testHere(ex)) {
           it.testMax = true; it.sets = 1; it.reps = 'Max'; it.scheme = '1×max'; it.repsPlan = Math.max(1, r3); it.rpePlan = 10; it.rpeTxt = '9–10'; it.rest = '2–3 min';
           it.info = 'Test du max de reps unbroken';
           it.note = 'Échauffement : 2 séries courtes faciles · Une seule série, au max, technique stricte · Arrête dès que la technique casse · Coude qui tire : arrête la série';
@@ -526,6 +531,13 @@
       var n2 = { id: it.id + '~sw', origId: it.id, origName: it.name, name: ov.swap.name, mode: rp ? 'reps' : 'kg', unit: sec ? 's' : '', sets: it.sets,
         reps: sec && !wasSec ? 30 : (!sec && wasSec ? 10 : it.reps), loadNum: null, rpePlan: it.rpePlan, rpeTxt: it.rpeTxt, rest: it.rest, ssNext: it.ssNext, note: '', swapped: true, info: ov.swap.all ? 'Remplacement appliqué aussi aux semaines suivantes' : '' };
       n2.repsPlan = n2.reps;
+      /* Remplaçant prévu dans le programme (ex.subs : nom + 1RM) : charge calculée au même % que l'exercice remplacé */
+      var e0 = (s.exercises || []).filter(function (q) { return q.id === it.id; })[0], sb = e0 && (e0.subs || []).filter(function (q) { return q.name === ov.swap.name; })[0];
+      if (sb && num(sb.orm, 0) > 0) { var st0 = { step: num(sb.step, 0) || num(e0.step, 0) };
+        if (it.scheme === '1RM') { n2.loadNum = rstep(num(sb.orm) * 1.025, st0); n2.sets = '3–5'; n2.reps = 1; n2.repsPlan = 1; n2.info = 'Test 1RM · ' + ov.swap.name + ' (réf. ' + kg(num(sb.orm)) + ')'; n2.note = 'Montée progressive, 3–5 essais'; }
+        else if (it.pp) { n2.loadNum = rstep(num(sb.orm) * it.pp / 100, st0); n2.info = fmtN(it.pp) + ' % du 1RM ' + ov.swap.name + ' (' + kg(num(sb.orm)) + ')'; }
+        else if (it.loadNum && it.orm) { n2.loadNum = rstep(num(sb.orm) * it.loadNum / it.orm, st0); n2.info = 'Même intensité que ' + it.name; }
+        if (sb.note) n2.note = sb.note; }
       var o2 = ovs[w + '|' + s.id + '|' + n2.id];
       if (o2) { if (o2.sets != null) n2.sets = o2.sets; if (o2.reps != null) { n2.reps = o2.reps; n2.repsPlan = o2.reps; } if (o2.kg != null) n2.loadNum = o2.kg; if (o2.rpe != null) { n2.rpePlan = o2.rpe; n2.rpeTxt = String(o2.rpe); } n2.edited = true; }
       n2.scheme = n2.sets + '×' + n2.reps; n2.load = n2.loadNum ? kg(n2.loadNum) : '';
@@ -794,11 +806,13 @@
     persist(p);
   };
   var swapPanelHtml = function (x, it, ek, act) {
-    var alts = altFor(it.origName || it.name).filter(function (n) { return n !== it.name; });
+    var e0 = (x.s.exercises || []).filter(function (q) { return q.id === (it.origId || it.id); })[0], subs = (e0 && e0.subs || []).map(function (q) { return q.name; });
+    var alts = subs.concat(altFor(it.origName || it.name).filter(function (n) { return subs.indexOf(n) < 0; })).filter(function (n) { return n !== it.name; });
     return '<div class="sub swp" style="margin-top:8px"><b class="small">Remplacer ' + esc(it.name) + ' par un exercice de même objectif</b>' +
       (alts.length ? '<div class="xchips">' + alts.map(function (n) { return '<button class="chip xchip" data-a="' + act + '" data-key="' + esc(ek) + '" data-n="' + esc(n) + '">' + esc(n) + '</button>'; }).join('') + '</div>' : '') +
       '<div class="row" style="flex-wrap:nowrap"><input class="in" data-swn="1" list="pl-lib3" autocomplete="off" placeholder="Ou un autre exercice…" style="flex:1;min-width:0"><button class="btn sm" data-a="' + act + '" data-key="' + esc(ek) + '" data-n="">Choisir</button></div>' +
       (x.s.extra || act !== 'sw-pick' ? '' : '<label class="row small" style="gap:8px;cursor:pointer"><input type="checkbox" data-swall="1"' + (ui.swapAll ? ' checked' : '') + ' style="width:20px;height:20px"> Aussi pour les semaines suivantes de cette séance</label>') +
+      (subs.length ? '<span class="small mu">' + esc(subs.join(', ')) + ' : remplaçant prévu, charge calculée sur son 1RM.</span>' : '') +
       '<span class="small mu">Séries, reps, RPE et repos sont gardés ; la charge est à choisir. Les séries notées comptent pour le nouvel exercice, pas pour l’ancien.</span>' +
       '<div class="row"><button class="btn sm ghost" data-a="' + (act === 'sw-pick' ? 'sw-cancel' : 'run-swcancel') + '">Annuler</button></div>' + libDatalist('pl-lib3') + '</div>';
   };
@@ -1850,7 +1864,7 @@
   var opt = function (list, v) { return list.map(function (o) { return '<option value="' + o[0] + '"' + (String(v) === String(o[0]) ? ' selected' : '') + '>' + o[1] + '</option>'; }).join(''); };
   var fld = function (label, path, val, attrs) { return '<label class="field"><span>' + label + '</span><input class="in" data-f="' + path + '" value="' + esc(val == null ? '' : val) + '" ' + (attrs || '') + '></label>'; };
   var nfld = function (label, path, val, extra) { return fld(label, path, val, 'type="number" inputmode="decimal" step="any" data-t="n" ' + (extra || '')); };
-  var sel = function (label, path, html, rr) { return '<label class="field"><span>' + label + '</span><select class="in" data-f="' + path + '"' + (rr ? ' data-rr="1"' : '') + (path.indexOf('day') >= 0 || path.indexOf('weeks') >= 0 || path.indexOf('offset') >= 0 || /\.ss$/.test(path) ? ' data-t="n"' : '') + '>' + html + '</select></label>'; };
+  var sel = function (label, path, html, rr) { return '<label class="field"><span>' + label + '</span><select class="in" data-f="' + path + '"' + (rr ? ' data-rr="1"' : '') + (path.indexOf('day') >= 0 || path.indexOf('weeks') >= 0 || path.indexOf('offset') >= 0 || /\.(ss|alt|testOn)$/.test(path) ? ' data-t="n"' : '') + '>' + html + '</select></label>'; };
   var editorBody = function () {
     var d = ed.draft, k = d.kind, h = '';
     h += '<div class="sec"><h3>Général</h3><div class="fgrid w2">' + fld('Nom du programme', 'name', d.name, 'maxlength="60"') + fld('Début (semaine 1 = lundi de cette date)', 'start', d.start, 'type="date" data-rr="1"') + '</div>';
@@ -1862,13 +1876,14 @@
         var G = GOALS[b.goal] || GOALS.force, cu = b.custom || DEF_CUSTOM;
         return '<div class="sub"><div class="row between"><span class="row"><span class="badge" style="background:' + G.color + '">B' + (i + 1) + '</span><span class="small mu">' + esc(G.desc) + ' · repos ' + esc(G.rest) + '</span></span>' + ((d.blocks || []).length > 1 ? '<button class="btn sm ghost icon" data-a="ed-del-block" data-i="' + i + '" aria-label="Supprimer le bloc ' + (i + 1) + '">' + ICON.trash + '</button>' : '') + '</div><div class="fgrid">' +
           sel('Objectif', 'blocks.' + i + '.goal', opt(GOAL_ORDER.map(function (g) { return [g, GOALS[g].label]; }), b.goal), true) +
-          sel('Durée', 'blocks.' + i + '.weeks', opt([2, 3, 4, 5, 6, 7, 8, 9, 10, 12].map(function (n) { return [n, n + ' semaines']; }), b.weeks), true) +
+          sel('Durée', 'blocks.' + i + '.weeks', opt([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12].map(function (n) { return [n, n + (n > 1 ? ' semaines' : ' semaine')]; }), b.weeks), true) +
           sel('Dernière semaine', 'blocks.' + i + '.end', opt([['deload', 'Décharge'], ['test', 'Test 1RM'], ['none', 'Aucune (travail)']], b.end), true) + '</div>' +
           (b.goal === 'perso' ? '<div class="fgrid">' + nfld('Séries', 'blocks.' + i + '.custom.s', cu.s) + nfld('Répétitions', 'blocks.' + i + '.custom.r', cu.r) + nfld('% 1RM semaine 1', 'blocks.' + i + '.custom.p0', cu.p0) + nfld('+ % par semaine', 'blocks.' + i + '.custom.inc', cu.inc) + nfld('RPE visé', 'blocks.' + i + '.custom.rpe', cu.rpe) + '</div>' : '') + '</div>';
       }).join('') + '<button class="btn" data-a="ed-add-block">' + ICON.plus + 'Ajouter un bloc</button></div>';
       h += '<div class="sec"><h3>Séances de la semaine type</h3><p class="small mu">Entre ta séance une fois : séries, répétitions et charges se calculent pour chaque semaine selon le bloc. « Principal » suit le % du 1RM du modèle, « Charge en kg » progresse de l’incrément choisi, « Poids du corps » ajoute des répétitions.</p>' +
         ((d.sessions || []).length ? '' : '<div class="row"><button class="btn" data-a="ed-sample">Remplir avec un exemple (A/B, 5 mouvements)</button></div>') +
         (d.sessions || []).map(function (s, i) {
+          var nTest = (d.blocks || []).filter(function (b0) { return b0.end === 'test'; }).length;
           return '<div class="sub"><div class="row between"><b>Séance ' + (i + 1) + '</b><button class="btn sm ghost icon" data-a="ed-del-sess" data-i="' + i + '" aria-label="Supprimer la séance ' + (i + 1) + '">' + ICON.trash + '</button></div><div class="fgrid w2">' + fld('Nom', 'sessions.' + i + '.name', s.name) + '</div><div class="fgrid">' + sel('Jour', 'sessions.' + i + '.day', dayOpts(s.day)) + nfld('Durée (min)', 'sessions.' + i + '.dur', s.dur) + '</div>' +
             (s.exercises || []).map(function (e, j) {
               var pth = 'sessions.' + i + '.exercises.' + j + '.';
@@ -1879,6 +1894,8 @@
               else if (e.mode === 'reps') f = nfld('Séries', pth + 'sets', e.sets) + nfld('Reps S1', pth + 'reps', e.reps) + nfld('+ reps / sem.', pth + 'incReps', e.incReps) + nfld('Reps max', pth + 'maxReps', e.maxReps) + sel('Semaine test', pth + 'testMax', opt([[0, '1 série en moins'], [1, 'Test : max unbroken']], num(e.testMax, 0) > 0 || e.testMax === true ? 1 : 0)) + fld('Note', pth + 'note', e.note);
               else f = fld('Prescription', pth + 'text', e.text, 'placeholder="ex. 3×12 RPE 8"') + fld('Note', pth + 'note', e.note);
               if (e.mode !== 'libre') f += restF;
+              if (e.mode !== 'libre') f += sel('Semaines', pth + 'alt', opt([[0, 'Toutes'], [1, 'Impaires (S1, S3…)'], [2, 'Paires (S2, S4…)']], num(e.alt, 0))) +
+                (nTest > 1 && (e.mode === 'pct' || e.mode === 'reps') ? sel('Testé en', pth + 'testOn', opt([[0, 'Chaque semaine de test']].concat(Array.from({ length: nTest }, function (_, q) { return [q + 1, 'Semaine de test ' + (q + 1)]; })), num(e.testOn, 0))) : '');
               if (e.mode !== 'libre' && j < s.exercises.length - 1) f += sel('Superset avec le suivant', pth + 'ss', opt([[0, 'Non'], [1, 'Oui, enchaîner sans repos']], num(e.ss, 0) > 0 ? 1 : 0));
               return '<div class="exr"><div class="row between"><span class="small mu">Exercice ' + (j + 1) + '</span><button class="btn sm ghost icon" data-a="ed-del-ex" data-i="' + i + '" data-j="' + j + '" aria-label="Supprimer l’exercice">' + ICON.trash + '</button></div><div class="fgrid w2">' + fld('Nom', pth + 'name', e.name, 'list="pl-lib" autocomplete="off" placeholder="Choisis ou écris un exercice"') + sel('Type', pth + 'mode', opt(EX_MODES, e.mode), true) + '</div><div class="fgrid">' + f + '</div></div>';
             }).join('') + '<button class="btn sm" data-a="ed-add-ex" data-i="' + i + '">' + ICON.plus + 'Ajouter un exercice</button></div>';
