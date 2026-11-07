@@ -671,7 +671,7 @@
   var parseRest = function (t) { var ns = (String(t).match(/\d+(?:[.,]\d+)?/g) || []).map(function (v) { return num(v); }); if (!ns.length) return 120; var avg = ns.reduce(function (a, b) { return a + b; }, 0) / ns.length; return /min/.test(t) ? Math.round(avg * 60) : Math.round(avg); };
   var beep = function () { if (tm.mute) return; try { if (!tm.ctx) return; [0, 0.25, 0.5].forEach(function (d) { var o = tm.ctx.createOscillator(), g = tm.ctx.createGain(); o.frequency.value = 880; g.gain.value = 0.15; o.connect(g); g.connect(tm.ctx.destination); o.start(tm.ctx.currentTime + d); o.stop(tm.ctx.currentTime + d + 0.15); }); } catch (e) {} try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {} };
   var drawTimer = function () {
-    var el = $id('timer'), runOn = !!(ui.run && ui.run.open); if (!tm.end) { el.hidden = true; return; }
+    var el = $id('timer'), runOn = !!(ui.run && ui.run.open); if (!el) return; if (!tm.end) { el.hidden = true; return; }
     var left = Math.round((tm.end - Date.now()) / 1000), a = Math.abs(left), txt = (left < 0 ? '+' : '') + Math.floor(a / 60) + ':' + pad(a % 60);
     var rt = $id('runt'); if (rt) { rt.textContent = txt; rt.className = 'runt' + (left <= 0 ? ' end' : ''); var rb = rt.closest ? rt.closest('.runrest') : null; if (rb && rb.classList) rb.classList.toggle('end', left <= 0); var rl = $id('runl'); if (rl) rl.textContent = left <= 0 ? 'Repos terminé : à toi !' : tm.label; }
     if (runOn) { el.hidden = true; if (left <= 0 && left > -5 && !tm.beeped) { tm.beeped = true; beep(); } return; }
@@ -1230,12 +1230,12 @@
     var lg = x.log || {}, tot = 0, dn = 0, part = 0, oe = runOpenEnd(x);
     /* Séance libre : pas de nombre de séries prévu, un exercice est fait dès sa première série */
     x.g.items.forEach(function (it) { if (!runLoggable(x, it)) return; var r = runRaw(x, it); if (r && r.skipped) return; tot++; var k = getSets(r).length; if (k >= (oe ? 1 : runN(it))) dn++; else if (k) part++; });
-    var here = !!(ui.run && ui.run.key === x.key && !ui.run.closed), past = iso(x.date) < iso(T0), anySet = dn + part > 0;
+    var here = !!(ui.run && ui.run.key === x.key && ui.run.open), past = iso(x.date) < iso(T0), anySet = dn + part > 0;
     /* log.reopen : « Séance faite » décoché à la main → reste en cours même si tout est noté */
     var fin = !!lg.fin || (!lg.reopen && !!lg.done && (past || !anySet || (tot > 0 && dn === tot && !here)));
     var st = fin ? 'finie' : here || anySet ? 'encours' : 'avenir';
     return { state: st, tot: tot, done: dn, part: part, pct: tot ? Math.round((dn + (fin ? 0 : part * 0.5)) / tot * 100) : (fin ? 100 : 0),
-      t0: here ? num(ui.run.t0, 0) || null : null, dur: num(lg.dur, 0) || null, fin: num(lg.fin, 0) || null, rpe: num(lg.rpe, 0) || null,
+      t0: ui.run && ui.run.key === x.key && (here || anySet) ? num(ui.run.t0, 0) || null : null, dur: num(lg.dur, 0) || null, fin: num(lg.fin, 0) || null, rpe: num(lg.rpe, 0) || null,
       est: estMin(estSess(x, false)), left: estMin(estSess(x, true)) };
   };
   var isFin = function (x) { var g = progressOf(x); return g ? g.state === 'finie' : !!(x.log && x.log.done); };
@@ -1243,16 +1243,31 @@
   var elapsedTxt = function (t0) { var m = Math.max(0, Math.floor((Date.now() - t0) / 60000)); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0'); };
   var ringSvg = function (pct, sz) { var r = sz / 2 - 5, cc = 2 * Math.PI * r, v = Math.max(0, Math.min(100, pct));
     return '<svg width="' + sz + '" height="' + sz + '" viewBox="0 0 ' + sz + ' ' + sz + '" aria-hidden="true"><circle cx="' + sz / 2 + '" cy="' + sz / 2 + '" r="' + r + '" fill="none" stroke="var(--bd)" stroke-width="6"/><circle cx="' + sz / 2 + '" cy="' + sz / 2 + '" r="' + r + '" fill="none" stroke="var(--ok)" stroke-width="6" stroke-linecap="round" stroke-dasharray="' + (cc * v / 100).toFixed(1) + ' ' + cc.toFixed(1) + '" transform="rotate(-90 ' + sz / 2 + ' ' + sz / 2 + ')"/><text x="50%" y="50%" dy=".35em" text-anchor="middle" font-family="Barlow Condensed,Barlow,sans-serif" font-weight="700" font-size="' + Math.round(sz * .27) + '" fill="var(--tx)">' + v + '%</text></svg>'; };
+  /* Remettre une séance à zéro : efface ce qui a été noté pour cette séance (séries, « pas fait »,
+     fin, durée, RPE), garde la note, l'ordre, les remplacements et les exercices retirés ou ajoutés.
+     Deux appuis (comme pour supprimer). */
+  var resetHtml = function (x, g) {
+    if (!g || g.state === 'avenir') return '';
+    var cf = ui.confirm === 'reset|' + x.key;
+    return '<div class="row" style="justify-content:flex-end;gap:6px">' + (cf ? '<span class="small t2" style="flex:1 1 160px">Effacer les séries notées de cette séance ?</span><button class="btn sm danger" data-a="reset-yes" data-key="' + esc(x.key) + '">Remettre à zéro</button><button class="btn sm ghost" data-a="del-no">Annuler</button>'
+      : '<button class="btn sm ghost" data-a="reset" data-key="' + esc(x.key) + '">Remettre à zéro</button>') + '</div>';
+  };
+  var resetInst = function (x) {
+    var p = x.p, k = x.w + '|' + x.s.id, lg = (p.logs || {})[k];
+    if (lg) { if (lg.note) p.logs[k] = { note: lg.note }; else delete p.logs[k]; }
+    if (ui.run && ui.run.key === x.key) { ui.run = null; tm.end = 0; clearInterval(tm.iv); try { localStorage.removeItem(RUNK); } catch (e) {} runLock(false); wakeOff(); drawRun(); drawTimer(); }
+    persist(p);
+  };
   var progressHtml = function (x) {
     var g = progressOf(x); if (!g) return '';
     if (g.state === 'avenir') return g.est ? '<div class="pgline small t2">' + ICON.clock + 'Durée estimée d’après les séries : <b>≈ ' + g.est + ' min</b> · ' + g.tot + ' exercice' + (g.tot > 1 ? 's' : '') + '</div>' : '';
     if (g.state === 'encours') return '<div class="pgcard"><div class="row between"><span class="eyebrow-s">Séance en cours</span>' + (g.left ? '<span class="small t2">reste ≈ ' + g.left + ' min</span>' : '') + '</div>' +
       '<div class="pgstats"><div>' + (g.t0 ? '<span class="v" data-elapsed="' + g.t0 + '">' + elapsedTxt(g.t0) + '</span><span class="l">Temps écoulé</span>' : '<span class="v">≈ ' + g.est + ' min</span><span class="l">Durée estimée</span>') + '</div><div><span class="v">' + g.done + ' / ' + g.tot + '</span><span class="l">Exercices</span></div><div><span class="v">' + g.pct + ' %</span><span class="l">Fait</span></div></div>' +
-      '<div class="pgbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + g.pct + '" aria-label="Avancement de la séance"><i style="width:' + g.pct + '%"></i></div></div>';
+      '<div class="pgbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + g.pct + '" aria-label="Avancement de la séance"><i style="width:' + g.pct + '%"></i></div>' + resetHtml(x, g) + '</div>';
     return '<div class="pgcard fin"><span class="eyebrow-s">Séance terminée</span><div class="pgstats">' +
       '<div><span class="l">Durée</span><span class="v">' + (g.dur ? g.dur + ' min' : '—') + '</span>' + (g.fin ? '<span class="l">terminée à ' + hm(g.fin) + '</span>' : '') + '</div>' +
       '<div class="ring" role="img" aria-label="' + g.pct + ' % des exercices faits">' + ringSvg(g.pct, 76) + '<span class="l">' + g.done + ' sur ' + g.tot + ' exercice' + (g.tot > 1 ? 's' : '') + '</span></div>' +
-      '<div><span class="l">Effort</span><span class="v">' + (g.rpe ? g.rpe + '/10' : '—') + '</span>' + (g.rpe ? '<span class="l">' + RPE_L[g.rpe] + '</span>' : '') + '</div></div></div>';
+      '<div><span class="l">Effort</span><span class="v">' + (g.rpe ? g.rpe + '/10' : '—') + '</span>' + (g.rpe ? '<span class="l">' + RPE_L[g.rpe] + '</span>' : '') + '</div></div>' + resetHtml(x, g) + '</div>';
   };
   var runState = function (x, it) {
     if (!runLoggable(x, it)) return 'info';
@@ -1464,7 +1479,8 @@
     var it = ui.run.end ? null : x.g.items[ui.run.exI];
     var go = function (j) { ui.run.add = false; if (j < 0) { if (x.s.extra) ui.run.add = true; else ui.run.end = true; } else { ui.run.exI = j; ui.run.end = false; } ui.run.d = null; ui.run.more = null; };
     switch (a) {
-      case 'run-close': if (runDropEmpty(x)) { runClose(true); toast('Séance vide : rien n’a été enregistré'); return; } runClose(false); return;
+      case 'run-close': if (runDropEmpty(x)) { runClose(true); toast('Séance vide : rien n’a été enregistré'); return; }
+        if (x && !runHasSets(x)) { runClose(true); toast('Rien n’a été noté : la séance reste à faire'); return; } runClose(false); return;
       case 'run-finish':
         if (runDropEmpty(x)) { runClose(true); toast('Séance vide : rien n’a été enregistré'); return; }
         var mn = Math.round((Date.now() - num(ui.run.t0, Date.now())) / 60000);
@@ -2229,6 +2245,8 @@
         if (document.activeElement) document.activeElement.blur();
         break;
       case 'wipe': ui.confirm = 'wipe'; break;
+      case 'reset': ui.confirm = 'reset|' + key; break;
+      case 'reset-yes': var xz = findInst(key); ui.confirm = null; if (xz) { resetInst(xz); toast('Séance remise à zéro'); } break;
       case 'wipe-undo': var wb = wipeBak(); if (wb) { var ids = {}; wb.programs.forEach(function (z) { ids[z.id] = 1; }); dropTombs(ids);
           wb.programs.forEach(function (z) { if (state.programs.some(function (q) { return q.id === z.id; })) return; var c2 = clone(z); c2.updatedAt = Math.max(Date.now(), num(wb.at, 0) + 1000); state.programs.push(c2); });
           try { localStorage.removeItem(WIPEK); } catch (eW2) {} saveLocal(); toast(wb.programs.length + ' programme' + (wb.programs.length > 1 ? 's' : '') + ' récupéré' + (wb.programs.length > 1 ? 's' : '')); } break;
