@@ -1145,6 +1145,31 @@
     if (!hits.length) return '';
     return '<div class="advice warn">' + esc(hits.join(' · ')) + '. Ces muscles ont déjà travaillé : garde le RPE prévu, pas de record aujourd’hui, et note un RPE honnête (l’ajustement en tiendra compte).</div>';
   };
+  /* ---------- Course à pied : mesures de la sortie (log.dur, km, fcm, fcx, dplus) ----------
+     Durée (min) et distance (km) donnent l'allure ; FC moyenne et max en bpm ; dénivelé positif en m.
+     Tout est facultatif ; noter une mesure marque la séance comme faite (comme le RPE). */
+  var RUNF = { dur: [1, 1440, 'Durée', 'min'], km: [0.1, 500, 'Distance', 'km'], fcm: [30, 230, 'FC moyenne', 'bpm'], fcx: [30, 240, 'FC max', 'bpm'], dplus: [0, 20000, 'Dénivelé +', 'm'] };
+  var isRunInst = function (x) { return !!x && (x.s.extra ? x.s.kind : x.p.kind) === 'course'; };
+  var runMeas = function (x) { var lg = x.log || {}, km = num(lg.km, 0) || (x.s.extra && x.log && x.log.done ? num(x.s.km, 0) : 0), dur = num(lg.dur, 0) || (x.s.extra && x.log && x.log.done ? num(x.s.dur, 0) : 0);
+    return { dur: dur || null, km: km || null, fcm: num(lg.fcm, 0) || null, fcx: num(lg.fcx, 0) || null, dplus: lg.dplus != null && lg.dplus !== '' ? num(lg.dplus, 0) : null, pace: km && dur ? dur / km : null }; };
+  var runMeasHtml = function (x) {
+    if (!isRunInst(x)) return '';
+    var lg = x.log || {}, m = runMeas(x), ph = { dur: Math.round(num(x.g.dur, 0)) || '', km: x.s.extra ? (num(x.s.km, 0) || '') : '', fcm: '', fcx: '', dplus: '' };
+    var f = function (k, mode) { var d = RUNF[k], v = lg[k] != null ? lg[k] : '';
+      return '<label class="field"><span>' + d[2] + ' (' + d[3] + ')</span><input class="in" type="text" inputmode="' + mode + '" data-rlg="' + esc(x.key) + '|' + k + '" value="' + esc(v === '' ? '' : String(v).replace('.', ',')) + '" placeholder="' + esc(String(ph[k]).replace('.', ',')) + '" aria-label="' + d[2] + ' en ' + d[3] + '"></label>'; };
+    return '<div class="col" style="gap:8px"><div class="row between"><span class="small mu">Mesures de la sortie</span>' + (m.pace ? '<b class="small">Allure ' + fmtPace(m.pace) + '</b>' : '') + '</div>' +
+      '<div class="fgrid w2">' + f('dur', 'numeric') + f('km', 'decimal') + f('fcm', 'numeric') + f('fcx', 'numeric') + '</div><div class="fgrid w2">' + f('dplus', 'numeric') + '</div>' +
+      '<span class="small mu">Les courbes sont dans Progrès › Explorer › Course à pied.</span></div>';
+  };
+  /* Toutes les sorties notées, pour les courbes (index.html) */
+  var runLogList = function () {
+    var out = [];
+    visible().forEach(function (p) { Object.keys(p.logs || {}).forEach(function (k) {
+      var x = findInst(p.id + '|' + k); if (!x || !isRunInst(x) || !(x.log && x.log.done)) return;
+      var m = runMeas(x); out.push({ key: x.key, date: iso(x.date), title: String(x.g.title || '').split(' — ')[0], prog: p.name, color: colorOf(p), dur: m.dur, km: m.km, pace: m.pace, fcm: m.fcm, fcx: m.fcx, dplus: m.dplus, rpe: num(x.log.rpe, 0) || null });
+    }); });
+    return out.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  };
   var painHtml = function (x) {
     var pa = painApi(); if (!pa || !pa.zones) return '';
     var zs = pa.zones() || []; if (!zs.length) return '';
@@ -1571,8 +1596,8 @@
       '<div class="col" style="border-top:1px solid var(--bd);padding-top:12px;gap:10px">' +
       '<button class="btn" data-a="done" data-key="' + esc(x.key) + '" aria-pressed="' + isFin(x) + '" style="min-height:48px;' + (isFin(x) ? 'border-color:var(--ok);color:var(--pl-onok,#0F1215);background:var(--ok)' : 'border-color:rgba(127,224,201,.6);color:var(--ok);background:rgba(127,224,201,.10)') + '">' + ICON.check + (isFin(x) ? 'Séance faite' : 'Marquer comme faite') + '</button>' +
       '<div class="col" style="gap:6px"><div class="row between"><span class="small mu">' + (x.s.extra ? 'RPE ressenti' : 'RPE ressenti · repère blanc = prévu (' + fmtN(x.g.rpe) + ')') + '</span><b class="small">' + rpeLab + '</b></div><div class="rpe" role="group" aria-label="RPE ressenti, de 1 à 10">' + rpe + '</div><div class="rpe-ends small mu"><span>Très facile</span><span>Maximal</span></div></div>' +
-      painHtml(x) +
-      '<label class="field"><span>Note (sensations, douleur, charges réelles…)</span><textarea class="in" data-note="' + esc(x.key) + '" rows="2">' + esc(log.note || '') + '</textarea></label>' +
+      runMeasHtml(x) + painHtml(x) +
+      '<label class="field"><span>' + (isRunInst(x) ? 'Note (sensations, parcours, météo…)' : 'Note (sensations, douleur, charges réelles…)') + '</span><textarea class="in" data-note="' + esc(x.key) + '" rows="2">' + esc(log.note || '') + '</textarea></label>' +
       (adv ? '<div class="advice' + (adv.warn ? ' warn' : '') + '">' + esc(adv.text) + (adv.adj ? '<div style="margin-top:8px"><button class="btn sm" data-a="adj" data-key="' + esc(x.key) + '" data-d="' + adv.adj + '">' + (adv.adj > 0 ? 'Monter la référence de 2,5 kg' : 'Baisser la référence de 2,5 kg') + '</button></div>' : '') + '</div>' : '') +
       '</div></div>';
   };
@@ -1972,8 +1997,8 @@
     var x = findInst(key); if (!x) return;
     var p = x.p; p.logs = p.logs || {};
     var k = x.w + '|' + x.s.id, cur = Object.assign({}, p.logs[k] || {}), nx = Object.assign(cur, patch);
-    ['fin', 'reopen'].forEach(function (f) { if (nx[f] == null) delete nx[f]; });
-    if (!nx.done && !nx.rpe && !nx.note && !(nx.ex && Object.keys(nx.ex).length)) delete p.logs[k]; else p.logs[k] = nx;
+    ['fin', 'reopen', 'km', 'fcm', 'fcx', 'dplus', 'dur'].forEach(function (f) { if (nx[f] == null) delete nx[f]; });
+    if (!nx.done && !nx.rpe && !nx.note && !(nx.ex && Object.keys(nx.ex).length) && !nx.km && !nx.dur) delete p.logs[k]; else p.logs[k] = nx;
     persist(p);
   };
   var setExLog = function (key, exId, patch) {
@@ -2293,6 +2318,14 @@
     var xf2 = t.getAttribute('data-xf'); if (xf2 && ui.xf) { ui.xf[xf2] = t.value; if (xf2 === 'pid' || xf2 === 'date') { if (xf2 === 'pid') ui.xf.ex = ui.xf.ex.filter(function (z) { return !z.ref; }); setTimeout(render, 0); } return; }
     var k = t.getAttribute('data-note');
     if (k) { setLog(k, { note: t.value.trim() }); return; }
+    var rl = t.getAttribute('data-rlg');
+    if (rl) { var ri = rl.lastIndexOf('|'), rk = rl.slice(0, ri), rf = rl.slice(ri + 1), d = RUNF[rf], raw = String(t.value).trim().replace(',', '.'), pt = {};
+      if (!d) return;
+      if (raw === '') pt[rf] = null;
+      else { var v = parseFloat(raw); if (!isFinite(v) || v < d[0] || v > d[1]) { toast(d[2] + ' : entre ' + fmtN(d[0]) + ' et ' + fmtN(d[1]) + ' ' + d[3]); setTimeout(render, 0); return; }
+        pt[rf] = rf === 'km' ? Math.round(v * 100) / 100 : Math.round(v); pt.done = true; }
+      if (!futureOk(rk)) { setTimeout(render, 0); return; }
+      setLog(rk, pt); setTimeout(render, 0); return; }
     var lgv = t.getAttribute('data-lg');
     if (lgv) { var ps = lgv.split('|'), patch = {}; patch[ps[4]] = t.value.trim(); setExLog(ps.slice(0, 3).join('|'), ps[3], patch); renderPending = true; setTimeout(render, 0); }
   });
@@ -2345,6 +2378,7 @@
       return out;
     },
     /* Pour le calendrier de l'accueil : séances du plan d'un jour donné (AAAA-MM-JJ) */
+    runLog: function () { return runLogList(); },
     dayList: function (d) {
       var dt = parseISO(d); if (!dt) return [];
       return instancesOn(dt, true).map(function (x) { var pats = {}, heavy = [], hp = {};

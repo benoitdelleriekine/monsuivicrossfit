@@ -429,7 +429,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v84";
+const APP_VERSION="msc-v85";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -1038,6 +1038,8 @@ function exploreCard(ms){
  const lw=dShift(monOf(TODAY),-7),rv=(S.sessions.length||planOn())?weekReview(lw):null;
  if(rv&&(rv.n||rv.pt))r+=row("psub","bilan","Bilan de la semaine",`Semaine du ${fMid(lw)} · ${rv.n} séance${rv.n>1?"s":""}`+(rv.rec?` · ${rv.rec} record${rv.rec>1?"s":""}`:""));
  const lr=loadRatio(),ln=lr[lr.length-1];
+ {const rl=runLogs();if(rl.length){const l4=rl.filter(z=>z.date>=dShift(TODAY,-27)),km4=l4.reduce((a,z)=>a+(z.km||0),0);
+  r+=row("psub","course","Course à pied",`${rl.length} sortie${rl.length>1?"s":""} notée${rl.length>1?"s":""}`+(km4?` · ${fx(km4,1)} km sur 4 semaines`:""))}}
  if(ln.c>0)r+=row("psub","charge","Charge d'entraînement",`7 jours : ${ln.a.toLocaleString("fr-FR")} UA · ${fx(ln.r,2)} × ta moyenne`);
  if(ms.length)r+=row("records","","Records et premières fois",rec.length+" record"+(rec.length>1?"s":"")+(wk?" · "+wk+" nouveauté"+(wk>1?"s":"")+" cette semaine":""));
  if(nMov)r+=row("psub","mouvements","Mes mouvements",nMov+" mouvement"+(nMov>1?"s":"")+" · recherche, records, courbes");
@@ -1079,6 +1081,41 @@ function chargePage(){const pts=loadRatio(),now=pts[pts.length-1],mx=Math.max(1,
   <div class="legend" style="margin-top:8px"><span><i style="background:var(--aqua)"></i>7 jours</span><span><i style="background:transparent;border-top:2px dashed var(--ink);border-radius:0;height:0;width:14px"></i>moyenne 28 jours</span></div></div>
   <div class="card flat"><div style="font-size:var(--fs-sm);color:var(--mute);line-height:1.6">Charge = durée × RPE (UA) de tes séances faites, CrossFit et Plan. Un rapport proche de 1 veut dire une semaine dans tes habitudes ; nettement au-dessus, une semaine plus chargée que d'habitude. C'est un repère pour doser, <b style="color:var(--ink)">pas une prédiction de blessure</b>.</div></div></div>`;
  return h}
+/* ══════════ Course à pied : sorties notées dans le Plan (distance, durée, FC) ══════════ */
+function runLogs(){try{return window.PLAN&&PLAN.runLog?PLAN.runLog():[]}catch(e){return[]}}
+const paceTxt=p=>{if(!p)return"—";let m=Math.floor(p),sc=Math.round((p-m)*60);if(sc===60){m++;sc=0}return m+"′"+String(sc).padStart(2,"0")+"″"};
+/* Courbe simple : points datés, axe des y min→max (inversé pour l'allure : plus haut = plus rapide) */
+function lineChart(pts,opt){if(pts.length<2)return`<div class="empty" style="padding:14px 0">${opt.empty||"Encore une sortie pour voir la courbe."}</div>`;
+ const W=320,H=130,L=40,B=20,T=10,ys=pts.map(p=>p.y),mn=Math.min(...ys),mx=Math.max(...ys),pad=(mx-mn)*.12||1,lo=mn-pad,hi=mx+pad;
+ const t0=+new Date(pts[0].d+"T12:00"),t1=+new Date(pts[pts.length-1].d+"T12:00"),X=d=>L+(t1===t0?.5:(+new Date(d+"T12:00")-t0)/(t1-t0))*(W-L-8);
+ const Y=v=>opt.inv?T+(v-lo)/(hi-lo)*(H-T-B):H-B-(v-lo)/(hi-lo)*(H-T-B);
+ const ticks=[lo+pad,(lo+hi)/2,hi-pad].map(v=>`<line x1="${L}" x2="${W-4}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" font-size="12" fill="var(--mute)">${opt.fmt(v)}</text>`).join("");
+ const path=pts.map((p,i)=>(i?"L":"M")+X(p.d).toFixed(1)+" "+Y(p.y).toFixed(1)).join(" ");
+ const dots=pts.map(p=>`<circle cx="${X(p.d).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="3.5" fill="${opt.color}"><title>${fMid(p.d)} : ${opt.fmt(p.y)}</title></circle>`).join("");
+ const z=d=>{const q=new Date(d+"T12:00");return q.getDate()+"/"+(q.getMonth()+1)};
+ return`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(opt.aria)}" style="display:block">${ticks}<path d="${path}" fill="none" stroke="${opt.color}" stroke-width="2" stroke-linejoin="round"/>${dots}
+  <text x="${L}" y="${H-4}" font-size="12" fill="var(--mute)">${z(pts[0].d)}</text><text x="${W-4}" y="${H-4}" text-anchor="end" font-size="12" fill="var(--mute)">${z(pts[pts.length-1].d)}</text></svg>`}
+function coursePage(){const rl=runLogs();if(!rl.length)return`<div class="empty">Note la distance, la durée ou la FC d'une sortie dans le Plan pour voir tes courbes.</div>`;
+ const m0=monOf(TODAY),wk=[];for(let i=11;i>=0;i--){const a=dShift(m0,-7*i),b=dShift(a,6),l=rl.filter(z=>z.date>=a&&z.date<=b);wk.push({a,km:l.reduce((s,z)=>s+(z.km||0),0),min:l.reduce((s,z)=>s+(z.dur||0),0),n:l.length})}
+ const l4=rl.filter(z=>z.date>=dShift(TODAY,-27)),km4=l4.reduce((a,z)=>a+(z.km||0),0),pc=l4.filter(z=>z.pace),fc=l4.filter(z=>z.fcm);
+ const avgPace=pc.length?pc.reduce((a,z)=>a+z.dur,0)/pc.reduce((a,z)=>a+z.km,0):null,avgFc=fc.length?Math.round(fc.reduce((a,z)=>a+z.fcm,0)/fc.length):null;
+ const mxk=Math.max(1,...wk.map(w=>w.km)),hasKm=wk.some(w=>w.km>0),W=320,H=110,bw=(W-8)/wk.length;
+ const bars=wk.map((w,i)=>`<rect x="${4+i*bw+bw*.15}" y="${H-18-(w.km/mxk)*(H-30)}" width="${bw*.7}" height="${Math.max(w.km?2:0,(w.km/mxk)*(H-30))}" rx="3" fill="${i===wk.length-1?"var(--aqua)":"var(--mute)"}"><title>Semaine du ${fMid(w.a)} : ${fx(w.km,1)} km</title></rect>`+(w.km&&(i===wk.length-1||w.km===mxk)?`<text x="${4+i*bw+bw/2}" y="${H-22-(w.km/mxk)*(H-30)}" text-anchor="middle" font-size="12" fill="var(--ink)">${fx(w.km,1)}</text>`:"")).join("")+
+  [0,4,8,11].map(i=>{const q=new Date(wk[i].a+"T12:00");return`<text x="${4+i*bw+bw/2}" y="${H-3}" text-anchor="middle" font-size="12" fill="var(--mute)">${q.getDate()}/${q.getMonth()+1}</text>`}).join("");
+ const P=rl.filter(z=>z.pace).slice(-30).map(z=>({d:z.date,y:z.pace})),F=rl.filter(z=>z.fcm).slice(-30).map(z=>({d:z.date,y:z.fcm}));
+ const tile=(v,l)=>`<div style="flex:1 1 0;min-width:0"><div class="dsp" style="font-size:var(--fs-lg,24px)">${v}</div><div style="font-size:12px;color:var(--mute)">${l}</div></div>`;
+ let h=`<div class="pane"><div class="card"><div class="eyebrow" style="margin-bottom:10px">4 dernières semaines</div><div style="display:flex;gap:10px;text-align:left">
+  ${tile(km4?fx(km4,1)+" km":"—","distance")}${tile(String(l4.length),"sortie"+(l4.length>1?"s":""))}${tile(avgPace?paceTxt(avgPace):"—","allure moy. /km")}${tile(avgFc?avgFc:"—","FC moy. (bpm)")}</div></div>
+  <div class="card"><div class="eyebrow" style="margin-bottom:8px">Kilomètres par semaine</div>${hasKm?`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Kilomètres par semaine sur 12 semaines" style="display:block">${bars}</svg>`:`<div class="empty" style="padding:14px 0">Note la distance de tes sorties pour voir les kilomètres.</div>`}</div>
+  <div class="card"><div class="eyebrow" style="margin-bottom:8px">Allure par sortie</div>${lineChart(P,{inv:true,color:"var(--aqua)",fmt:paceTxt,aria:"Allure par sortie, plus haut = plus rapide",empty:"Note durée et distance de deux sorties pour voir ton allure."})}
+   <div style="font-size:12px;color:var(--mute);margin-top:6px">Plus haut = plus rapide. Une sortie lente ou du fractionné fait varier la courbe : compare des sorties du même type.</div></div>
+  <div class="card"><div class="eyebrow" style="margin-bottom:8px">FC moyenne par sortie</div>${lineChart(F,{color:"var(--lava)",fmt:v=>Math.round(v),aria:"FC moyenne par sortie en battements par minute",empty:"Note la FC moyenne de deux sorties pour voir la courbe."})}
+   <div style="font-size:12px;color:var(--mute);margin-top:6px">À allure égale, une FC qui baisse au fil des semaines est un bon signe d'endurance.</div></div>
+  <div class="card"><div class="eyebrow" style="margin-bottom:4px">Dernières sorties</div>`+
+  rl.slice(-10).reverse().map(z=>`<button class="row-link" data-act="planopen" data-v="${esc(z.key)}" style="gap:10px;padding:10px 0"><span style="flex:1;min-width:0"><b style="display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(z.title)}</b>
+   <span style="font-size:12px;color:var(--mute)">${fMid(z.date)}${z.dur?" · "+z.dur+" min":""}${z.dplus?" · D+ "+z.dplus+" m":""}${z.rpe?" · RPE "+z.rpe:""}</span></span>
+   <span style="flex:none;text-align:right;font-size:12px;color:var(--mute)"><b class="dsp" style="font-size:var(--fs-md);color:var(--ink)">${z.km?fx(z.km,z.km<10?2:1)+" km":"—"}</b><br>${z.pace?paceTxt(z.pace)+" /km":""}${z.fcm?(z.pace?" · ":"")+z.fcm+" bpm":""}</span></button>`).join("")+`</div></div>`;
+ return h}
 /* Volume hebdomadaire par famille, 8 semaines */
 function famPage(){const fw=famWeekly(8),rows=fw.rows.filter(r=>r.tot>0).sort((a,b)=>b.tot-a.tot);if(!rows.length)return"";
  const mx=Math.max(1,...rows.flatMap(r=>r.w));
@@ -1113,7 +1150,7 @@ function cmpLine(sets,prev){const a=setStats(sets),b=prev?setStats(prev.sets):nu
  if(a.rpe!=null&&b.rpe!=null)parts.push(`RPE ${fx(a.rpe)} (${fx(b.rpe)} avant)`);
  return`<div style="font-size:var(--fs-cap);color:var(--mute);margin:-4px 0 10px;line-height:1.5">Par rapport au ${fMid(prev.date)} : ${parts.join(" · ")}</div>`}
 /* Sous-pages de Progrès : mêmes blocs qu'avant, chacun sur sa page */
-const PSUB={mouvements:"Mes mouvements",metcons:"Metcons refaits",douleur:"Douleur",travail:"Ce que tu travailles",bilan:"Bilan de la semaine",charge:"Charge d'entraînement"};
+const PSUB={mouvements:"Mes mouvements",metcons:"Metcons refaits",douleur:"Douleur",travail:"Ce que tu travailles",bilan:"Bilan de la semaine",charge:"Charge d'entraînement",course:"Course à pied"};
 function vPSub(k){
  let h=`<div class="head" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px"><div><div class="eyebrow">Progrès</div><h1>${PSUB[k]||""}</h1></div><button class="chip" style="white-space:nowrap;flex:none" data-act="psclose">‹ Progrès</button></div>`;
  if(k==="mouvements"){if(wide2()){const det=S.fiche?vFiche(S.fiche,true):"";
@@ -1122,6 +1159,7 @@ function vPSub(k){
  else if(k==="metcons")h+=benchPage();
  else if(k==="bilan")h+=bilanPage();
  else if(k==="charge")h+=chargePage();
+ else if(k==="course")h+=coursePage();
  else if(k==="douleur")h+=`<div class="pane">${painCard()||'<div class="empty">La courbe apparaît après quelques notes de douleur.</div>'}</div>`;
  else if(k==="travail")h+=famPage()+patternCard();
  return h+`<div style="height:24px"></div>`}
