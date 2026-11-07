@@ -148,7 +148,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .calseg{width:108px;flex:none}
 .calseg button{min-height:34px;font-size:13.5px}
 .calnav{min-width:36px;min-height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;color:var(--ink);background:var(--sunk);border:1px solid var(--line)}
-.cstar{position:absolute;top:2px;right:4px;font-size:12px;line-height:1;color:var(--melon)}
+.cstar{position:absolute;top:2px;right:4px;font-size:12px;line-height:1;color:color-mix(in srgb,var(--melon) 72%,var(--ink))}
 .gcell.on .cstar{color:var(--onacc)}
 .cstar.l{position:static;font-size:12px;margin-right:5px}
 #calblock .callegend{justify-content:flex-start;gap:6px 12px;flex-wrap:wrap;margin-top:10px}
@@ -280,6 +280,8 @@ input.chip{font-size:16px}
 .lvnames{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);font-weight:500}
 .lvnames span{flex:1;text-align:center}
 .hero-n{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:48px;letter-spacing:-.02em;line-height:.86}
+.tbar{flex:1 1 100%;display:block;height:6px;border-radius:999px;background:var(--track);overflow:hidden;margin:2px 0 0 19px}
+.tbar i{display:block;height:100%;background:var(--aqua);border-radius:999px}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
 #app.v-in{animation:fadein .2s ease-out}
 .split-r.d-in{animation:fadein .15s ease-out}
@@ -426,7 +428,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v80";
+const APP_VERSION="msc-v81";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -1913,17 +1915,24 @@ function todayCard(){
  /* Aujourd'hui : séances du jour, sinon la prochaine prévue ; actions de saisie ; douleur du matin */
  const pl=planOn()?planDay(TODAY):[],zs=(S.pain&&S.pain.zones)||[],cf=S.sessions.filter(x=>x.date===TODAY);
  const canFree=planOn()&&window.PLAN&&PLAN.free&&S.planif&&(S.planif.programs||[]).length>0;
- const run=pl.find(x=>!x.done&&x.kind==="muscu");
+ const run=pl.find(x=>x.kind==="muscu"&&(x.pg?x.pg.state!=="finie":!x.done));
  let nxt=null;
  if(!pl.some(x=>!x.done)&&planOn())for(let i=1;i<=14&&!nxt;i++){const d=dShift(TODAY,i),l=planDay(d).filter(x=>!x.done);if(l.length)nxt={d,x:l[0]}}
  let h=`<div class="card" style="padding:18px"><div class="card-h" style="margin-bottom:4px"><div class="eyebrow">Aujourd'hui</div></div>`;
  cf.forEach(x=>{h+=`<button class="row-link" style="gap:9px;padding:11px 0" data-act="openday" data-v="${x.id}">
   <i class="pdot done" style="--c:var(--aqua)"></i><b style="flex:1;font-size:13.5px">CrossFit${(x.metcons||[])[0]&&x.metcons[0].name?" · "+esc(x.metcons[0].name):""}</b><span style="font-size:12px;font-weight:600">Faite ›</span></button>`});
- pl.forEach(x=>{h+=`<button class="row-link" style="gap:9px;padding:11px 0" data-act="${!x.done&&x.kind==="muscu"&&window.PLAN&&PLAN.run?"planrun":"planopen"}" data-v="${esc(x.key)}">
-  <i class="pdot${x.done?" done":""}" style="--c:${x.color};flex:none"></i>
+ pl.forEach(x=>{
+  /* Lot 9 : séance de muscu du Plan → à venir (durée estimée), en cours (barre), terminée */
+  const g=x.pg,fin=g?g.state==="finie":x.done,enc=g&&g.state==="encours";
+  const sub=g?(fin?`Faite${g.dur?" · "+g.dur+" min":""}${g.rpe?" · RPE "+g.rpe+" "+["","Très facile","Très facile","Facile","Modéré","Modéré","Dur","Dur","Très dur","Très dur","Maximal"][g.rpe].toLowerCase():""}`
+    :enc?`En cours · ${g.done}/${g.tot} exercices${g.left?" · reste ≈ "+g.left+" min":""}`:`${esc(x.prog)}${g.est?" · ≈ "+g.est+" min":x.dur?" · "+x.dur+" min":""}`)
+   :`${esc(x.prog)}${x.dur?" · "+x.dur+" min":""}`;
+  h+=`<button class="row-link" style="gap:9px;padding:11px 0;flex-wrap:wrap" data-act="${!fin&&x.kind==="muscu"&&window.PLAN&&PLAN.run?"planrun":"planopen"}" data-v="${esc(x.key)}">
+  <i class="pdot${fin?" done":""}" style="--c:${x.color};flex:none"></i>
   <span style="flex:1;min-width:0"><b style="display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}</b>
-  <span style="font-size:12px;color:var(--mute)">${esc(x.prog)}${x.dur?" · "+x.dur+" min":""}</span></span>
-  <span style="flex:none;font-size:12px;font-weight:700;color:${x.done?"var(--ink)":"var(--aqua)"}">${x.done?"Faite"+(x.rpe?" · RPE "+x.rpe:""):(x.kind==="muscu"?"Démarrer":"Voir")} ›</span></button>`});
+  <span style="font-size:12px;color:var(--mute)">${sub}</span></span>
+  <span style="flex:none;font-size:12px;font-weight:700;color:${fin?"var(--ink)":"var(--aqua)"}">${fin?(g?"Voir":"Faite"+(x.rpe?" · RPE "+x.rpe:"")):enc?"Reprendre":(x.kind==="muscu"?"Démarrer":"Voir")} ›</span>
+  ${enc?`<span class="tbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${g.pct}" aria-label="Avancement de la séance"><i style="width:${g.pct}%"></i></span>`:""}</button>`});
  if(!pl.length&&!cf.length){
   if(nxt)h+=`<button class="row-link" style="gap:9px;padding:11px 0" data-act="planopen" data-v="${esc(nxt.x.key)}">
    <i class="pdot" style="--c:${nxt.x.color};flex:none"></i>
@@ -1934,7 +1943,7 @@ function todayCard(){
  let od=[];try{od=planOn()&&PLAN.overdue?PLAN.overdue():[]}catch(e){}
  od.forEach(o=>{h+=`<div class="odue"><span style="flex:1;min-width:0"><b style="display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.title)}</b><span style="font-size:12px;color:var(--mute)">prévue ${fMid(o.date)}, pas faite</span></span>
   <button class="btn btn-quiet sm" style="width:auto;flex:none" data-act="odmove" data-v="${esc(o.key)}" aria-label="Reporter ${esc(o.title)} à aujourd'hui">Aujourd'hui</button><button class="btn btn-quiet sm danger" style="width:auto;flex:none" data-act="oddrop" data-v="${esc(o.key)}" aria-label="Supprimer ${esc(o.title)}">✕</button></div>`});
- h+=`<div class="acts">`+(run?`<button class="btn btn-go" data-act="planrun" data-v="${esc(run.key)}">${IC_PLAY} Démarrer</button>`:canFree?`<button class="btn btn-go" data-act="planfree">${IC_PLAY} Séance libre</button>`:"")+
+ h+=`<div class="acts">`+(run?`<button class="btn btn-go" data-act="planrun" data-v="${esc(run.key)}">${IC_PLAY} ${run.pg&&run.pg.state==="encours"?"Reprendre":"Démarrer"}</button>`:canFree?`<button class="btn btn-go" data-act="planfree">${IC_PLAY} Séance libre</button>`:"")+
   `<button class="btn ${run||canFree?"btn-quiet":"btn-go"}" data-act="tab" data-v="noter">+ Noter</button></div>`;
  if(zs.length){h+=`<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:2px">`+
   zs.map(z=>painChips(TODAY,z,"matin","Ce matin, douleur "+painZ(z)[1].toLowerCase())).join("")+`</div>`}
