@@ -33,4 +33,6 @@ p=P();x=E.findInst(p.id+'|4|'+sa.id);const it0=x.g.items[0];E.doSwap(x,it0,'Fron
 const sw=x.g.items.find(it=>it.swapped);const ids3=x.g.items.map(it=>it.id);
 p.orders[x.w+'|'+x.s.id]=ids3.filter(i=>i!==sw.id).concat([sw.id]);E.persist(p);x=E.findInst(p.id+'|4|'+sa.id);
 T('séance du plan : un exercice remplacé se déplace aussi',x.g.items[x.g.items.length-1].id===sw.id);
+{const src=require('fs').readFileSync(require('path').join(__dirname,'..','planif.js'),'utf8');
+ T('Réorganiser : liste repliée (aucun exercice ouvert), ↑ ↓ de 44 px',/if \(!exOpenOf\(x, it\) \|\| ui\.reorder === x\.key\) return muscuItemLine/.test(src)&&/\.mvb\{width:44px;height:44px/.test(src)&&!/ui\.noteEdit === ek \|\| ui\.reorder === x\.key/.test(src));}
 process.exitCode=ko?1:0;console.log(ko?`\n${ko} échec(s)`:'\nAucune erreur.');
