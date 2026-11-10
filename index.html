@@ -429,7 +429,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v89";
+const APP_VERSION="msc-v90";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -1954,7 +1954,7 @@ function todayCard(){
  /* Aujourd'hui : séances du jour, sinon la prochaine prévue ; actions de saisie ; douleur du matin */
  const pl=planOn()?planDay(TODAY):[],zs=(S.pain&&S.pain.zones)||[],cf=S.sessions.filter(x=>x.date===TODAY);
  const canFree=planOn()&&window.PLAN&&PLAN.free&&S.planif&&(S.planif.programs||[]).length>0;
- const run=pl.find(x=>x.kind==="muscu"&&(x.pg?x.pg.state!=="finie":!x.done));
+ const run=pl.find(x=>(x.kind==="muscu"||x.sets)&&(x.pg?x.pg.state!=="finie":!x.done));
  let nxt=null;
  if(!pl.some(x=>!x.done)&&planOn())for(let i=1;i<=14&&!nxt;i++){const d=dShift(TODAY,i),l=planDay(d).filter(x=>!x.done);if(l.length)nxt={d,x:l[0]}}
  let h=`<div class="card" style="padding:18px"><div class="card-h" style="margin-bottom:4px"><div class="eyebrow">Aujourd'hui</div></div>`;
@@ -1966,11 +1966,11 @@ function todayCard(){
   const sub=g?(fin?`Faite${g.dur?" · "+g.dur+" min":""}${g.rpe?" · RPE "+g.rpe+" "+["","Très facile","Très facile","Facile","Modéré","Modéré","Dur","Dur","Très dur","Très dur","Maximal"][g.rpe].toLowerCase():""}`
     :enc?`En cours · ${g.done}/${g.tot} exercices${g.left?" · reste ≈ "+g.left+" min":""}`:`${esc(x.prog)}${g.est?" · ≈ "+g.est+" min":x.dur?" · "+x.dur+" min":""}`)
    :`${esc(x.prog)}${x.dur?" · "+x.dur+" min":""}`;
-  h+=`<button class="row-link" style="gap:9px;padding:11px 0;flex-wrap:wrap" data-act="${!fin&&x.kind==="muscu"&&window.PLAN&&PLAN.run?"planrun":"planopen"}" data-v="${esc(x.key)}">
+  h+=`<button class="row-link" style="gap:9px;padding:11px 0;flex-wrap:wrap" data-act="${!fin&&(x.kind==="muscu"||x.sets)&&window.PLAN&&PLAN.run?"planrun":"planopen"}" data-v="${esc(x.key)}">
   <i class="pdot${fin?" done":""}" style="--c:${x.color};flex:none"></i>
   <span style="flex:1;min-width:0"><b style="display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}</b>
   <span style="font-size:12px;color:var(--mute)">${sub}</span></span>
-  <span style="flex:none;font-size:12px;font-weight:700;color:${fin?"var(--ink)":"var(--aqua)"}">${fin?(g?"Voir":"Faite"+(x.rpe?" · RPE "+x.rpe:"")):enc?"Reprendre":(x.kind==="muscu"?"Démarrer":"Voir")} ›</span>
+  <span style="flex:none;font-size:12px;font-weight:700;color:${fin?"var(--ink)":"var(--aqua)"}">${fin?(g?"Voir":"Faite"+(x.rpe?" · RPE "+x.rpe:"")):enc?"Reprendre":(x.kind==="muscu"||x.sets?"Démarrer":"Voir")} ›</span>
   ${enc?`<span class="tbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${g.pct}" aria-label="Avancement de la séance"><i style="width:${g.pct}%"></i></span>`:""}</button>`});
  if(!pl.length&&!cf.length){
   if(nxt)h+=`<button class="row-link" style="gap:9px;padding:11px 0" data-act="planopen" data-v="${esc(nxt.x.key)}">
