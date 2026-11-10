@@ -1,0 +1,40 @@
+/* Double progression selon les séances réelles : plage 8–12, +2,5 kg après 2 séances à 12 reps sur toutes les séries. */
+const {boot}=require('./_boot.js');
+let ko=0;const T=(n,c,x)=>{if(!c)ko++;console.log(`  ${c?'✓':'✗'} ${n}${x!=null?'  ('+x+')':''}`)};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const mu=clone(require('./_programme.json').find(q=>q.kind==='muscu'));mu.id='mu';
+mu.blocks=[{goal:'hyp',weeks:6,end:'deload',custom:{s:4,r:8,p0:70,inc:2.5,rpe:8}},{goal:'hyp',weeks:6,end:'deload',custom:{s:4,r:8,p0:70,inc:2.5,rpe:8}}];const S0=mu.sessions[0];S0.exercises.push({id:'dp',name:'Développé haltères',mode:'dbl',sets:3,reps:8,repsMax:12,startKg:20,incKg:2.5,need:2});
+const R=boot({});R.S.profile={sex:'m',age:36,bw:81,name:'B'};R.S.planif={programs:[mu],deleted:[]};
+const E=R.PLAN.engine,p=R.S.planif.programs[0];
+const spec=w=>R.PLAN.engine.findInst('mu|'+w+'|'+S0.id);
+const work=[];for(let w=1;w<=30&&work.length<8;w++){const x=spec(w);if(x&&!x.g.light)work.push(w)}
+const it=w=>spec(w).g.items.find(z=>z.id==='dp');
+const log=(w,reps,kg)=>{p.logs[w+'|'+S0.id]={done:true,ex:{dp:{sets:reps.map(r=>({kg:kg==null?it(w).loadNum:kg,reps:r,rpe:8}))}}};E.persist(p)};
+console.log('\n═══ Double progression 8–12 reps ═══\n');
+const [a,b,c,d,e,f,g]=work;
+T('départ : 3 × 8–12 @ 20 kg',it(a).scheme==='3×8–12'&&it(a).loadNum===20,it(a).scheme+' @'+it(a).loadNum);
+log(a,[10,9,9]);
+T('après 10/9/9 : vise 10–12, même charge',it(b).reps==='10–12'&&it(b).loadNum===20,it(b).reps);
+log(b,[12,12,12]);
+T('1re séance à 12 partout : charge gardée, « encore 1 séance »',it(c).loadNum===20&&it(c).reps==='12'&&/encore 1 séance/.test(it(c).info),it(c).info);
+log(c,[12,12,12]);
+T('2e séance de suite à 12 : +2,5 kg et objectif 8–10',it(d).loadNum===22.5&&it(d).reps==='8–10',it(d).scheme+' @'+it(d).loadNum);
+T('message clair sur la séance',/Charge \+2,5 kg/.test(it(d).info),it(d).info);
+log(d,[9,8,8]);
+T('puis remonte : 9–12',it(e).reps==='9–12'&&it(e).loadNum===22.5,it(e).reps);
+log(e,[12,11,10]);
+T('une série sous 12 : la série validée ne compte pas (vise 11–12)',it(f).reps==='11–12'&&it(f).loadNum===22.5,it(f).reps);
+log(f,[7,7,6]);log(g,[7,6,6]);
+const h=work[7];T('2 séances sous 8 : charge −2,5 kg',it(h).loadNum===20,it(h).loadNum);
+console.log('\n═══ Cas particuliers ═══\n');
+log(a,[10,9,9],25);
+T('charge notée différente (25 kg) : devient la référence',it(b).loadNum===25,it(b).loadNum);
+log(a,[10,9,9],20);
+p.logs[b+'|'+S0.id]={done:true,ex:{dp:{plan:true}}};E.persist(p);
+T('« comme prévu » = objectif atteint (10 reps → vise 11–12)',it(c).reps==='11–12',it(c).reps);
+const dl=(()=>{for(let w=1;w<=30;w++){const x=spec(w);if(x&&x.g.light)return w}})();
+if(dl){T('semaine allégée : 1 série en moins',it(dl).sets===2)}
+const db=E.debrief(spec(a)).find(o=>o.name==='Développé haltères');
+T('débriefing : prochaine séance avec le message de progression',db&&db.nx&&db.nx.it.dbl===true);
+T('pas de bascule en "comme prévu" ni erreur pour la séance sans log',it(a).dblMsg.length>0);
+process.exitCode=ko?1:0;console.log(ko?`\n${ko} échec(s)`:'\nAucune erreur.');
