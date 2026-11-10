@@ -33,4 +33,13 @@ T('débriefing : prochaine séance S2 selon les paliers prévus',db&&db.nx&&db.n
 const mu=clone(require('./_programme.json').find(q=>q.kind==='muscu'));mu.id='mu2';mu.sessions[0].exercises.push({id:'pp',name:'Curl marteau',mode:'plan',steps:[{w:1,sets:3,reps:12,kg:10,rpe:8},{w:3,sets:4,reps:10,kg:12,rpe:8}]});R.S.planif.programs.push(mu);
 const gm=w=>E.findInst('mu2|'+w+'|'+mu.sessions[0].id).g.items.find(z=>z.id==='pp');
 T('muscu : exercice en progression planifiée (paliers)',gm(1).scheme==='3×12'&&gm(1).loadNum===10&&gm(3).scheme==='4×10'&&gm(4).loadNum===12);
+console.log('\n═══ Saisie rapide de paliers ═══\n');
+const q=E.parseSteps('2x15, 3x15, 2x12, 3x12, 2x10, 3x10, 4x10, 2x8, 3x8, 4x8, 2x6, 3x6, 4x6',{kg:4,rpe:8,rest:'2 min'},1);
+T('13 éléments → 13 paliers, un par semaine (S1 à S13)',q.steps.length===13&&q.steps[0].w===1&&q.steps[12].w===13&&q.steps[12].sets===4&&q.steps[12].reps===6);
+T('charge, RPE et repos de départ reportés',q.steps.every(z=>z.kg===4&&z.rpe===8&&z.rest==='2 min'));
+const q2=E.parseSteps('2x15 4kg; 3x12 2sem @5 ; 4x10 rpe9 puis 4x8-10 6,5kg ; n\'importe quoi',{},1);
+T('charge redonnée, durée « 2sem », RPE, plage de reps, séparateurs variés',q2.steps.map(z=>z.w+':'+z.sets+'x'+z.reps+'@'+z.kg+(z.rpe?'r'+z.rpe:'')).join(' ')==='1:2x15@4 2:3x12@5 4:4x10@5r9 5:4x8-10@6.5r9',q2.steps.map(z=>z.w+':'+z.sets+'x'+z.reps+'@'+z.kg+(z.rpe?'r'+z.rpe:'')).join(' '));
+T('texte non reconnu signalé, pas inventé',q2.bad.length===1);
+const pr=R.S.planif.programs.find(z=>z.id==='reh');pr.fixed[0].exercises[1].steps=q.steps;E.persist(pr);
+T('séances générées : S3 2×12, S8 2×8, S13 4×6',it(3,'e2').scheme==='2×12'&&it(8,'e2').scheme==='2×8'&&it(13,'e2').scheme==='4×6');
 process.exitCode=ko?1:0;console.log(ko?`\n${ko} échec(s)`:'\nAucune erreur.');
