@@ -261,6 +261,8 @@ input.chip{font-size:16px}
   -webkit-backdrop-filter:blur(3px);z-index:60;display:flex;align-items:flex-end}
 .sheet-in{background:var(--card);border:1px solid var(--line);border-bottom:none;width:100%;max-width:520px;margin:0 auto;max-height:88vh;
   border-radius:28px 28px 0 0;display:flex;flex-direction:column;box-shadow:0 -20px 60px rgba(0,0,0,.7)}
+/* Sélecteur de mouvement : hauteur fixe, sinon la feuille rétrécit à chaque lettre tapée et le champ de recherche saute. */
+.sheet-in.fixh{height:88vh;height:88dvh}.sheet-in.fixh>.fixl{flex:1;min-height:0;overscroll-behavior:contain}
 .mv{width:100%;padding:14px 2px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
 .mv small{color:var(--mute);font-size:12px}
 .empty{text-align:center;padding:38px 24px;color:var(--mute);font-size:13.5px;line-height:1.68}
@@ -302,6 +304,7 @@ input.chip{font-size:16px}
  .head h1{font-size:44px}
  .scroll{padding-left:22px;padding-right:22px}
  .sheet-in{border-radius:24px;margin-bottom:6vh;max-width:560px}
+ .sheet-in.fixh{height:min(80vh,720px)}
  .sheet{align-items:center}
 }
 @media (min-width:1200px){#app{max-width:720px}.tabs{max-width:720px}}
@@ -429,7 +432,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v92";
+const APP_VERSION="msc-v93";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -2338,10 +2341,10 @@ function vPicker(){
  const nq=t=>String(t).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""),qq=nq(q);
  const L=allMoves().filter(m=>m.k!=="wod"&&(nq(m.n).includes(qq)||nq(m.g).includes(qq)));
  const G=[...new Set(L.map(m=>m.g))];
- let h=`<div class="sheet" data-act="closepick"><div class="sheet-in" data-stop="1">
+ let h=`<div class="sheet" data-act="closepick"><div class="sheet-in fixh" data-stop="1">
   <div style="padding:18px 22px 10px"><div style="width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 16px"></div>
   <input class="inp" id="q" placeholder="Chercher un mouvement…" value="${esc(S.q)}"></div>
-  <div style="overflow-y:auto;padding:0 22px 30px">`;
+  <div class="fixl" style="overflow-y:auto;padding:0 22px 30px">`;
  if(!q){const rec=recents(6);
   if(rec.length)h+=`<div style="margin-top:16px"><div class="eyebrow" style="margin-bottom:8px">Récemment utilisés</div>
    <div class="chips">`+rec.map(id=>`<button class="chip" style="border-color:var(--aqua);color:var(--aqua);font-weight:600"

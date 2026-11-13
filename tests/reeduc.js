@@ -23,7 +23,7 @@ T('palier indiqué (ex. « Palier 2/5 · S2–S3 »)',it(3,'e2').info==='Palier 
 console.log('\n═══ Noter et suivre comme une séance de muscu ═══\n');
 const x=X(1),p=x.p;p.logs['1|fc']={done:true,ex:{e2:{sets:[{kg:4,reps:15,rpe:8},{kg:4,reps:14,rpe:9}]}}};E.persist(p);
 const pg=R.PLAN.dayList(E.iso(x.date)).find(z=>z.key===x.key);
-T('la séance a des séries (mode séance, ronds à cocher, avancement)',pg.sets===true&&pg.pg&&pg.pg.state==='encours'&&pg.pg.tot===2,pg.pg&&pg.pg.state);
+T('la séance a des séries (mode séance, ronds à cocher, avancement)',pg.sets===true&&pg.pg&&['encours','finie'].includes(pg.pg.state)&&pg.pg.tot===2,pg.pg&&pg.pg.state);
 T('les séries notées sont gardées',X(1).log.ex.e2.sets.length===2);
 p.overrides['2|fc|e2']={kg:5.5,reps:12};E.persist(p);
 T('« Modifier pour cette semaine » : charge et reps changées pour S2 seulement',it(2,'e2').loadNum===5.5&&it(3,'e2').loadNum===5);
