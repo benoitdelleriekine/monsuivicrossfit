@@ -50,7 +50,7 @@ S.sessions=[{id:'a',date:today,feel:4,note:'',metcons:[],
  {id:'b',date:'2026-08-04',feel:3,note:'',entries:[],metcons:[]}];
 
 console.log('\n═══ Les trois vues ═══');
-S.tab='progres';
+S.tab='progres';S.ps='calendrier';
 for(const v of ['mois','semaines','annee']){
  click({act:'hv',v});render();
  const h=H();
@@ -74,7 +74,7 @@ click({act:'day',v:today});click({act:'openday',v:'a'});
 console.log('  ouverture du suivi : '+(S.tab==='historique'&&S.open==='a'?'✓':'✗'));
 
 console.log('\n═══ Navigation entre les mois ═══');
-S.tab='progres';S.hv='mois';S.moff=0;
+S.tab='progres';S.ps='calendrier';S.hv='mois';S.moff=0;
 click({act:'moff',v:'-1'});console.log('  mois précédent : offset '+S.moff+' → '+monthGrid(S.moff).label);
 click({act:'moff',v:'-1'});click({act:'moff',v:'1'});console.log('  retour avant   : offset '+S.moff);
 click({act:'moff',v:'1'});click({act:'moff',v:'1'});

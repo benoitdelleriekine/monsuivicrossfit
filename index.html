@@ -83,6 +83,18 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:3px;padding:3px;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-m)}
 .seg button{min-height:36px;border-radius:11px;font-size:var(--fs-sm);font-weight:600;color:var(--mute);text-align:center;padding:0 6px}
 .seg button.on{background:var(--aqua);color:var(--onacc);font-weight:700}
+.card.wkc{padding:6px 18px 14px}.wkc-h{display:flex;justify-content:space-between;align-items:center;min-height:44px}
+.wkc-go{min-height:44px;padding:0 4px 0 14px;font-size:13.5px;font-weight:700;color:var(--aqua)}
+.wkc-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin:0 -10px}
+.wkc-days button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:62px;border-radius:12px;background:var(--track);color:var(--ink)}
+.wkc-days button.on{background:var(--aqua);color:var(--onacc)}
+.wkc-days .l{font-size:12px;font-weight:600}.wkc-days b{font-family:"Barlow Condensed",sans-serif;font-size:18px;line-height:1}
+.wkc-days .pdots{justify-content:center;gap:3px;height:7px}.wkc-days .pdot{width:7px;height:7px;margin:0}
+.wkc-qs{display:flex;gap:4px;margin-top:14px}.wkc-q{flex:1;min-width:0;text-align:center}
+.wkc-q>b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:24px;line-height:1.1;white-space:nowrap}
+.wkc-q>span{display:block;font-size:12px;color:var(--mute);white-space:nowrap}
+.wkc-q>i{display:block;height:4px;border-radius:2px;background:var(--track);margin:6px 6px 0;overflow:hidden}.wkc-q>i>i{display:block;height:100%}
+.wkc-n{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--mute)}
 .tiles{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:var(--sp-2);margin-bottom:14px}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r-m);padding:12px 9px 10px;position:relative;overflow:hidden;text-align:left;box-shadow:var(--sh-lo);min-height:66px}
 .tile b{display:block;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:var(--fs-num);line-height:1}
@@ -432,7 +444,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v94";
+const APP_VERSION="msc-v95";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -884,8 +896,9 @@ window.PLAN_HOST={sessions:()=>S.sessions.map(cfForPlan),
 /* Séances du module Plan (muscu, course, autres) pour le calendrier de l'accueil */
 const planOn=()=>!(S.tabsOff||[]).includes("plan")&&window.PLAN&&typeof PLAN.dayList==="function";
 const planDay=d=>{try{return planOn()?PLAN.dayList(d):[]}catch(e){return[]}};
-function vProgres(){
+function vProgres(calOnly){
   const hasPlan=planOn()&&S.planif&&(S.planif.programs||[]).length>0;
+  if(calOnly&&!S.sessions.length&&!hasPlan)return`<div class="empty">Le calendrier se remplit dès la première séance notée.</div>`;
   if(!S.sessions.length&&!hasPlan)return`<div class="head"><div class="eyebrow">Bienvenue</div><h1>Tes progrès</h1></div><div class="pane" style="padding-bottom:0">${installCard()}</div>
    <div class="pane"><div class="empty">Ici s'afficheront tes records, tes paliers franchis et tes premières fois.<br>Tout commence par une séance notée.</div>
    <button class="btn btn-go" data-act="new">Noter ma première séance</button></div>`;
@@ -905,6 +918,7 @@ function vProgres(){
   if(new Date(TODAY+"T12:00").getDay()===1){const rv=weekReview(dShift(monOf(TODAY),-7));if(rv.n||rv.pt)h+=`<div style="margin-top:12px">${reviewCard(rv,true).replace('<div class="card"','<div class="card" data-act="psub" data-v="bilan" role="button" tabindex="0"')}</div>`}
 
   /* ─── Bloc calendrier, trois vues au choix ─── */
+  const hHome=h;h="";
   const vue=S.hv||"mois";
   const segV=`<div class="seg calseg" role="group" aria-label="Vue du calendrier">`+[["mois","M","Mois"],["semaines","S","Semaines"],["annee","A","Année"]].map(([k,c,l])=>
     `<button class="${vue===k?"on":""}" data-act="hv" data-v="${k}" aria-label="${l}" aria-pressed="${vue===k}" title="${l}">${c}</button>`).join("")+`</div>`;
@@ -1013,6 +1027,8 @@ function vProgres(){
     <button class="chip" data-act="newday">+ CrossFit</button></div></div>`;
    h+=`</div>`}
 
+  if(calOnly)return h;
+  h=hHome;   /* le calendrier n'est plus sur l'accueil : Explorer › Calendrier */
   /* La courbe de douleur reste sur l'accueil seulement quand une zone est à surveiller ;
      sinon elle est dans « Douleur », à un geste, comme les autres analyses. */
   if(painAlert())h+=painCard();
@@ -1039,6 +1055,7 @@ function exploreCard(ms){
  const row=(act,v,t,sub,extra)=>`<button class="row-link" data-act="${act}"${v?` data-v="${v}"`:""}><span style="flex:1;min-width:0"><b style="display:block;font-size:var(--fs-md)">${t}</b><span style="display:block;font-size:var(--fs-cap);color:var(--mute);margin-top:2px">${sub}</span></span>${extra||""}<span style="color:var(--mute);font-size:18px;flex:none">›</span></button>`;
  let r="";
  const lw=dShift(monOf(TODAY),-7),rv=(S.sessions.length||planOn())?weekReview(lw):null;
+ r+=row("psub","calendrier","Calendrier","Mois · semaines · année · partage");
  if(rv&&(rv.n||rv.pt))r+=row("psub","bilan","Bilan de la semaine",`Semaine du ${fMid(lw)} · ${rv.n} séance${rv.n>1?"s":""}`+(rv.rec?` · ${rv.rec} record${rv.rec>1?"s":""}`:""));
  const lr=loadRatio(),ln=lr[lr.length-1];
  {const rl=runLogs();if(rl.length){const l4=rl.filter(z=>z.date>=dShift(TODAY,-27)),km4=l4.reduce((a,z)=>a+(z.km||0),0);
@@ -1153,12 +1170,13 @@ function cmpLine(sets,prev){const a=setStats(sets),b=prev?setStats(prev.sets):nu
  if(a.rpe!=null&&b.rpe!=null)parts.push(`RPE ${fx(a.rpe)} (${fx(b.rpe)} avant)`);
  return`<div style="font-size:var(--fs-cap);color:var(--mute);margin:-4px 0 10px;line-height:1.5">Par rapport au ${fMid(prev.date)} : ${parts.join(" · ")}</div>`}
 /* Sous-pages de Progrès : mêmes blocs qu'avant, chacun sur sa page */
-const PSUB={mouvements:"Mes mouvements",metcons:"Metcons refaits",douleur:"Douleur",travail:"Ce que tu travailles",bilan:"Bilan de la semaine",charge:"Charge d'entraînement",course:"Course à pied"};
+const PSUB={calendrier:"Calendrier",mouvements:"Mes mouvements",metcons:"Metcons refaits",douleur:"Douleur",travail:"Ce que tu travailles",bilan:"Bilan de la semaine",charge:"Charge d'entraînement",course:"Course à pied"};
 function vPSub(k){
  let h=`<div class="head" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px"><div><div class="eyebrow">Progrès</div><h1>${PSUB[k]||""}</h1></div><button class="chip" style="white-space:nowrap;flex:none" data-act="psclose">‹ Progrès</button></div>`;
  if(k==="mouvements"){if(wide2()){const det=S.fiche?vFiche(S.fiche,true):"";
    return h+`<div class="split"><div class="split-l">${S.fiche?movesBlock().split(`class="row-link" data-act="fiche" data-v="${S.fiche}"`).join(`class="row-link" aria-current="true" data-act="fiche" data-v="${S.fiche}"`):movesBlock()}</div><div class="split-r" aria-live="polite">${det||'<div class="empty">Choisis un mouvement pour voir sa fiche.</div>'}</div></div><div style="height:24px"></div>`}
   h+=movesBlock()}
+ else if(k==="calendrier")h+=`<div class="pane">${vProgres(true)}</div>`;
  else if(k==="metcons")h+=benchPage();
  else if(k==="bilan")h+=bilanPage();
  else if(k==="charge")h+=chargePage();
@@ -1991,19 +2009,39 @@ function todayCard(){
   zs.map(z=>painChips(TODAY,z,"matin","Ce matin, douleur "+painZ(z)[1].toLowerCase())).join("")+`</div>`}
  return h+`</div>`+weekTiles()}
 
-/* Cette semaine : nombre de séances par type et records, d'un coup d'œil */
+/* Cette semaine : les 7 jours, les chiffres du plan (fait / prévu) et le nombre de séances par type.
+   Le calendrier mois / semaines / année est dans Explorer › Calendrier. */
 function weekTiles(){
  const mon=monday(TODAY+"T12:00"),sun=dShift(mon,6),inW=d=>d>=mon&&d<=sun;
+ const hasPlan=planOn()&&S.planif&&(S.planif.programs||[]).length>0;
  const cf=S.sessions.filter(s=>inW(s.date)).length;
  const k={muscu:0,course:0,autre:0};
  try{if(planOn()&&PLAN.historyList)PLAN.historyList().forEach(x=>{if(inW(x.date)){const t=k[x.kind]!=null?x.kind:"autre";k[t]++}})}catch(e){}
  const rec=msAll().filter(m=>inW(m.date)&&m.t!=="Découvert").length;
- const tl=[[cf,"CrossFit","var(--c-cf)"],[k.muscu,"Muscu","var(--c-mu)"]];
- if(k.course||planOn()&&(PLAN.programs?PLAN.programs():[]).some(p=>p.kind==="course"))tl.push([k.course,"Course","var(--c-run)"]);
- if(k.autre)tl.push([k.autre,"Autre","var(--c-oth)"]);
- tl.push([rec,rec>1?"Records":"Record","var(--c-rec)"]);
- return`<div class="eyebrow" style="margin:4px 2px 9px">Cette semaine</div><div class="tiles">`+tl.map(([n,l,c])=>
-  `<button class="tile" data-act="hv" data-v="semaines" aria-label="${n} ${l} cette semaine" style="--c:${c}"><i></i><b>${n}</b><span>${l}</span></button>`).join("")+`</div>`}
+ const cfDays=new Set(S.sessions.map(s=>s.date)),JL=["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+ const fr=n=>n.toLocaleString("fr-FR"),sameM=mon.slice(5,7)===sun.slice(5,7);
+ const dm=d=>new Date(d+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
+ const range=(sameM?String(+mon.slice(8)):dm(mon))+" – "+dm(sun);
+ let h=`<div class="card wkc" id="wkcard"><div class="wkc-h"><div class="eyebrow">Cette semaine · ${range}</div>${planOn()?`<button class="wkc-go" data-act="tab" data-v="plan">Plan ›</button>`:""}</div><div class="wkc-days">`;
+ for(let i=0;i<7;i++){const d=dShift(mon,i),pl=hasPlan?planDay(d):[],t=d===TODAY;
+  const dots=[...(cfDays.has(d)?[`<i class="pdot done" style="--c:${t?"var(--onacc)":"var(--c-cf)"}"></i>`]:[]),
+   ...pl.map(x=>`<i class="pdot${x.done?" done":d<TODAY?" miss":""}" style="--c:${t?"var(--onacc)":x.color}"></i>`)].slice(0,3).join("");
+  const n=pl.length+(cfDays.has(d)?1:0),nd=pl.filter(x=>x.done).length+(cfDays.has(d)?1:0);
+  h+=`<button class="${t?"on":""}" data-act="wkday" data-v="${d}" aria-label="${fLong(d)}${n?`, ${n} séance${n>1?"s":""}, ${nd} faite${nd>1?"s":""}`:", repos"}"><span class="l">${JL[i]}</span><b>${+d.slice(8)}</b><span class="pdots">${dots}</span></button>`}
+ h+=`</div>`;
+ let w=null;try{if(hasPlan&&PLAN.weekSummary)w=PLAN.weekSummary()}catch(e){}
+ if(w&&(w.total||w.ua)){
+  const q=(v,sub,c,a,b,lab)=>`<div class="wkc-q" role="group" aria-label="${lab}"><b style="color:${c}">${v}</b><span>${sub}</span><i><i style="width:${b>0?Math.min(100,Math.round(a/b*100)):0}%;background:${c}"></i></i></div>`;
+  const t1=x=>(Math.round(x/100)/10).toLocaleString("fr-FR");
+  h+=`<div class="wkc-qs">`+q(`${w.done} / ${w.total}`,"séances","var(--orchid)",w.done,w.total,"Séances du plan faites")+
+   q(fr(w.uaDone),`/ ${fr(w.ua)} UA`,"var(--ink)",w.uaDone,w.ua,"Charge faite sur charge prévue")+
+   (w.ton?q(`${t1(w.tonDone)} t`,`/ ${t1(w.ton)} t`,"var(--pl-or)",w.tonDone,w.ton,"Tonnage fait sur tonnage prévu"):"")+
+   (w.runMin||w.runDone?q(`${w.runDone} min`,`/ ${w.runMin} min`,"var(--pl-te)",w.runDone,w.runMin,"Course faite sur course prévue"):"")+`</div>`}
+ const tl=[[cf,"CrossFit"],[k.muscu,"Muscu"]];
+ if(k.course||planOn()&&(PLAN.programs?PLAN.programs():[]).some(p=>p.kind==="course"))tl.push([k.course,"Course"]);
+ if(k.autre)tl.push([k.autre,"Autre"]);
+ h+=`<div class="wkc-n">`+tl.map(([n,l])=>`${n} ${l}`).join(" · ")+(rec?` · <span style="color:var(--c-rec)">★ ${rec} record${rec>1?"s":""}</span>`:"")+`</div></div>`;
+ return h}
 
 /* ══════════ RECORDS ══════════
    Tous les records au même endroit : charge max estimée (CrossFit et plan muscu),
@@ -3465,6 +3503,7 @@ document.addEventListener("click",ev=>{
   case"hv":S.hv=v;S.day=null;pendingAnchor="calblock";break;
   case"moff":{S.moff=Math.min(0,(S.moff||0)+(+v));S.day=null;pendingAnchor="calblock";break}
   case"day":S.day=S.day===v?null:v;pendingAnchor="calblock";break;
+  case"wkday":if(planOn()&&PLAN.openDay){PLAN.openDay(v);S.tab="plan";S.day=null}else{S.ps="calendrier";S.hv="mois";S.moff=0;S.day=v}break;
   case"dayclose":S.day=null;pendingAnchor="calblock";break;
   case"pain":{const n=+b.dataset.v,z=b.dataset.z,d0=b.dataset.d,w=b.dataset.w;painSet(d0,z,w,painGet(d0,z,w)===n?null:n);break}
   case"painz":{if(!S.pain)S.pain={zones:[],log:{}};const i=S.pain.zones.indexOf(v);if(i>=0)S.pain.zones.splice(i,1);else S.pain.zones.push(v);S.pain.zt=Date.now();painVer++;break}

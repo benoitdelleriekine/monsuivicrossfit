@@ -44,7 +44,7 @@ S.sessions=[{id:'s1',date:'2026-08-10',feel:1,note:'',
     veut dire « pas encore chronométré », pas « abandonné ». */
 
 console.log('═══ Doublon du bouton « Partager le mois » ═══\n');
-S.tab='progres';S.hv='mois';render();
+S.tab='progres';S.ps='calendrier';S.hv='mois';render();
 const cnt=(nodes.app.innerHTML.match(/Partager le mois/g)||[]).length;
 T('un seul bouton affiché (une seule fois dans le code source)', cnt===1);
 
