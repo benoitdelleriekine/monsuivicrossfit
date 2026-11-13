@@ -432,7 +432,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v93";
+const APP_VERSION="msc-v94";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -1898,7 +1898,7 @@ function vMetcon(mc,idx){
         placeholder="—" aria-label="Répétitions"></div>
        <span class="sunit">${m.u==="sec"?"s":m.u==="m"?"m":"reps"}</span>
        ${ST.sch?`<button class="sdiff" data-act="mclad" data-i="${i}">fixe</button>`:""}`))
-      +`<div style="${ST.seq?"flex:0 0 118px;margin-top:6px":"flex:1"};min-width:0"><input class="sin" type="number" inputmode="decimal" id="mi-${i}-weight"
+      +`<div style="${ST.seq?"flex:0 0 118px;margin-top:6px":"flex:1"};min-width:0"><input class="sin" type="text" inputmode="decimal" autocomplete="off" id="mi-${i}-weight"
         data-mi="${i}" data-f="weight" value="${it.weight||""}" placeholder="PdC" aria-label="Charge"></div>
        <span class="sunit" style="${ST.seq?"margin-top:6px":""}">kg</span>`)
     +(it.seq&&ST.seq?`<div style="flex:1 0 100%;font-size:12px;color:var(--aqua);margin-top:6px;font-weight:600">
@@ -2209,7 +2209,7 @@ function setsCard(en,m,isCar){
    <div style="flex:1.05;min-width:0"><input class="sin" type="number" inputmode="numeric" id="sr-${i}"
      data-set="${i}" data-f="reps" value="${s.reps||""}" aria-label="Répétitions série ${i+1}"></div>
    <span class="sunit">${uL}</span>
-   <div style="flex:1.15;min-width:0"><input class="sin" type="number" inputmode="decimal" id="sw-${i}"
+   <div style="flex:1.15;min-width:0"><input class="sin" type="text" inputmode="decimal" autocomplete="off" id="sw-${i}"
      data-set="${i}" data-f="weight" value="${s.weight||""}" placeholder="PdC" aria-label="Charge série ${i+1}"></div>
    <span class="sunit">kg</span>
    <button class="sdiff" data-act="scycle" data-i="${i}">${(DIFFS.find(d=>d.k===s.diff)||DIFFS[1]).l}</button>
@@ -2226,7 +2226,7 @@ function setsCard(en,m,isCar){
 
 function step(k,unit,st,min,sm){return`<div class="step${sm?" sm":""}">
  <button class="step-btn" aria-label="Diminuer" data-act="dec" data-k="${k}" data-s="${st}" data-min="${min||0}">−</button>
- <div class="step-val"><input type="number" inputmode="decimal" id="in-${k}" data-k="${k}" value="${S.d[k]}" aria-label="${({age:"Âge (ans)",bw:"Poids de corps (kg)"})[k]||unit}">
+ <div class="step-val"><input type="text" inputmode="decimal" autocomplete="off" id="in-${k}" data-k="${k}" value="${S.d[k]}" aria-label="${({age:"Âge (ans)",bw:"Poids de corps (kg)"})[k]||unit}">
  <div class="eyebrow" style="margin-top:3px">${unit}</div></div>
  <button class="step-btn" aria-label="Augmenter" data-act="inc" data-k="${k}" data-s="${st}">+</button></div>`}
 
@@ -3102,7 +3102,7 @@ function chainRowBody(ch,st,i){
   const val=Math.max(rm||0,dr||0);
   h+=`<div style="display:flex;align-items:center;gap:7px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">
    <span style="font-size:12px;color:var(--mute);flex:1">Charge max${val?` · ${val.toFixed(val%1?1:0)} kg${rm&&val===rm?" estimée":""}`:""}</span>
-   <input class="sin" style="width:64px;flex:none;padding:10px 4px;font-size:16px" type="number" inputmode="decimal"
+   <input class="sin" style="width:64px;flex:none;padding:10px 4px;font-size:16px" type="text" inputmode="decimal" autocomplete="off"
     id="in-${rmKey}" placeholder="—">
    <button class="chip sm" data-act="log" data-v="${rmKey}" data-k="decl">Noter</button></div>
    ${histBlock("decl",rmKey,"kg")}`}
@@ -3285,7 +3285,7 @@ function stepInner(ch,st,i,pinnable){
   const val=Math.max(rm||0,dr||0);
   h+=`<div style="display:flex;align-items:center;gap:7px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">
    <span style="font-size:12px;color:var(--mute);flex:1">Charge max${val?` · ${val.toFixed(val%1?1:0)} kg${rm&&val===rm?" estimée":""}`:""}</span>
-   <input class="sin" style="width:64px;flex:none;padding:8px 4px;font-size:16px" type="number" inputmode="decimal"
+   <input class="sin" style="width:64px;flex:none;padding:8px 4px;font-size:16px" type="text" inputmode="decimal" autocomplete="off"
     id="in-${rmKey}" placeholder="—">
    <button class="chip sm" data-act="log" data-v="${rmKey}" data-k="decl">Noter</button></div>
    ${histBlock("decl",rmKey,"kg")}`}
@@ -3334,7 +3334,7 @@ function nextUpHTML(N){
 /* ══════════ RENDU ══════════ */
 let lastView=null,pendingAnchor=null;
 let animView=null,lastOpen=null,vinT=null;
-function render(){
+function render(){if(holdRender)return;
  if(window.PLAN&&window.PLAN.hold())return;
  /* On mémorise le texte exact en cours de frappe. Sans cela, la valeur
     recalculée est réinjectée à chaque caractère et un champ vidé se remplit
@@ -3681,7 +3681,12 @@ document.addEventListener("click",ev=>{
  }
  save();render()});
 
-document.addEventListener("input",ev=>{const t=ev.target;
+/* Champs décimaux : on accepte la virgule (clavier iPhone français). Tant que la saisie finit par « , » ou « . »
+   (ex. « 7, » avant le 5), on enregistre sans redessiner l'écran, sinon la virgule disparaîtrait. */
+const decV=v=>parseFloat(String(v).replace(",","."));
+let holdRender=false;
+document.addEventListener("input",ev=>{const t=ev.target;holdRender=t.inputMode==="decimal"&&/[.,]0*$/.test(t.value);try{onInput(ev)}finally{holdRender=false}});
+function onInput(ev){const t=ev.target;
  if(t.id==="q"){S.q=t.value;render();return}
  if(t.id==="pn"){S.pname=t.value;return}
  if(t.id==="shfile"){const f=t.files&&t.files[0];if(!f)return;
@@ -3706,7 +3711,7 @@ document.addEventListener("input",ev=>{const t=ev.target;
   if(t.dataset.f==="reps"){
    it.seq=null;it.reps=t.value===""?null:Math.max(0,parseInt(t.value)||0);
    save();render();return}
-  const n=t.value===""?null:Math.max(0,parseFloat(t.value)||0);
+  const n=t.value===""?null:Math.max(0,decV(t.value)||0);
   it[t.dataset.f]=n;
   if(t.dataset.f==="dist"&&n)it.cal=null;
   if(t.dataset.f==="cal"&&n)it.dist=null;
@@ -3718,14 +3723,14 @@ document.addEventListener("input",ev=>{const t=ev.target;
   save();return}
  if(t.dataset.set!=null){const en=entryOf();if(!en)return;
   const st=en.sets[+t.dataset.set];if(!st)return;
-  const n=t.value===""?0:Math.max(0,parseFloat(t.value)||0);
+  const n=t.value===""?0:Math.max(0,decV(t.value)||0);
   st[t.dataset.f]=t.dataset.f==="reps"?Math.round(n):n;save();render();return}
  if(t.id==="dt"&&t.value){if(S.draft)S.draft.date=t.value;save();render();return}
  if(t.id==="nt"){if(S.draft)S.draft.note=t.value;save();return}
  if(t.id==="sdur"){if(S.draft){const v=parseInt(t.value);S.draft.dur=v>0?Math.min(300,v):null}save();return}
- if(t.dataset.k){S.d[t.dataset.k]=t.value===""?0:Math.max(0,parseFloat(t.value)||0);
+ if(t.dataset.k){S.d[t.dataset.k]=t.value===""?0:Math.max(0,decV(t.value)||0);
   const en=entryOf();if(en){const m=mv(en.movementId);
-   if(m.k==="barbell"||m.k==="cardio"||m.u==="reps"){save();render()}}}});
+   if(m.k==="barbell"||m.k==="cardio"||m.u==="reps"){save();render()}}}}
 
 /* Recharge les champs du formulaire depuis le profil enregistré.
    Appelée à l'ouverture, mais aussi quand le cloud livre un profil après coup :
