@@ -483,7 +483,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v96";
+const APP_VERSION="msc-v98";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -2025,7 +2025,7 @@ const t1=x=>(Math.round(x/100)/10).toLocaleString("fr-FR");
 const tdTitle=t=>{const p=String(t||"").split(" — ");return p.length>1&&p[1].trim()?p.slice(1).join(" — "):String(t||"")};
 function sessBand(x,lead){
  const g=x.pg,fin=g?g.state==="finie":x.done,enc=!!g&&g.state==="encours",sets=(x.kind==="muscu"||x.sets)&&window.PLAN&&PLAN.run;
- const kind=x.extra?x.prog:(KINDL[x.kind]||x.prog),est=g&&g.est?g.est:x.dur,k=esc(x.key),ttl=esc(tdTitle(x.title));
+ const kind=x.extra?x.prog:(KINDL[x.kind]||x.prog),est=g&&g.est?g.est:x.dur,k=esc(x.key),ttl=esc(x.kind==="muscu"?tdTitle(x.title):x.title);
  const facts=[est?"≈ "+est+" min":"",sets&&x.nEx?x.nEx+" exercice"+(x.nEx>1?"s":""):"",x.ton?t1(x.ton)+" t":""].filter(Boolean);
  if(fin){const m=[g&&g.dur?g.dur+" min":"",x.tonDone?t1(x.tonDone)+" t":"",(g&&g.rpe)||x.rpe?"RPE "+((g&&g.rpe)||x.rpe):""].filter(Boolean).join(" · ");
   return`<button class="card tdb" data-act="planopen" data-v="${k}"><span class="tdb-m"><span class="tdb-e" style="color:var(--orchid)">${IC_OK} Faite · ${esc(kind)}</span><b class="tdb-t">${ttl}</b>${m?`<span class="tdb-s">${m}</span>`:""}</span><span class="tdb-x" style="font-size:18px">›</span></button>`}
@@ -2065,7 +2065,7 @@ function todayCard(){
  pl.forEach(x=>{h+=sessBand(x,"Aujourd'hui")});
  if(!pl.length&&!cf.length){
   if(nxt){const x=nxt.x=nxt.l[0],q=nxt.d===dShift(TODAY,1)?"Demain":fLong(nxt.d).split(" ")[0];
-   h+=`<button class="card tdb" data-act="planopen" data-v="${esc(x.key)}"><span class="tdb-m"><span class="tdb-e">Repos aujourd'hui</span><b class="tdb-t"><span style="text-transform:capitalize">${q}</span> : ${nxt.l.map(y=>esc(tdTitle(y.title))).join(" + ")}</b><span class="tdb-s">${nxt.l.map(y=>esc(y.prog)+(y.pg&&y.pg.est?" ≈ "+y.pg.est+" min":y.dur?" "+y.dur+" min":"")).join(" · ")}</span></span><span class="tdb-k" style="width:auto;margin:0">Voir ›</span></button>`}
+   h+=`<button class="card tdb" data-act="planopen" data-v="${esc(x.key)}"><span class="tdb-m"><span class="tdb-e">Repos aujourd'hui</span><b class="tdb-t"><span style="text-transform:capitalize">${q}</span> : ${nxt.l.map(y=>esc(y.kind==="muscu"?tdTitle(y.title):y.title)).join(" + ")}</b><span class="tdb-s">${nxt.l.map(y=>esc(y.prog)+(y.pg&&y.pg.est?" ≈ "+y.pg.est+" min":y.dur?" "+y.dur+" min":"")).join(" · ")}</span></span><span class="tdb-k" style="width:auto;margin:0">Voir ›</span></button>`}
   else h+=`<button class="card tdb" data-act="tab" data-v="noter"><span class="tdb-m"><span class="tdb-e">Aujourd'hui</span><b class="tdb-t">Rien de noté pour l'instant</b><span class="tdb-s">${planOn()?"Pas de séance prévue : jour de repos ou séance libre":"Note ta séance du jour"}</span></span><span class="tdb-k" style="width:auto;margin:0">Noter ›</span></button>`}
  let od=[];try{od=planOn()&&PLAN.overdue?PLAN.overdue():[]}catch(e){}
  if(od.length){h+=`<div class="card" style="padding:4px 14px 14px">`;
