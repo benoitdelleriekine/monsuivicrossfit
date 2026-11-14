@@ -3,7 +3,7 @@ const {boot}=require('./_boot.js');
 let ko=0;const T=(n,c,x)=>{if(!c)ko++;console.log(`  ${c?'✓':'✗'} ${n}${x!=null?'  ('+x+')':''}`)};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const mu=clone(require('./_programme.json').find(q=>q.kind==='muscu'));mu.id='mu';
-mu.blocks=[{goal:'hyp',weeks:6,end:'deload',custom:{s:4,r:8,p0:70,inc:2.5,rpe:8}},{goal:'hyp',weeks:6,end:'deload',custom:{s:4,r:8,p0:70,inc:2.5,rpe:8}}];const S0=mu.sessions[0];S0.exercises.push({id:'dp',name:'Développé haltères',mode:'dbl',sets:3,reps:8,repsMax:12,startKg:20,incKg:2.5,need:2});
+mu.blocks=[{goal:'hyp',weeks:6,end:'deload',custom:{s:4,r:8,p0:70,inc:2.5,rpe:8}},{goal:'hyp',weeks:6,end:'deload',custom:{s:4,r:8,p0:70,inc:2.5,rpe:8}}];const S0=mu.sessions[0];S0.exercises.push({id:'dp',name:'Développé machine',mode:'dbl',sets:3,reps:8,repsMax:12,startKg:20,incKg:2.5,need:2});
 const R=boot({});R.S.profile={sex:'m',age:36,bw:81,name:'B'};R.S.planif={programs:[mu],deleted:[]};
 const E=R.PLAN.engine,p=R.S.planif.programs[0];
 const spec=w=>R.PLAN.engine.findInst('mu|'+w+'|'+S0.id);
@@ -34,7 +34,7 @@ p.logs[b+'|'+S0.id]={done:true,ex:{dp:{plan:true}}};E.persist(p);
 T('« comme prévu » = objectif atteint (10 reps → vise 11–12)',it(c).reps==='11–12',it(c).reps);
 const dl=(()=>{for(let w=1;w<=30;w++){const x=spec(w);if(x&&x.g.light)return w}})();
 if(dl){T('semaine allégée : 1 série en moins',it(dl).sets===2)}
-const db=E.debrief(spec(a)).find(o=>o.name==='Développé haltères');
+const db=E.debrief(spec(a)).find(o=>o.name==='Développé machine');
 T('débriefing : prochaine séance avec le message de progression',db&&db.nx&&db.nx.it.dbl===true);
 T('pas de bascule en "comme prévu" ni erreur pour la séance sans log',it(a).dblMsg.length>0);
 process.exitCode=ko?1:0;console.log(ko?`\n${ko} échec(s)`:'\nAucune erreur.');

@@ -191,21 +191,26 @@
   };
   // ---------- Autorégulation ----------
   // Pas de charge : 2,5 kg par défaut (barre), réglable par exercice (1 kg avec micro-disques, 2 kg aux haltères…)
-  /* Matériel et pas de charge.
-     À la barre, les plus petits disques font 1,25 kg : on ne peut charger que de 2,5 en 2,5 kg. Toute charge proposée pour un exercice à la barre
-     est donc un multiple de 2,5 kg, même si un pas plus fin avait été enregistré. Le matériel est celui choisi dans l'éditeur (ex.eq : 'barre' | 'libre'),
-     sinon il est déduit : un exercice « % du 1RM » ou au nom typique (squat, soulevé de terre, développé couché, barre…) est à la barre,
-     sauf si son nom indique autre chose (haltères, poulie, machine, kettlebell, lesté…). */
-  var NONBAR = /halt[eè]re|dumbbell|\bdb\b|kettlebell|\bkb\b|poulie|machine|c[aâ]ble|[eé]lastique|lest[eé]|gilet|goblet|presse|tirage|guid[eé]|smith|trx|anneaux|sangle/i;
+  /* Matériel et pas de charge : les charges proposées sont toujours des charges qu'on peut réellement prendre.
+     - barre : plus petits disques 1,25 kg → de 2,5 en 2,5 kg ;
+     - haltères : de 2 en 2 kg ;
+     - poulie (câble, tirage) : plaques de 5 kg → de 5 en 5 kg.
+     Ce pas s'impose même si un pas plus fin avait été enregistré. Le matériel est celui choisi dans l'éditeur (ex.eq), sinon il est déduit du nom ;
+     sans indice, un exercice « % du 1RM » ou au nom typique (squat, soulevé de terre, développé couché…) est à la barre.
+     « libre » (choisi dans l'éditeur) ou matériel non reconnu (kettlebell, machine, lest…) : le pas indiqué, tel quel. */
+  var EQ_STEP = { barre: 2.5, halt: 2, poulie: 5 };
+  var HALT = /halt[eè]re|dumbbell|\bdb\b/i, POULIE = /poulie|c[aâ]ble|cable|tirage|pulley|face pull|pushdown|vis-[àa]-vis/i;
+  var NONBAR = /kettlebell|\bkb\b|machine|[eé]lastique|lest[eé]|gilet|goblet|presse|guid[eé]|smith|trx|anneaux|sangle/i;
   var BARRE = /barre|barbell|squat|soulev[eé]|deadlift|d[eé]velopp[eé] couch[eé]|bench|hip thrust|pendlay|good morning|snatch|clean|arrach[eé]|[eé]paul[eé]|jerk|thruster|push press|strict press|\bohp\b|d[eé]velopp[eé] militaire/i;
-  var eqOf = function (ex) { if (!ex) return 'autre'; if (ex.eq === 'barre' || ex.eq === 'libre') return ex.eq; var n = String(ex.name || ''); if (NONBAR.test(n)) return 'autre'; return ex.mode === 'pct' || BARRE.test(n) ? 'barre' : 'autre'; };
-  var stepOf = function (ex, dflt) { var st = num(ex && ex.step, 0); if (eqOf(ex) === 'barre') return st >= 2.5 ? Math.round(st / 2.5) * 2.5 : 2.5; return st > 0 ? st : (dflt || 2.5); };
+  var eqOf = function (ex) { if (!ex) return 'autre'; if (EQ_STEP[ex.eq] || ex.eq === 'libre') return ex.eq; var n = String(ex.name || '');
+    if (HALT.test(n)) return 'halt'; if (POULIE.test(n)) return 'poulie'; if (NONBAR.test(n)) return 'autre'; return ex.mode === 'pct' || BARRE.test(n) ? 'barre' : 'autre'; };
+  var stepOf = function (ex, dflt) { var st = num(ex && ex.step, 0), m = EQ_STEP[eqOf(ex)]; if (m) return st >= m ? Math.round(st / m) * m : m; return st > 0 ? st : (dflt || 2.5); };
   var rstep = function (x, ex) { var st = stepOf(ex, 2.5); return Math.round(Math.round(x / st) * st * 100) / 100; };
   /* Charges en kg (hors % du 1RM) : au demi-kilo comme avant, sauf à la barre (2,5 kg) ou si un pas est indiqué */
   var rkg = function (x, ex) { var st = stepOf(ex, 0.5); return Math.round(Math.round(x / st) * st * 100) / 100; };
-  /* % du 1RM : la charge théorique est arrondie au pas possible. Si l'arrondi l'éloigne de 3 % ou plus (charges légères : 2,5 kg pèsent lourd),
-     on compense d'une répétition — une de plus si la barre est plus légère que prévu, une de moins si elle est plus lourde. */
-  var pctFit = function (T, r, ex, cap) { var L = rstep(T, ex), d = 0; if (T > 0 && L > 0) { var gap = (L - T) / T; d = gap <= -0.03 ? 1 : gap >= 0.03 ? -1 : 0; } if (r + d < 1 || (cap > 0 && r + d > cap)) d = 0; return { L: L, r: r + d, d: d }; };
+  /* % du 1RM : la charge théorique est arrondie au pas possible. Si l'arrondi l'éloigne de 3 % ou plus (charges légères, ou plaques de 5 kg à la poulie),
+     on compense en répétitions — 1 rep par tranche de 3 %, 2 au plus : en plus si la charge est plus légère que prévu, en moins si elle est plus lourde. */
+  var pctFit = function (T, r, ex, cap) { var L = rstep(T, ex), d = 0; if (T > 0 && L > 0) { var gap = (L - T) / T; d = (gap < 0 ? 1 : -1) * Math.min(2, Math.floor(Math.abs(gap) / 0.03 + 1e-9)); } while (d && (r + d < 1 || (cap > 0 && r + d > cap))) d += d > 0 ? -1 : 1; return { L: L, r: r + d, d: d }; };
   // Paramètres d'une semaine pour un mouvement en % du 1RM (sans la charge)
   var pctParams = function (sp, ex) {
     var off = num(ex.offset, 0), rc = num(ex.repCap, 0), rr0 = sp.r, pAdj = 0;
@@ -494,7 +499,7 @@
         it.tmFrom = orm0; it.tmF = tr.f; it.orm = orm;
         if (sp.test) {
           if (off === 0 && testHere(ex)) { it.scheme = '1RM'; it.load = orm ? 'visé ' + kg(rstep(orm * 1.025, ex)) : ''; it.note = 'Montée progressive, 3–5 essais'; it.loadNum = orm ? rstep(orm * 1.025, ex) : null; it.repsPlan = 1; it.rpePlan = 10; it.sets = '3–5'; it.reps = 1; it.rpeTxt = '9–10'; it.rest = '4–5 min'; it.info = 'Test : montée progressive par paliers'; }
-          else { it.scheme = '3×3'; it.load = orm ? kg(r25(orm * 0.6)) : ''; it.note = 'Léger, garde de la fraîcheur pour le test'; it.loadNum = orm ? r25(orm * 0.6) : null; it.repsPlan = 3; it.rpePlan = 6; it.sets = 3; it.reps = 3; it.rpeTxt = '6'; it.rest = '2 min'; it.info = 'Léger avant le test'; }
+          else { it.scheme = '3×3'; it.load = orm ? kg(rstep(orm * 0.6, ex)) : ''; it.note = 'Léger, garde de la fraîcheur pour le test'; it.loadNum = orm ? rstep(orm * 0.6, ex) : null; it.repsPlan = 3; it.rpePlan = 6; it.sets = 3; it.reps = 3; it.rpeTxt = '6'; it.rest = '2 min'; it.info = 'Léger avant le test'; }
         } else {
           var prm = pctParams(sp, ex), rc = prm.rc, rr0 = prm.r, pAdj = prm.pAdj, s = prm.s;
           var pp = prm.pp, fit = pctFit(orm * pp / 100, rr0, ex, rc), L = fit.L, L0 = rstep(orm0 * pp / 100, ex); it.pp = pp; rr0 = fit.r;
@@ -502,7 +507,7 @@
           it.scheme = s + '×' + rr0; it.load = orm ? kg(L) : fmtN(pp) + ' %';
           it.note = fmtN(pp) + ' % 1RM · RPE ' + sp.rpe + ' · repos ' + sp.rest + (pAdj ? ' · reps plafonnées à ' + rc + ', intensité ajustée' : '') + (ex.note ? ' · ' + ex.note : '');
           if (sp.goal === 'puis' && !sp.deload) it.note += ' · vitesse max';
-          it.ton = orm ? s * rr0 * L : 0; it.loadNum = orm ? L : null; it.repsPlan = rr0; it.sets = s; it.reps = rr0; it.rpeTxt = sp.rpe; it.rest = off < 0 ? '2 min' : sp.rest; it.info = fmtN(pp) + ' % du 1RM' + (orm ? (Math.abs(tr.f - 1) > 0.001 ? ' · 1RM de travail ' + kg(Math.round(orm * 2) / 2) + ' (réf. ' + kg(orm0) + ')' : ' (1RM ' + kg(orm0) + ')') : ' · 1RM à renseigner') + (pAdj ? ' · reps limitées à ' + rc : '') + (orm && fit.d ? ' · charge arrondie à ' + fmtN(stepOf(ex, 2.5)) + ' kg près : ' + (fit.d > 0 ? '1 rep de plus' : '1 rep de moins') + ' pour compenser' : '');
+          it.ton = orm ? s * rr0 * L : 0; it.loadNum = orm ? L : null; it.repsPlan = rr0; it.sets = s; it.reps = rr0; it.rpeTxt = sp.rpe; it.rest = off < 0 ? '2 min' : sp.rest; it.info = fmtN(pp) + ' % du 1RM' + (orm ? (Math.abs(tr.f - 1) > 0.001 ? ' · 1RM de travail ' + kg(Math.round(orm * 2) / 2) + ' (réf. ' + kg(orm0) + ')' : ' (1RM ' + kg(orm0) + ')') : ' · 1RM à renseigner') + (pAdj ? ' · reps limitées à ' + rc : '') + (orm && fit.d ? ' · charge arrondie à ' + fmtN(stepOf(ex, 2.5)) + ' kg près : ' + Math.abs(fit.d) + ' rep' + (Math.abs(fit.d) > 1 ? 's' : '') + (fit.d > 0 ? ' de plus' : ' de moins') + ' pour compenser' : '');
         }
       } else if (ex.mode === 'kg') {
         var kgPlan = function (wk, shift) {
@@ -2126,9 +2131,10 @@
   var sel = function (label, path, html, rr) { return '<label class="field"><span>' + label + '</span><select class="in" data-f="' + path + '"' + (rr ? ' data-rr="1"' : '') + (path.indexOf('day') >= 0 || path.indexOf('weeks') >= 0 || path.indexOf('offset') >= 0 || /\.(ss|alt|testOn)$/.test(path) ? ' data-t="n"' : '') + '>' + html + '</select></label>'; };
   var getPath = function (obj, path) { return path.split('.').reduce(function (o, k) { return o == null ? o : o[/^\d+$/.test(k) ? +k : k]; }, obj); };
   /* Matériel : à la barre, tout est arrondi à 2,5 kg (disques de 1,25 kg). Sinon, pas de charge libre. */
-  var eqEd = function (pth, e, dflt) { var auto = eqOf({ name: e.name, mode: e.mode }), cur = eqOf(e);
-    return sel('Matériel', pth + 'eq', opt([['', 'Automatique (' + (auto === 'barre' ? 'barre' : 'autre matériel') + ')'], ['barre', 'Barre et disques'], ['libre', 'Haltères, machine, poulie…']], e.eq || '')) +
-      nfld(cur === 'barre' ? 'Pas de charge (kg) · 2,5 mini à la barre' : 'Pas de charge (kg)', pth + 'step', stepOf(e, dflt)); };
+  var EQ_LAB = { barre: 'barre · 2,5 kg', halt: 'haltères · 2 kg', poulie: 'poulie · 5 kg', autre: 'pas libre', libre: 'pas libre' };
+  var eqEd = function (pth, e, dflt) { var auto = eqOf({ name: e.name, mode: e.mode }), cur = eqOf(e), m = EQ_STEP[cur];
+    return sel('Matériel', pth + 'eq', opt([['', 'Automatique (' + EQ_LAB[auto] + ')'], ['barre', 'Barre et disques · de 2,5 en 2,5 kg'], ['halt', 'Haltères · de 2 en 2 kg'], ['poulie', 'Poulie · de 5 en 5 kg'], ['libre', 'Autre · pas libre']], e.eq || '')) +
+      nfld(m ? 'Pas de charge (kg) · ' + fmtN(m) + ' mini' : 'Pas de charge (kg)', pth + 'step', stepOf(e, dflt)); };
   var dblEd = function (pth, e) {
     var lo = num(e.reps, 8), hi = num(e.repsMax, 12);
     return nfld('Séries', pth + 'sets', e.sets) + nfld('Charge de départ (kg, 0 = sans)', pth + 'startKg', e.startKg) + nfld('Reps min de la plage', pth + 'reps', e.reps) + nfld('Reps max de la plage', pth + 'repsMax', e.repsMax) +
