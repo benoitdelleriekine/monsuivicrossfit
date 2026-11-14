@@ -191,7 +191,21 @@
   };
   // ---------- Autorégulation ----------
   // Pas de charge : 2,5 kg par défaut (barre), réglable par exercice (1 kg avec micro-disques, 2 kg aux haltères…)
-  var rstep = function (x, ex) { var st = num(ex && ex.step, 0) > 0 ? num(ex.step) : 2.5; return Math.round(x / st) * st; };
+  /* Matériel et pas de charge.
+     À la barre, les plus petits disques font 1,25 kg : on ne peut charger que de 2,5 en 2,5 kg. Toute charge proposée pour un exercice à la barre
+     est donc un multiple de 2,5 kg, même si un pas plus fin avait été enregistré. Le matériel est celui choisi dans l'éditeur (ex.eq : 'barre' | 'libre'),
+     sinon il est déduit : un exercice « % du 1RM » ou au nom typique (squat, soulevé de terre, développé couché, barre…) est à la barre,
+     sauf si son nom indique autre chose (haltères, poulie, machine, kettlebell, lesté…). */
+  var NONBAR = /halt[eè]re|dumbbell|\bdb\b|kettlebell|\bkb\b|poulie|machine|c[aâ]ble|[eé]lastique|lest[eé]|gilet|goblet|presse|tirage|guid[eé]|smith|trx|anneaux|sangle/i;
+  var BARRE = /barre|barbell|squat|soulev[eé]|deadlift|d[eé]velopp[eé] couch[eé]|bench|hip thrust|pendlay|good morning|snatch|clean|arrach[eé]|[eé]paul[eé]|jerk|thruster|push press|strict press|\bohp\b|d[eé]velopp[eé] militaire/i;
+  var eqOf = function (ex) { if (!ex) return 'autre'; if (ex.eq === 'barre' || ex.eq === 'libre') return ex.eq; var n = String(ex.name || ''); if (NONBAR.test(n)) return 'autre'; return ex.mode === 'pct' || BARRE.test(n) ? 'barre' : 'autre'; };
+  var stepOf = function (ex, dflt) { var st = num(ex && ex.step, 0); if (eqOf(ex) === 'barre') return st >= 2.5 ? Math.round(st / 2.5) * 2.5 : 2.5; return st > 0 ? st : (dflt || 2.5); };
+  var rstep = function (x, ex) { var st = stepOf(ex, 2.5); return Math.round(Math.round(x / st) * st * 100) / 100; };
+  /* Charges en kg (hors % du 1RM) : au demi-kilo comme avant, sauf à la barre (2,5 kg) ou si un pas est indiqué */
+  var rkg = function (x, ex) { var st = stepOf(ex, 0.5); return Math.round(Math.round(x / st) * st * 100) / 100; };
+  /* % du 1RM : la charge théorique est arrondie au pas possible. Si l'arrondi l'éloigne de 3 % ou plus (charges légères : 2,5 kg pèsent lourd),
+     on compense d'une répétition — une de plus si la barre est plus légère que prévu, une de moins si elle est plus lourde. */
+  var pctFit = function (T, r, ex, cap) { var L = rstep(T, ex), d = 0; if (T > 0 && L > 0) { var gap = (L - T) / T; d = gap <= -0.03 ? 1 : gap >= 0.03 ? -1 : 0; } if (r + d < 1 || (cap > 0 && r + d > cap)) d = 0; return { L: L, r: r + d, d: d }; };
   // Paramètres d'une semaine pour un mouvement en % du 1RM (sans la charge)
   var pctParams = function (sp, ex) {
     var off = num(ex.offset, 0), rc = num(ex.repCap, 0), rr0 = sp.r, pAdj = 0;
@@ -388,7 +402,7 @@
         }
         else if (sp.test) { L = rstep(orm * f * 1.025, ex); var e = e1rm(r.kg, r.reps, r.rpe || 10); f = Math.max(f * 0.85, Math.min(f * 1.15, e / orm)); }
         else {
-          var pr = pctParams(sp, ex); L = ov.kg != null ? num(ov.kg) : rstep(orm * f * pr.pp / 100, ex); reps = ov.reps != null ? num(ov.reps) : pr.r; rpe = ov.rpe != null ? num(ov.rpe) : rpeNum(sp.rpe);
+          var pr = pctParams(sp, ex), ft = pctFit(orm * f * pr.pp / 100, pr.r, ex, pr.rc); L = ov.kg != null ? num(ov.kg) : ft.L; reps = ov.reps != null ? num(ov.reps) : ft.r; rpe = ov.rpe != null ? num(ov.rpe) : rpeNum(sp.rpe);
           var target = f * e1rm(r.kg, r.reps, r.rpe || rpe) / e1rm(L, reps, rpe);
           var nf = f + AUTO_ALPHA * (target - f);
           f = Math.max(f * (1 - AUTO_CAP), Math.min(f * (1 + AUTO_CAP), nf));
@@ -434,8 +448,8 @@
     return out.sort(function (a, b) { return a.ord - b.ord; });
   };
   var dblState = function (p, ex, before) {
-    var lo = Math.max(1, num(ex.reps, 8) | 0), hi = Math.max(lo, num(ex.repsMax, 12) | 0), inc = num(ex.incKg, 2.5) || 2.5, need = Math.max(1, num(ex.need, 2) | 0);
-    var st = { L: num(ex.startKg, 0) || 0, lo: lo, hi: hi, inc: inc, need: need, streak: 0, low: 0, tgt: lo, phase: 'start', n: 0, last: null };
+    var stD = stepOf(ex, 0.5), lo = Math.max(1, num(ex.reps, 8) | 0), hi = Math.max(lo, num(ex.repsMax, 12) | 0), inc = Math.max(stD, Math.round((num(ex.incKg, 2.5) || 2.5) / stD) * stD), need = Math.max(1, num(ex.need, 2) | 0);
+    var st = { L: rkg(num(ex.startKg, 0) || 0, ex), lo: lo, hi: hi, inc: inc, need: need, streak: 0, low: 0, tgt: lo, phase: 'start', n: 0, last: null };
     dblHist(p, ex, before).forEach(function (h) {
       var ss = getSets(h.raw).filter(function (z) { return num(z.reps, 0) > 0; }), kgU, minR;
       if (!ss.length) { if (!h.raw.plan) return; kgU = st.L; minR = st.tgt; }
@@ -443,8 +457,8 @@
       if (Math.abs(kgU - st.L) > 0.01) { st.L = kgU; st.streak = 0; st.low = 0; }
       st.n++; st.last = { kg: kgU, reps: minR };
       st.streak = minR >= hi ? st.streak + 1 : 0; st.low = minR < lo ? st.low + 1 : 0;
-      if (st.streak >= need) { st.L = r05(st.L + inc); st.streak = 0; st.low = 0; st.tgt = lo; st.phase = 'up'; }
-      else if (st.low >= 2 && st.L > 0) { st.L = Math.max(0, r05(st.L - inc)); st.low = 0; st.streak = 0; st.tgt = lo; st.phase = 'down'; }
+      if (st.streak >= need) { st.L = rkg(st.L + inc, ex); st.streak = 0; st.low = 0; st.tgt = lo; st.phase = 'up'; }
+      else if (st.low >= 2 && st.L > 0) { st.L = Math.max(0, rkg(st.L - inc, ex)); st.low = 0; st.streak = 0; st.tgt = lo; st.phase = 'down'; }
       else { st.tgt = Math.min(hi, Math.max(lo, minR + 1)); st.phase = minR >= hi ? 'valid' : 'climb'; }
     });
     return st;
@@ -483,24 +497,24 @@
           else { it.scheme = '3×3'; it.load = orm ? kg(r25(orm * 0.6)) : ''; it.note = 'Léger, garde de la fraîcheur pour le test'; it.loadNum = orm ? r25(orm * 0.6) : null; it.repsPlan = 3; it.rpePlan = 6; it.sets = 3; it.reps = 3; it.rpeTxt = '6'; it.rest = '2 min'; it.info = 'Léger avant le test'; }
         } else {
           var prm = pctParams(sp, ex), rc = prm.rc, rr0 = prm.r, pAdj = prm.pAdj, s = prm.s;
-          var pp = prm.pp, L = rstep(orm * pp / 100, ex), L0 = rstep(orm0 * pp / 100, ex); it.pp = pp;
+          var pp = prm.pp, fit = pctFit(orm * pp / 100, rr0, ex, rc), L = fit.L, L0 = rstep(orm0 * pp / 100, ex); it.pp = pp; rr0 = fit.r;
           it.adjKg = L - L0;
           it.scheme = s + '×' + rr0; it.load = orm ? kg(L) : fmtN(pp) + ' %';
           it.note = fmtN(pp) + ' % 1RM · RPE ' + sp.rpe + ' · repos ' + sp.rest + (pAdj ? ' · reps plafonnées à ' + rc + ', intensité ajustée' : '') + (ex.note ? ' · ' + ex.note : '');
           if (sp.goal === 'puis' && !sp.deload) it.note += ' · vitesse max';
-          it.ton = orm ? s * rr0 * L : 0; it.loadNum = orm ? L : null; it.repsPlan = rr0; it.sets = s; it.reps = rr0; it.rpeTxt = sp.rpe; it.rest = off < 0 ? '2 min' : sp.rest; it.info = fmtN(pp) + ' % du 1RM' + (orm ? (Math.abs(tr.f - 1) > 0.001 ? ' · 1RM de travail ' + kg(Math.round(orm * 2) / 2) + ' (réf. ' + kg(orm0) + ')' : ' (1RM ' + kg(orm0) + ')') : ' · 1RM à renseigner') + (pAdj ? ' · reps limitées à ' + rc : '');
+          it.ton = orm ? s * rr0 * L : 0; it.loadNum = orm ? L : null; it.repsPlan = rr0; it.sets = s; it.reps = rr0; it.rpeTxt = sp.rpe; it.rest = off < 0 ? '2 min' : sp.rest; it.info = fmtN(pp) + ' % du 1RM' + (orm ? (Math.abs(tr.f - 1) > 0.001 ? ' · 1RM de travail ' + kg(Math.round(orm * 2) / 2) + ' (réf. ' + kg(orm0) + ')' : ' (1RM ' + kg(orm0) + ')') : ' · 1RM à renseigner') + (pAdj ? ' · reps limitées à ' + rc : '') + (orm && fit.d ? ' · charge arrondie à ' + fmtN(stepOf(ex, 2.5)) + ' kg près : ' + (fit.d > 0 ? '1 rep de plus' : '1 rep de moins') + ' pour compenser' : '');
         }
       } else if (ex.mode === 'kg') {
         var kgPlan = function (wk, shift) {
           var kE = workBefore(wk, muscuLight(p)), r0 = Math.max(1, num(ex.reps, 10) | 0), mx0 = num(ex.repsMax, 0), base = num(ex.startKg, 0) + shift, Lk, rk = r0;
           if (mx0 > r0) { var sp0 = mx0 - r0 + 1; rk = r0 + (kE % sp0); Lk = base + num(ex.incKg, 0) * Math.floor(kE / sp0); } else Lk = base + num(ex.incKg, 0) * kE;
-          return { L: num(ex.startKg, 0) > 0 || shift ? r05(Lk) : 0, reps: rk };
+          return { L: num(ex.startKg, 0) > 0 || shift ? rkg(Lk, ex) : 0, reps: rk };
         };
         var shiftKg = kgShift(p, ex, w, kgPlan), kp = kgPlan(w, shiftKg);
         var s2 = Math.max(1, num(ex.sets, 3) | 0), rr = kp.reps, L2 = kp.L, rmx = num(ex.repsMax, 0), dbl = rmx > num(ex.reps, 10);
         it.adjKg = shiftKg;
         if ((sp.deload || sp.test) && !ex.keep) { s2 = Math.max(1, s2 - 1); }
-        L2 = r05(L2); it.scheme = s2 + '×' + rr; it.load = L2 ? kg(L2) : 'charge à définir'; it.ton = s2 * rr * L2; it.loadNum = L2 || null; it.repsPlan = rr; it.rpePlan = (sp.deload || sp.test) && !ex.keep ? 6 : 8; it.sets = s2; it.reps = rr; it.rpeTxt = String(it.rpePlan); it.rest = '90 s – 2 min'; it.info = ex.keep ? 'Charge fixe' : (dbl ? 'Double progression : ' + num(ex.reps) + ' → ' + rmx + ' reps, puis +' + kg(num(ex.incKg, 0)) : (num(ex.incKg, 0) && String(ex.note || '').indexOf('par semaine') < 0 ? '+' + kg(num(ex.incKg)) + ' par semaine' : ''));
+        L2 = rkg(L2, ex); it.scheme = s2 + '×' + rr; it.load = L2 ? kg(L2) : 'charge à définir'; it.ton = s2 * rr * L2; it.loadNum = L2 || null; it.repsPlan = rr; it.rpePlan = (sp.deload || sp.test) && !ex.keep ? 6 : 8; it.sets = s2; it.reps = rr; it.rpeTxt = String(it.rpePlan); it.rest = '90 s – 2 min'; it.info = ex.keep ? 'Charge fixe' : (dbl ? 'Double progression : ' + num(ex.reps) + ' → ' + rmx + ' reps, puis +' + kg(num(ex.incKg, 0)) : (num(ex.incKg, 0) && String(ex.note || '').indexOf('par semaine') < 0 ? '+' + kg(num(ex.incKg)) + ' par semaine' : ''));
         if (sp.deload && !ex.keep) it.info = 'Semaine allégée : 1 série en moins' + (it.info ? ' · ' + it.info : '');
       } else if (ex.mode === 'reps') {
         var s3 = Math.max(1, num(ex.sets, 3) | 0), r3 = Math.floor(num(ex.reps, 5) + num(ex.incReps, 0) * kEff), mx = num(ex.maxReps, 0);
@@ -580,8 +594,8 @@
       if (xe.ref) {
         (p.sessions || []).forEach(function (s) { if (base || !(s.exercises || []).some(function (z) { return z.id === xe.ref; })) return; var g0 = genMuscu(p, s, w); if (g0) base = g0.items.filter(function (z) { return z.id === xe.ref; })[0] || null; });
         if (!base) { var e0 = findEx(p, xe.ref); var rs0 = e0 && e0.mode === 'pct' ? refSpec(p, w) : null;
-          if (rs0) { var pr1 = pctParams(rs0, e0), tf = tmTrace(p, e0, w).f, o1 = num(e0.orm, 0), L1 = o1 ? rstep(o1 * tf * pr1.pp / 100, e0) : null;
-            base = { id: xe.ref, name: e0.name, mode: 'pct', main: num(e0.offset, 0) === 0, orm: o1, sets: pr1.s, reps: pr1.r, repsPlan: pr1.r, loadNum: L1, rpePlan: rpeNum(rs0.rpe), rpeTxt: String(rs0.rpe), rest: e0.rest || rs0.rest || '2–3 min', note: e0.note || '', info: 'Hors cycle : repère = semaine de travail la plus proche' + (o1 ? ' · 1RM de travail ' + kg(Math.round(o1 * tf * 2) / 2) : '') + ' · note un RPE de 7 ou plus pour recaler ton 1RM' }; } }
+          if (rs0) { var pr1 = pctParams(rs0, e0), tf = tmTrace(p, e0, w).f, o1 = num(e0.orm, 0), ft1 = pctFit(o1 * tf * pr1.pp / 100, pr1.r, e0, pr1.rc), L1 = o1 ? ft1.L : null;
+            base = { id: xe.ref, name: e0.name, mode: 'pct', main: num(e0.offset, 0) === 0, orm: o1, sets: pr1.s, reps: ft1.r, repsPlan: ft1.r, loadNum: L1, rpePlan: rpeNum(rs0.rpe), rpeTxt: String(rs0.rpe), rest: e0.rest || rs0.rest || '2–3 min', note: e0.note || '', info: 'Hors cycle : repère = semaine de travail la plus proche' + (o1 ? ' · 1RM de travail ' + kg(Math.round(o1 * tf * 2) / 2) : '') + ' · note un RPE de 7 ou plus pour recaler ton 1RM' }; } }
         if (!base && e0) { if (e0) base = { id: xe.ref, name: e0.name, mode: e0.mode === 'reps' ? 'reps' : 'kg', sets: num(e0.sets, 3) || 3, reps: num(e0.reps, 8) || 8, loadNum: e0.mode === 'kg' && num(e0.startKg, 0) ? num(e0.startKg) : null, rpePlan: 8, rpeTxt: '8', rest: e0.rest || '2 min', note: e0.note || '' }; }
       }
       if (!base) { var lbe = libFind(xe.name), sec = !!(lbe && lbe[5] === 'sec'); base = { id: xe.id, name: xe.name || 'Exercice', mode: lbe && (lbe[5] === 'reps' || sec) ? 'reps' : 'kg', unit: sec ? 's' : '', sets: 3, reps: sec ? 30 : 10, loadNum: null, rpePlan: 8, rpeTxt: '8', rest: '2 min', note: '' }; }
@@ -622,7 +636,7 @@
       n2.repsPlan = n2.reps;
       /* Remplaçant prévu dans le programme (ex.subs : nom + 1RM) : charge calculée au même % que l'exercice remplacé */
       var e0 = (s.exercises || []).filter(function (q) { return q.id === it.id; })[0], sb = e0 && (e0.subs || []).filter(function (q) { return q.name === ov.swap.name; })[0];
-      if (sb && num(sb.orm, 0) > 0) { var st0 = { step: num(sb.step, 0) || num(e0.step, 0) };
+      if (sb && num(sb.orm, 0) > 0) { var st0 = { step: num(sb.step, 0) || num(e0.step, 0), name: sb.name, mode: 'pct', eq: sb.eq };
         if (it.scheme === '1RM') { n2.loadNum = rstep(num(sb.orm) * 1.025, st0); n2.sets = '3–5'; n2.reps = 1; n2.repsPlan = 1; n2.info = 'Test 1RM · ' + ov.swap.name + ' (réf. ' + kg(num(sb.orm)) + ')'; n2.note = 'Montée progressive, 3–5 essais'; }
         else if (it.pp) { n2.loadNum = rstep(num(sb.orm) * it.pp / 100, st0); n2.info = fmtN(it.pp) + ' % du 1RM ' + ov.swap.name + ' (' + kg(num(sb.orm)) + ')'; }
         else if (it.loadNum && it.orm) { n2.loadNum = rstep(num(sb.orm) * it.loadNum / it.orm, st0); n2.info = 'Même intensité que ' + it.name; }
@@ -1072,7 +1086,7 @@
       return '<button class="snum' + (on ? ' on' : '') + '" data-a="sd-sel" data-i="' + i + '" aria-pressed="' + on + '" aria-label="Choisir la série ' + (i + 1) + '">S' + (i + 1) + '</button>' + inp('kg', isR ? '0' : it.loadNum) + inp('reps', it.repsPlan) + inp('rpe', it.rpePlan) + '<button class="btn sm ghost icon" data-a="set-del" data-i="' + i + '" aria-label="Retirer la série ' + (i + 1) + '" style="width:36px;min-height:36px">×</button>';
     }).join('');
     return '<div class="sub" style="margin-top:8px"><b class="small">Ce que j’ai fait, série par série</b><span class="small mu">Pré-rempli avec le prévu : change seulement ce qui diffère.</span><div class="sgrid"><span></span><span class="pl">' + (isR ? 'Lest kg' : 'Charge kg') + '</span><span class="pl">Reps</span><span class="pl">RPE</span><span></span>' + rows + '</div>' +
-      (function () { var sel = Math.min(ui.sdSel || 0, Math.max(0, d.length - 1)), st = num((findEx(x.p, it.id) || {}).step, 0) || 2.5;
+      (function () { var sel = Math.min(ui.sdSel || 0, Math.max(0, d.length - 1)), st = stepOf(findEx(x.p, it.id) || { name: it.name }, 2.5);
         return '<div class="col" style="gap:6px"><span class="small mu">' + (d.length > 1 ? 'S' + (sel + 1) + (sel < d.length - 1 ? ' et suivantes' : '') : 'Série') + ' (touche S1, S2… pour choisir)</span><div class="sdq">' +
           [['kg', -st, '−' + fmtN(st) + ' kg'], ['kg', st, '+' + fmtN(st) + ' kg'], ['reps', -1, '−1 rep'], ['reps', 1, '+1 rep']].map(function (q) { return '<button class="btn sm" data-a="sd-step" data-f="' + q[0] + '" data-d="' + q[1] + '">' + q[2] + '</button>'; }).join('') + '</div></div>'; })() +
       '<div class="row"><button class="btn sm ghost" data-a="set-add">' + ICON.plus + 'Série</button><span class="grow"></span><button class="btn sm ghost" data-a="real-close">Annuler</button><button class="btn sm primary" data-a="real-save" data-key="' + esc(x.key) + '" data-ex="' + esc(it.id) + '">Enregistrer</button></div></div>';
@@ -1521,7 +1535,7 @@
     var sedJ = ui.run.sed && ui.run.sed.ex === it.id && ss[ui.run.sed.j] ? ui.run.sed.j : -1;
     if (st === 'done' && !more && !oe && sedJ < 0) return h + '<div class="runfoot"><button class="btn" data-a="run-more">' + ICON.plus + 'Ajouter une série</button><button class="btn primary runmain" data-a="run-next">Exercice suivant ›</button></div>';
     if (sedJ >= 0) h += '<div class="sedbar"><b>Modifier la série ' + (sedJ + 1) + '</b><span class="small t2">Change la charge, les reps ou le RPE, puis enregistre.</span></div>';
-    var d = runDraft(x, it), stp = num((findEx(x.p, it.id) || {}).step, 0) || 2.5, rv = num(d.rpe, 0);
+    var d = runDraft(x, it), stp = stepOf(findEx(x.p, it.id) || { name: it.name }, 2.5), rv = num(d.rpe, 0);
     var kgLab = isR ? 'Lest kg · facultatif' : lk === 'db' ? 'Kg par haltère' : 'Charge kg', kgPh = isR || lk === 'db' || lk === 'gym' ? 'PDC' : '0';
     var stepper = function (f, lab, dv, val) { return '<div class="runf"><span class="pl">' + lab + '</span><div class="runst"><button class="btn icon" data-a="run-step" data-f="' + f + '" data-d="' + (-dv) + '" aria-label="' + lab + ' moins ' + fmtN(dv) + '">−</button><input class="in runin" type="text" inputmode="decimal" autocomplete="off" step="any" data-rf="' + f + '" value="' + (val == null || (f === 'kg' && !num(val, 0)) ? '' : esc(val)) + '" placeholder="' + (f === 'kg' ? kgPh : '0') + '" aria-label="' + lab + '"><button class="btn icon" data-a="run-step" data-f="' + f + '" data-d="' + dv + '" aria-label="' + lab + ' plus ' + fmtN(dv) + '">+</button></div></div>'; };
     if (!ss.length) h += warmHtml(it);
@@ -2111,10 +2125,14 @@
   var nfld = function (label, path, val, extra) { return fld(label, path, val, 'type="text" inputmode="decimal" autocomplete="off" step="any" data-t="n" ' + (extra || '')); };
   var sel = function (label, path, html, rr) { return '<label class="field"><span>' + label + '</span><select class="in" data-f="' + path + '"' + (rr ? ' data-rr="1"' : '') + (path.indexOf('day') >= 0 || path.indexOf('weeks') >= 0 || path.indexOf('offset') >= 0 || /\.(ss|alt|testOn)$/.test(path) ? ' data-t="n"' : '') + '>' + html + '</select></label>'; };
   var getPath = function (obj, path) { return path.split('.').reduce(function (o, k) { return o == null ? o : o[/^\d+$/.test(k) ? +k : k]; }, obj); };
+  /* Matériel : à la barre, tout est arrondi à 2,5 kg (disques de 1,25 kg). Sinon, pas de charge libre. */
+  var eqEd = function (pth, e, dflt) { var auto = eqOf({ name: e.name, mode: e.mode }), cur = eqOf(e);
+    return sel('Matériel', pth + 'eq', opt([['', 'Automatique (' + (auto === 'barre' ? 'barre' : 'autre matériel') + ')'], ['barre', 'Barre et disques'], ['libre', 'Haltères, machine, poulie…']], e.eq || '')) +
+      nfld(cur === 'barre' ? 'Pas de charge (kg) · 2,5 mini à la barre' : 'Pas de charge (kg)', pth + 'step', stepOf(e, dflt)); };
   var dblEd = function (pth, e) {
     var lo = num(e.reps, 8), hi = num(e.repsMax, 12);
     return nfld('Séries', pth + 'sets', e.sets) + nfld('Charge de départ (kg, 0 = sans)', pth + 'startKg', e.startKg) + nfld('Reps min de la plage', pth + 'reps', e.reps) + nfld('Reps max de la plage', pth + 'repsMax', e.repsMax) +
-      nfld('+ kg quand c’est validé', pth + 'incKg', e.incKg) + sel('Séances à ' + fmtN(hi) + ' reps pour monter', pth + 'need', opt([[1, '1 séance'], [2, '2 de suite'], [3, '3 de suite']], num(e.need, 2) || 2)) +
+      nfld('+ kg quand c’est validé', pth + 'incKg', e.incKg) + eqEd(pth, e, 0.5) + sel('Séances à ' + fmtN(hi) + ' reps pour monter', pth + 'need', opt([[1, '1 séance'], [2, '2 de suite'], [3, '3 de suite']], num(e.need, 2) || 2)) +
       '<p class="small t2" style="grid-column:1/-1;margin:0">Quand toutes tes séries atteignent ' + fmtN(hi) + ' reps ' + (num(e.need, 2) === 1 ? 'une fois' : (num(e.need, 2) || 2) + ' séances de suite') + ', la charge monte de ' + fmtN(num(e.incKg, 2.5) || 2.5) + ' kg et l’objectif repasse à ' + fmtN(lo) + '–' + fmtN(Math.min(hi, lo + 2)) + ' reps, puis remonte d’une rep par séance. Calculé à partir des séries que tu notes ; les semaines de décharge ne comptent pas.</p>';
   };
   var stepsEd = function (pth, e) {
@@ -2164,8 +2182,8 @@
               var pth = 'sessions.' + i + '.exercises.' + j + '.';
               var f = '';
               var restF = fld('Repos (vide = auto)', pth + 'rest', e.rest, 'placeholder="ex. 3 min"');
-              if (e.mode === 'pct') f = nfld('1RM (kg)', pth + 'orm', e.orm) + sel('Variante', pth + 'offset', opt([[0, 'Principale'], [-5, 'Secondaire −5 %'], [-10, 'Secondaire −10 %'], [-15, 'Secondaire −15 %']], e.offset || 0)) + nfld('Reps max (0 = selon bloc)', pth + 'repCap', e.repCap || 0) + nfld('Séries max (0 = selon bloc)', pth + 'setCap', e.setCap || 0) + nfld('Pas de charge (kg)', pth + 'step', e.step || 2.5) + fld('Note', pth + 'note', e.note);
-              else if (e.mode === 'kg') f = nfld('Séries', pth + 'sets', e.sets) + nfld('Reps (min)', pth + 'reps', e.reps) + nfld('Reps max (double progression, 0 = non)', pth + 'repsMax', e.repsMax || 0) + nfld('Charge S1 (kg)', pth + 'startKg', e.startKg) + nfld(num(e.repsMax, 0) > num(e.reps, 0) ? '+ kg à chaque cycle de reps' : '+ kg / semaine', pth + 'incKg', e.incKg) + fld('Note', pth + 'note', e.note);
+              if (e.mode === 'pct') f = nfld('1RM (kg)', pth + 'orm', e.orm) + sel('Variante', pth + 'offset', opt([[0, 'Principale'], [-5, 'Secondaire −5 %'], [-10, 'Secondaire −10 %'], [-15, 'Secondaire −15 %']], e.offset || 0)) + nfld('Reps max (0 = selon bloc)', pth + 'repCap', e.repCap || 0) + nfld('Séries max (0 = selon bloc)', pth + 'setCap', e.setCap || 0) + eqEd(pth, e, 2.5) + fld('Note', pth + 'note', e.note);
+              else if (e.mode === 'kg') f = nfld('Séries', pth + 'sets', e.sets) + nfld('Reps (min)', pth + 'reps', e.reps) + nfld('Reps max (double progression, 0 = non)', pth + 'repsMax', e.repsMax || 0) + nfld('Charge S1 (kg)', pth + 'startKg', e.startKg) + nfld(num(e.repsMax, 0) > num(e.reps, 0) ? '+ kg à chaque cycle de reps' : '+ kg / semaine', pth + 'incKg', e.incKg) + eqEd(pth, e, 0.5) + fld('Note', pth + 'note', e.note);
               else if (e.mode === 'reps') f = nfld('Séries', pth + 'sets', e.sets) + nfld('Reps S1', pth + 'reps', e.reps) + nfld('+ reps / sem.', pth + 'incReps', e.incReps) + nfld('Reps max', pth + 'maxReps', e.maxReps) + sel('Semaine test', pth + 'testMax', opt([[0, '1 série en moins'], [1, 'Test : max unbroken']], num(e.testMax, 0) > 0 || e.testMax === true ? 1 : 0)) + fld('Note', pth + 'note', e.note);
               else if (e.mode === 'plan') f = stepsEd(pth, e) + fld('Note', pth + 'note', e.note);
               else if (e.mode === 'dbl') f = dblEd(pth, e) + fld('Note', pth + 'note', e.note);
@@ -2795,7 +2813,7 @@
       return out;
     },
     /* Accès au moteur pour les tests automatiques (lecture seule, aucune interface ne s'en sert) */
-    engine: { weekHtml: function () { return weekHtml(); }, ui: function () { return ui; }, parseSteps: function (t, b, w) { return parseSteps(t, b, w); }, debrief: function (x) { return debriefOf(x); }, setAt: function (x, it, j, z) { return runSetAt(x, it, j, z); }, labelSupersets: function (l) { return labelSupersets(l); }, ssStep: function (x, i) { return ssStep(x, i); }, doSwap: function (x, it, n, all) { doSwap(x, it, n, all); }, copyInst: function (x, d) { return copyInst(x, d); }, addExTo: function (x, n) { return addExTo(x, n); }, saveNote: function (x, it, t) { saveNote(x, it, t); }, lastNote: function (n, d) { return lastNote(n, d); }, overdue: function () { return overdueList(14); }, moveExtra: function (k, d) { return moveExtra(k, d); }, editBegin: function () { editBegin(); }, persist: function (p) { persist(p); }, gen: gen, tmTrace: tmTrace, kgShift: kgShift, findEx: findEx, findInst: findInst, muscuSpec: muscuSpec, logsFor: logsFor, cfIdOf: cfIdOf, exPattern: exPattern, libFind: libFind, LIB: LIB, progStart: progStart, instancesOn: instancesOn, weekStats: weekStats, parseISO: parseISO, iso: iso, addDays: addDays, rstep: rstep, e1rm: e1rm },
+    engine: { stepOf: function (ex, d) { return stepOf(ex, d); }, eqOf: function (ex) { return eqOf(ex); }, weekHtml: function () { return weekHtml(); }, ui: function () { return ui; }, parseSteps: function (t, b, w) { return parseSteps(t, b, w); }, debrief: function (x) { return debriefOf(x); }, setAt: function (x, it, j, z) { return runSetAt(x, it, j, z); }, labelSupersets: function (l) { return labelSupersets(l); }, ssStep: function (x, i) { return ssStep(x, i); }, doSwap: function (x, it, n, all) { doSwap(x, it, n, all); }, copyInst: function (x, d) { return copyInst(x, d); }, addExTo: function (x, n) { return addExTo(x, n); }, saveNote: function (x, it, t) { saveNote(x, it, t); }, lastNote: function (n, d) { return lastNote(n, d); }, overdue: function () { return overdueList(14); }, moveExtra: function (k, d) { return moveExtra(k, d); }, editBegin: function () { editBegin(); }, persist: function (p) { persist(p); }, gen: gen, tmTrace: tmTrace, kgShift: kgShift, findEx: findEx, findInst: findInst, muscuSpec: muscuSpec, logsFor: logsFor, cfIdOf: cfIdOf, exPattern: exPattern, libFind: libFind, LIB: LIB, progStart: progStart, instancesOn: instancesOn, weekStats: weekStats, parseISO: parseISO, iso: iso, addDays: addDays, rstep: rstep, e1rm: e1rm },
     library: function () { return LIB.map(function (l) { return { id: l[0], n: libName(l), k: l[2], g: l[3], pat: l[4], mode: l[5] }; }); },
     programs: function () { return state.programs.map(function (p) { return { id: p.id, name: p.name || KIND[p.kind].label, color: colorOf(p), kind: p.kind }; }); },
     open: function (key) { var x = findInst(key); if (!x) return; ui.jump = 'sel'; ui.view = 'semaine'; ui.weekStart = iso(mondayOf(x.date)); ui.day = dow(x.date); ui.sel = key; ui.xf = null; ui.edit = null; },

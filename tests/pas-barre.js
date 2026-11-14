@@ -1,0 +1,31 @@
+/* À la barre, les charges vont de 2,5 en 2,5 kg (plus petits disques : 1,25 kg). */
+const {boot}=require('./_boot.js');
+let ko=0;const T=(n,c,x)=>{if(!c)ko++;console.log(`  ${c?'✓':'✗'} ${n}${x!=null?'  ('+x+')':''}`)};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const fan=clone(require('./_fanny.json'));const P0=Array.isArray(fan)?fan[0]:(fan.programs||[fan])[0];
+const R=boot({});R.S.profile={sex:'f',age:35,bw:60,name:'F'};R.S.planif={programs:[P0],deleted:[]};
+const E=R.PLAN.engine,p=R.S.planif.programs[0],m25=v=>Math.abs(v/2.5-Math.round(v/2.5))<1e-9;
+const all=[];for(let w=1;w<=16;w++)p.sessions.forEach(s=>{const x=E.findInst(p.id+'|'+w+'|'+s.id);if(x)x.g.items.forEach(it=>all.push({w,it}))});
+const of=n=>all.filter(z=>z.it.name===n&&z.it.loadNum);
+console.log('\n═══ Exercices à la barre : multiples de 2,5 kg ═══\n');
+['Squat','Soulevé de terre','Développé couché'].forEach(n=>{const l=of(n);T(n+' : toutes les charges du cycle sont des multiples de 2,5 kg (pas enregistré : 1 kg)',l.length>3&&l.every(z=>m25(z.it.loadNum)),[...new Set(l.map(z=>z.it.loadNum))].join(' '))});
+T('matériel déduit : squat = barre, développé militaire haltères et tirage poulie = autre',E.eqOf({name:'Squat',mode:'pct'})==='barre'&&E.eqOf({name:'Développé militaire assis haltères',mode:'pct'})==='autre'&&E.eqOf({name:'Tirage vertical poulie',mode:'pct'})==='autre');
+const dm=of('Développé militaire assis haltères');
+T('haltères : le pas de 1 kg est gardé',dm.some(z=>!m25(z.it.loadNum))||dm.every(z=>Number.isInteger(z.it.loadNum)),[...new Set(dm.map(z=>z.it.loadNum))].join(' '));
+console.log('\n═══ Charges légères : une rep compense l\'arrondi ═══\n');
+const comp=all.filter(z=>/pour compenser/.test(z.it.info||''));
+T('quand l\'arrondi s\'éloigne de 3 % ou plus, 1 rep de plus ou de moins (indiqué sur la séance)',comp.length>0,comp.slice(0,3).map(z=>'S'+z.w+' '+z.it.name+' '+z.it.scheme+' @'+z.it.loadNum).join(' | '));
+T('jamais sur une charge proche de la théorie (écart < 3 %)',all.filter(z=>z.it.pp&&z.it.orm).every(z=>{const t=z.it.orm*z.it.pp/100,g=Math.abs(z.it.loadNum-t)/t;return /pour compenser/.test(z.it.info||'')===(g>=0.03-1e-9)||g>=0.03-1e-9}));
+console.log('\n═══ Autres modes ═══\n');
+T('pas : barre 2,5 même si 1 enregistré ; 5 gardé ; matériel « libre » choisi : pas respecté',E.stepOf({name:'Squat',mode:'pct',step:1})===2.5&&E.stepOf({name:'Squat',mode:'pct',step:5})===5&&E.stepOf({name:'Squat',mode:'pct',step:1,eq:'libre'})===1&&E.stepOf({name:'Curl haltères',mode:'kg'},0.5)===0.5);
+const mu=clone(require('./_programme.json').find(q=>q.kind==='muscu'));mu.id='m2';mu.logs={};
+mu.sessions[0].exercises.push({id:'k1',name:'Hip thrust',mode:'kg',sets:3,reps:10,startKg:41,incKg:1},{id:'k2',name:'Curl haltères',mode:'kg',sets:3,reps:10,startKg:9,incKg:0.5},{id:'d1',name:'Rowing barre',mode:'dbl',sets:3,reps:8,repsMax:12,startKg:41,incKg:2,need:1});
+R.S.planif.programs.push(mu);
+const g=w=>E.findInst('m2|'+w+'|'+mu.sessions[0].id),gi=(w,id)=>g(w).g.items.find(z=>z.id===id);
+const ws=[];for(let w=1;w<=12&&ws.length<5;w++){if(g(w)&&!g(w).g.light)ws.push(w)}
+T('charge en kg à la barre (hip thrust 41 kg, +1 kg/sem.) : arrondie à 2,5',ws.every(w=>m25(gi(w,'k1').loadNum)),ws.map(w=>gi(w,'k1').loadNum).join(' '));
+T('charge en kg aux haltères : demi-kilos gardés',ws.some(w=>!m25(gi(w,'k2').loadNum)),ws.map(w=>gi(w,'k2').loadNum).join(' '));
+T('double progression à la barre : départ 40 kg (41 arrondi)',gi(ws[0],'d1').loadNum===40,gi(ws[0],'d1').loadNum);
+const pm=R.S.planif.programs[1];pm.logs[ws[0]+'|'+mu.sessions[0].id]={done:true,ex:{d1:{sets:[{kg:40,reps:12,rpe:8},{kg:40,reps:12,rpe:8},{kg:40,reps:12,rpe:8}]}}};E.persist(pm);
+T('… puis +2,5 kg (et non +2) une fois validée',gi(ws[1],'d1').loadNum===42.5,gi(ws[1],'d1').loadNum);
+process.exitCode=ko?1:0;console.log(ko?`\n${ko} échec(s)`:'\nAucune erreur.');
