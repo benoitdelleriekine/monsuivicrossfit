@@ -83,6 +83,45 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:3px;padding:3px;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-m)}
 .seg button{min-height:36px;border-radius:11px;font-size:var(--fs-sm);font-weight:600;color:var(--mute);text-align:center;padding:0 6px}
 .seg button.on{background:var(--aqua);color:var(--onacc);font-weight:700}
+/* Accueil : en-tête compact, titres de section, bandeaux de séance, tuiles */
+.head.phead2.hm{padding-bottom:12px}.hm-id{display:flex;align-items:center;gap:10px;min-width:0}.hm-id svg{flex:none}
+.head.phead2.hm h1{font-size:24px;margin-top:1px;line-height:1.1}
+.sect{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--mute);font-weight:600;margin:10px 6px 12px}
+.card.tdb{display:flex;align-items:center;gap:6px;padding:14px 12px 14px 18px;width:100%;text-align:left;color:var(--ink)}
+.tdb-m{flex:1;min-width:0;display:block;text-align:left;color:inherit}
+.tdb-e{display:block;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.tdb-ec{color:color-mix(in srgb,var(--c) 62%,var(--ink))}
+.tdb-t{display:block;font-family:"Barlow Condensed",sans-serif;font-size:24px;line-height:1.15;text-transform:uppercase;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.tdb-t.big{font-size:30px;-webkit-line-clamp:3;margin-top:4px}
+.tdb-s{display:block;font-size:13.5px;color:var(--mute);margin-top:1px}
+.tdb-x{flex:none;width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;color:var(--mute)}
+.tdb.fill{background:var(--c);border-color:var(--c);color:var(--on)}
+.tdb.fill .tdb-e,.tdb.fill .tdb-s{color:color-mix(in srgb,var(--on) 82%,var(--c))}.tdb.fill .tdb-x{color:var(--on)}
+.tdb-go{flex:none;width:52px;height:52px;border-radius:50%;background:var(--on);color:var(--c);display:flex;align-items:center;justify-content:center}
+.tdb-go svg{width:20px;height:20px;margin-left:3px}
+.tdb.edge{border-color:color-mix(in srgb,var(--c) 55%,var(--line))}
+.tdb-r{flex:none;width:auto;padding:0 18px}
+.card.tdb.open{display:block;padding:10px 18px 8px}
+.tdb-h{display:flex;align-items:flex-start;gap:6px;width:100%;text-align:left;color:inherit;min-height:44px}.tdb-h .tdb-x{margin-right:-10px}
+.tdb-f{display:flex;gap:6px;margin-top:12px}.tdb-f>div{flex:1;min-width:0;background:var(--track);border-radius:12px;padding:9px 6px;text-align:center}
+.tdb-f b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:18px;line-height:1.1}.tdb-f span{font-size:12px;color:var(--mute)}
+.tdb-l{margin-top:10px;border-top:1px solid var(--line);padding-top:4px}.tdb-l>div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:13.5px}
+.tdb-l>div>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tdb-l>div>b{flex:none}.tdb-l p{font-size:12px;color:var(--mute);padding:4px 0 2px}
+.tdb-up{font-size:12px;color:var(--orchid)}
+.tdb-k{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin-top:4px;font-size:13.5px;font-weight:700;color:var(--aqua);flex:none}
+.card.pline{display:flex;align-items:center;gap:12px;padding:4px 8px 4px 18px;min-height:56px}
+.pline b{display:block;font-size:13.5px}.pline span>span{display:block;font-size:12px;color:var(--mute)}
+.pline button{flex:none;min-height:44px;padding:0 10px;font-size:13.5px;font-weight:700;color:var(--aqua)}
+.wkc-p{margin-top:12px;font-size:13.5px;line-height:1.4;color:var(--mute)}.wkc-p b{color:var(--ink)}
+.wkc-c{margin-top:10px;font-size:12px;color:var(--mute);text-align:center}
+.card.kp{padding:0 18px}.kp .row-link{padding:11px 0}.kp .row-link:first-child{border-top:0}
+.kp b{display:block;font-size:13.5px}.kp span>span{display:block;font-size:12px;color:var(--mute)}
+.kp-i{flex:none;width:34px;height:34px;border-radius:10px;background:color-mix(in srgb,var(--c) 18%,transparent);color:color-mix(in srgb,var(--c) 70%,var(--ink));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px}
+.kp-i svg{width:18px;height:18px}
+.xts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.xt{display:block;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px 14px;min-height:84px;color:var(--ink);box-shadow:var(--sh-lo)}
+.xt-l,.xt-s{display:block;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xt-v{display:block;font-family:"Barlow Condensed",sans-serif;font-size:24px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card.wkc{padding:6px 18px 14px}.wkc-h{display:flex;justify-content:space-between;align-items:center;min-height:44px}
 .wkc-go{min-height:44px;padding:0 4px 0 14px;font-size:13.5px;font-weight:700;color:var(--aqua)}
 .wkc-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin:0 -10px}
@@ -128,10 +167,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .acts .btn{flex:1;padding:12px 10px;font-size:13.5px;border-radius:var(--r-m)}
 .eyebrow{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--mute);font-weight:600}
 .head{padding:calc(30px + env(safe-area-inset-top)) 22px 10px}
-.head h1{font-family:"Barlow Condensed",sans-serif;font-weight:700;text-transform:uppercase;font-size:40px;letter-spacing:.006em;line-height:.9;margin-top:5px}
+.head h1{font-family:"Barlow Condensed",sans-serif;font-weight:700;text-transform:uppercase;font-size:24px;letter-spacing:.006em;line-height:1.1;margin-top:1px}
 .phead2{padding-bottom:14px}
 .phead2 .hrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.head.phead2 h1{font-size:var(--fs-h1);margin-top:6px;line-height:1.08;padding-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.head.phead2 h1{margin-top:1px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .phead2 .eyebrow svg{flex:none}
 .phead2 .hello{font-size:var(--fs-sm);font-weight:600;margin-top:6px;line-height:1.4}
 .phead2 .hello span{color:var(--mute);font-weight:500}
@@ -313,7 +352,7 @@ input.chip{font-size:16px}
   padding:10px 18px;border-radius:0 0 20px 20px}
  #overlay .sheet{align-items:center}
  .head{padding-top:26px}
- .head h1{font-size:44px}
+ .head h1,.head.phead2.hm h1{font-size:30px}
  .scroll{padding-left:22px;padding-right:22px}
  .sheet-in{border-radius:24px;margin-bottom:6vh;max-width:560px}
  .sheet-in.fixh{height:min(80vh,720px)}
@@ -444,7 +483,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v95";
+const APP_VERSION="msc-v96";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -904,15 +943,10 @@ function vProgres(calOnly){
    <button class="btn btn-go" data-act="new">Noter ma première séance</button></div>`;
   const ms=msAll(),st=streak(allDone()),msDays=new Set(ms.map(x=>x.date));
   const days=new Set(S.sessions.map(s=>s.date));
-  const [titre,sous]=accroche();
-
   const prenom=S.profile&&S.profile.name?String(S.profile.name).trim().split(/\s+/)[0]:"";
-  let h=`<div class="head phead2">
-   <div class="hrow"><div class="eyebrow" style="display:flex;align-items:center;gap:8px;min-width:0">${LOGOMARK}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fMid(TODAY)}</span></div>
-   <div class="hacts">${st>0?`<span class="hpill" title="Semaines d'affilée avec au moins une séance">${IC_FLAME} ${st} sem.</span>`:""}
-   <button class="hpill" data-act="records" aria-label="Records"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>Records</button></div></div>
-   <h1>${prenom?"Bonjour "+esc(prenom):"Progrès"}</h1>
-   <div class="hello">${titre} <span>${sous}</span></div></div><div class="pane">`;
+  /* En-tête compact : date, bonjour et série de semaines sur une seule bande */
+  let h=`<div class="head phead2 hm"><div class="hrow"><div class="hm-id">${LOGOMARK}<div style="min-width:0"><div class="eyebrow">${fMid(TODAY)}</div><h1>${prenom?"Bonjour "+esc(prenom):"Progrès"}</h1></div></div>
+   <div class="hacts">${st>0?`<span class="hpill" title="Semaines d'affilée avec au moins une séance">${IC_FLAME} ${st} sem.</span>`:""}</div></div></div><div class="pane">`;
   h+=installCard();
   h+=todayCard();
   if(new Date(TODAY+"T12:00").getDay()===1){const rv=weekReview(dShift(monOf(TODAY),-7));if(rv.n||rv.pt)h+=`<div style="margin-top:12px">${reviewCard(rv,true).replace('<div class="card"','<div class="card" data-act="psub" data-v="bilan" role="button" tabindex="0"')}</div>`}
@@ -1032,6 +1066,7 @@ function vProgres(calOnly){
   /* La courbe de douleur reste sur l'accueil seulement quand une zone est à surveiller ;
      sinon elle est dans « Douleur », à un geste, comme les autres analyses. */
   if(painAlert())h+=painCard();
+  h+=keepCard(ms);
   h+=`</div>`;   /* le conteneur d'accueil se referme ici : les sections
                     suivantes ouvrent chacune le leur, sinon les marges s'ajoutent */
   h+=exploreCard(ms);
@@ -1052,21 +1087,24 @@ function exploreCard(ms){
  const rec=ms.filter(x=>x.t==="Record"),wk=ms.filter(x=>(new Date(TODAY)-new Date(x.date))/864e5<=7).length;
  const nMov=new Set(allSess().flatMap(s=>(s.entries||[]).filter(e=>e.sets&&e.sets.length).map(e=>e.movementId))).size;
  const bench=benchCard(),zones=(S.pain&&S.pain.zones)||[],pat=patternCard();
- const row=(act,v,t,sub,extra)=>`<button class="row-link" data-act="${act}"${v?` data-v="${v}"`:""}><span style="flex:1;min-width:0"><b style="display:block;font-size:var(--fs-md)">${t}</b><span style="display:block;font-size:var(--fs-cap);color:var(--mute);margin-top:2px">${sub}</span></span>${extra||""}<span style="color:var(--mute);font-size:18px;flex:none">›</span></button>`;
+ /* Tuiles : un intitulé, une donnée, une précision. Deux colonnes sur téléphone. */
+ const row=(act,v,t,val,sub)=>`<button class="xt" data-act="${act}"${v?` data-v="${v}"`:""}><span class="xt-l">${t}</span><b class="xt-v">${val}</b><span class="xt-s">${sub}</span></button>`;
  let r="";
  const lw=dShift(monOf(TODAY),-7),rv=(S.sessions.length||planOn())?weekReview(lw):null;
- r+=row("psub","calendrier","Calendrier","Mois · semaines · année · partage");
- if(rv&&(rv.n||rv.pt))r+=row("psub","bilan","Bilan de la semaine",`Semaine du ${fMid(lw)} · ${rv.n} séance${rv.n>1?"s":""}`+(rv.rec?` · ${rv.rec} record${rv.rec>1?"s":""}`:""));
+ const dm=d=>new Date(d+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
+ const nMo=allDone().filter(x=>x.date.slice(0,7)===TODAY.slice(0,7)).length;
+ r+=row("psub","calendrier","Calendrier",(m=>m[0].toUpperCase()+m.slice(1))(MOIS[+TODAY.slice(5,7)-1]),nMo+" séance"+(nMo>1?"s":"")+" ce mois");
+ if(rv&&(rv.n||rv.pt))r+=row("psub","bilan","Bilan de la semaine",(+lw.slice(8))+" – "+dm(dShift(lw,6)),`${rv.n} séance${rv.n>1?"s":""}`+(rv.rec?` · ${rv.rec} record${rv.rec>1?"s":""}`:""));
  const lr=loadRatio(),ln=lr[lr.length-1];
  {const rl=runLogs();if(rl.length){const l4=rl.filter(z=>z.date>=dShift(TODAY,-27)),km4=l4.reduce((a,z)=>a+(z.km||0),0);
-  r+=row("psub","course","Course à pied",`${rl.length} sortie${rl.length>1?"s":""} notée${rl.length>1?"s":""}`+(km4?` · ${fx(km4,1)} km sur 4 semaines`:""))}}
- if(ln.c>0)r+=row("psub","charge","Charge d'entraînement",`7 jours : ${ln.a.toLocaleString("fr-FR")} UA · ${fx(ln.r,2)} × ta moyenne`);
- if(ms.length)r+=row("records","","Records et premières fois",rec.length+" record"+(rec.length>1?"s":"")+(wk?" · "+wk+" nouveauté"+(wk>1?"s":"")+" cette semaine":""));
- if(nMov)r+=row("psub","mouvements","Mes mouvements",nMov+" mouvement"+(nMov>1?"s":"")+" · recherche, records, courbes");
- if(bench)r+=row("psub","metcons","Metcons refaits","Benchmarks et WOD notés plusieurs fois");
- if(zones.length)r+=row("psub","douleur","Douleur",painAlert()?"À surveiller":"4 dernières semaines · RAS");
- if(pat)r+=row("psub","travail","Ce que tu travailles","Équilibre des familles de mouvements");
- return r?`<div class="pane" style="padding-bottom:0"><div class="eyebrow" style="margin-bottom:10px">Explorer</div><div class="card" style="padding:2px 16px">${r}</div></div>`:""}
+  r+=row("psub","course","Course à pied",km4?fx(km4,1)+" km":rl.length,km4?"sur 4 semaines":"sortie"+(rl.length>1?"s":"")+" notée"+(rl.length>1?"s":""))}}
+ if(ln.c>0)r+=row("psub","charge","Charge d'entraînement",fx(ln.r,2)+" ×","ta moyenne · 7 jours");
+ if(ms.length)r+=row("records","","Records",rec.length,wk?"+"+wk+" cette semaine":"et premières fois");
+ if(nMov)r+=row("psub","mouvements","Mes mouvements",nMov,"recherche, courbes");
+ if(bench)r+=row("psub","metcons","Metcons refaits","WOD","benchmarks comparés");
+ if(zones.length)r+=row("psub","douleur","Douleur",painAlert()?"À surveiller":"RAS","4 dernières semaines");
+ if(pat)r+=row("psub","travail","Ce que tu travailles","Équilibre","familles de mouvements");
+ return r?`<div class="pane" style="padding-bottom:0"><div class="sect">Explorer</div><div class="xts">${r}</div></div>`:""}
 /* Bandeau des records et premières fois (en tête de la page Records) */
 function msStrip(ms){let h="";
   if(ms.length){
@@ -1971,43 +2009,80 @@ function hist_bench(name,curId){
    <span><span class="dsp" style="font-size:18px">${x.sc.txt}</span>${x.rx?' <span class="badge">Rx</span>':""}</span></div>`).join("")+`</div>`}
 
 /* Carte « Aujourd'hui » : séances prévues du jour et douleur du matin */
+/* Texte lisible sur un fond de couleur de programme (clair → texte sombre, foncé → texte blanc) */
+function onCol(hex){const m=/^#?([0-9a-f]{6})$/i.exec(String(hex||"").trim());if(!m)return"#14181C";
+ const n=parseInt(m[1],16),f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};
+ return .2126*f(n>>16)+.7152*f(n>>8&255)+.0722*f(n&255)>.32?"#14181C":"#FFFFFF"}
+const IC_CHEV='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+const IC_OK='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const KINDL={muscu:"Muscu",course:"Course",fixe:"Activité"};
+let tdOpen=null,painEdit=null;   /* séance dépliée sur l'accueil ; zone de douleur en cours de modification */
+const t1=x=>(Math.round(x/100)/10).toLocaleString("fr-FR");
+/* Bandeau d'une séance sur l'accueil.
+   À faire : fond à la couleur du programme (réduit) → un appui déplie l'aperçu, le rond démarre.
+   Dépliée, en cours ou faite : couleurs habituelles. */
+/* « Muscu samedi — Squat / Bench » → « Squat / Bench » : le type et le jour sont déjà dans l'intitulé du bandeau */
+const tdTitle=t=>{const p=String(t||"").split(" — ");return p.length>1&&p[1].trim()?p.slice(1).join(" — "):String(t||"")};
+function sessBand(x,lead){
+ const g=x.pg,fin=g?g.state==="finie":x.done,enc=!!g&&g.state==="encours",sets=(x.kind==="muscu"||x.sets)&&window.PLAN&&PLAN.run;
+ const kind=x.extra?x.prog:(KINDL[x.kind]||x.prog),est=g&&g.est?g.est:x.dur,k=esc(x.key),ttl=esc(tdTitle(x.title));
+ const facts=[est?"≈ "+est+" min":"",sets&&x.nEx?x.nEx+" exercice"+(x.nEx>1?"s":""):"",x.ton?t1(x.ton)+" t":""].filter(Boolean);
+ if(fin){const m=[g&&g.dur?g.dur+" min":"",x.tonDone?t1(x.tonDone)+" t":"",(g&&g.rpe)||x.rpe?"RPE "+((g&&g.rpe)||x.rpe):""].filter(Boolean).join(" · ");
+  return`<button class="card tdb" data-act="planopen" data-v="${k}"><span class="tdb-m"><span class="tdb-e" style="color:var(--orchid)">${IC_OK} Faite · ${esc(kind)}</span><b class="tdb-t">${ttl}</b>${m?`<span class="tdb-s">${m}</span>`:""}</span><span class="tdb-x" style="font-size:18px">›</span></button>`}
+ if(enc)return`<div class="card tdb edge" style="--c:${x.color}"><button class="tdb-m" data-act="planrun" data-v="${k}"><span class="tdb-e tdb-ec">En cours · ${esc(kind)}</span><b class="tdb-t">${ttl}</b><span class="tdb-s">${g.done} exercice${g.done>1?"s":""} sur ${g.tot}${g.left?" · reste ≈ "+g.left+" min":""}</span>
+   <span class="tbar" style="margin:8px 0 0" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${g.pct}" aria-label="Avancement de la séance"><i style="width:${g.pct}%"></i></span></button>
+   <button class="btn btn-go tdb-r" data-act="planrun" data-v="${k}">Reprendre</button></div>`;
+ if(tdOpen===x.key){
+  const fc=[[est?"≈ "+est+" min":"—","durée"]];if(sets&&x.nEx)fc.push([x.nEx,"exercice"+(x.nEx>1?"s":"")]);if(x.ton)fc.push([t1(x.ton)+" t","tonnage prévu"]);else if(x.rpe0)fc.push(["RPE "+x.rpe0,"visé"]);
+  const more=(x.nEx||0)-(x.items||[]).length;
+  return`<div class="card tdb open edge" style="--c:${x.color}"><button class="tdb-h" data-act="tdx" data-v="${k}" aria-expanded="true" aria-label="Réduire ${ttl}"><span class="tdb-m"><span class="tdb-e tdb-ec">${lead} · ${esc(kind)}${x.wk?" · "+x.wk:""}${x.ph?" "+esc(x.ph):""}</span><b class="tdb-t big">${ttl}</b></span><span class="tdb-x" style="transform:rotate(180deg)">${IC_CHEV}</span></button>
+   <div class="tdb-f">${fc.map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("")}</div>
+   ${(x.items||[]).length?`<div class="tdb-l">${x.items.map(it=>`<div><span>${esc(it.n)}${it.up?` <b class="tdb-up">${esc(it.up)}</b>`:""}</span><b>${esc(it.t)}</b></div>`).join("")}${more>0?`<p>+ ${more} autre${more>1?"s":""} exercice${more>1?"s":""}</p>`:""}</div>`:""}
+   ${sets?`<button class="btn btn-go" style="margin-top:12px" data-act="planrun" data-v="${k}">${IC_PLAY} Démarrer la séance</button><button class="tdb-k" data-act="planopen" data-v="${k}">Voir la séance dans le plan ›</button>`
+     :`<button class="btn btn-go" style="margin-top:12px" data-act="planopen" data-v="${k}">Ouvrir la séance</button>`}</div>`}
+ const on=onCol(x.hex);
+ return`<div class="card tdb fill" style="--c:${esc(x.hex)};--on:${on}"><button class="tdb-m" data-act="tdx" data-v="${k}" aria-expanded="false" aria-label="${ttl} : voir l'aperçu"><span class="tdb-e">${lead} · ${esc(kind)}</span><b class="tdb-t">${ttl}</b>${facts.length?`<span class="tdb-s">${facts.join(" · ")}</span>`:""}</button>
+  <button class="tdb-x" data-act="tdx" data-v="${k}" aria-hidden="true" tabindex="-1">${IC_CHEV}</button>${sets?`<button class="tdb-go" data-act="planrun" data-v="${k}" aria-label="Démarrer ${ttl}">${IC_PLAY}</button>`:""}</div>`}
+/* Douleur du matin : l'échelle tant que ce n'est pas noté, puis une ligne (note, tendance 7 jours, mini-courbe) */
+function painLine(z){
+ const cur=painGet(TODAY,z,"matin"),nm=painZ(z)[1].toLowerCase();
+ if(cur==null||painEdit===z)return`<div class="card" style="padding:6px 18px 16px">${painChips(TODAY,z,"matin","Ce matin, douleur "+nm)}</div>`;
+ const vs=[];for(let i=6;i>=0;i--){const v=painGet(dShift(TODAY,-i),z,"matin");if(v!=null)vs.push(v)}
+ let sub="première note de la semaine",sp="";
+ if(vs.length>=3){const h=Math.floor(vs.length/2),av=a=>a.reduce((x,y)=>x+y,0)/a.length,d=av(vs.slice(-h))-av(vs.slice(0,h));
+  sub=(d<=-.5?"en baisse":d>=.5?"en hausse":"stable")+" sur 7 jours · moyenne "+fx(av(vs),1)}
+ else if(vs.length===2)sub="hier "+vs[0]+"/10";
+ if(vs.length>=2){const W=74,H=22,mx=Math.max(4,...vs),pt=vs.map((v,i)=>[2+i*(W-4)/(vs.length-1),H-3-(v/mx)*(H-6)]),c=cur>3?"var(--melon)":"var(--orchid)";
+  sp=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="flex:none" aria-hidden="true"><polyline fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="${pt.map(q=>q[0].toFixed(1)+","+q[1].toFixed(1)).join(" ")}"/><circle cx="${pt[pt.length-1][0].toFixed(1)}" cy="${pt[pt.length-1][1].toFixed(1)}" r="2.5" fill="${c}"/></svg>`}
+ return`<div class="card pline"><span style="flex:1;min-width:0"><b>${esc(painZ(z)[1])} ce matin : ${cur}/10</b><span>${sub}</span></span>${sp}<button data-act="painedit" data-v="${esc(z)}" aria-label="Modifier la douleur ${esc(nm)} de ce matin">Modifier</button></div>`}
 function todayCard(){
- /* Aujourd'hui : séances du jour, sinon la prochaine prévue ; actions de saisie ; douleur du matin */
+ /* Aujourd'hui : un bandeau par séance du jour, sinon la prochaine prévue ; séances en retard ; douleur du matin */
  const pl=planOn()?planDay(TODAY):[],zs=(S.pain&&S.pain.zones)||[],cf=S.sessions.filter(x=>x.date===TODAY);
- const canFree=planOn()&&window.PLAN&&PLAN.free&&S.planif&&(S.planif.programs||[]).length>0;
- const run=pl.find(x=>(x.kind==="muscu"||x.sets)&&(x.pg?x.pg.state!=="finie":!x.done));
  let nxt=null;
- if(!pl.some(x=>!x.done)&&planOn())for(let i=1;i<=14&&!nxt;i++){const d=dShift(TODAY,i),l=planDay(d).filter(x=>!x.done);if(l.length)nxt={d,x:l[0]}}
- let h=`<div class="card" style="padding:18px"><div class="card-h" style="margin-bottom:4px"><div class="eyebrow">Aujourd'hui</div></div>`;
- cf.forEach(x=>{h+=`<button class="row-link" style="gap:9px;padding:11px 0" data-act="openday" data-v="${x.id}">
-  <i class="pdot done" style="--c:var(--aqua)"></i><b style="flex:1;font-size:13.5px">CrossFit${(x.metcons||[])[0]&&x.metcons[0].name?" · "+esc(x.metcons[0].name):""}</b><span style="font-size:12px;font-weight:600">Faite ›</span></button>`});
- pl.forEach(x=>{
-  /* Lot 9 : séance de muscu du Plan → à venir (durée estimée), en cours (barre), terminée */
-  const g=x.pg,fin=g?g.state==="finie":x.done,enc=g&&g.state==="encours";
-  const sub=g?(fin?`Faite${g.dur?" · "+g.dur+" min":""}${g.rpe?" · RPE "+g.rpe+" "+["","Très facile","Très facile","Facile","Modéré","Modéré","Dur","Dur","Très dur","Très dur","Maximal"][g.rpe].toLowerCase():""}`
-    :enc?`En cours · ${g.done}/${g.tot} exercices${g.left?" · reste ≈ "+g.left+" min":""}`:`${esc(x.prog)}${g.est?" · ≈ "+g.est+" min":x.dur?" · "+x.dur+" min":""}`)
-   :`${esc(x.prog)}${x.dur?" · "+x.dur+" min":""}`;
-  h+=`<button class="row-link" style="gap:9px;padding:11px 0;flex-wrap:wrap" data-act="${!fin&&(x.kind==="muscu"||x.sets)&&window.PLAN&&PLAN.run?"planrun":"planopen"}" data-v="${esc(x.key)}">
-  <i class="pdot${fin?" done":""}" style="--c:${x.color};flex:none"></i>
-  <span style="flex:1;min-width:0"><b style="display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}</b>
-  <span style="font-size:12px;color:var(--mute)">${sub}</span></span>
-  <span style="flex:none;font-size:12px;font-weight:700;color:${fin?"var(--ink)":"var(--aqua)"}">${fin?(g?"Voir":"Faite"+(x.rpe?" · RPE "+x.rpe:"")):enc?"Reprendre":(x.kind==="muscu"||x.sets?"Démarrer":"Voir")} ›</span>
-  ${enc?`<span class="tbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${g.pct}" aria-label="Avancement de la séance"><i style="width:${g.pct}%"></i></span>`:""}</button>`});
+ if(!pl.some(x=>!x.done)&&planOn())for(let i=1;i<=14&&!nxt;i++){const d=dShift(TODAY,i),l=planDay(d).filter(x=>!x.done);if(l.length)nxt={d,l}}
+ let h="";
+ cf.forEach(x=>{const n=(x.metcons||[])[0]&&x.metcons[0].name;h+=`<button class="card tdb" data-act="openday" data-v="${x.id}"><span class="tdb-m"><span class="tdb-e" style="color:var(--orchid)">${IC_OK} Faite · CrossFit</span><b class="tdb-t">${n?esc(n):"Séance CrossFit"}</b></span><span class="tdb-x" style="font-size:18px">›</span></button>`});
+ pl.forEach(x=>{h+=sessBand(x,"Aujourd'hui")});
  if(!pl.length&&!cf.length){
-  if(nxt)h+=`<button class="row-link" style="gap:9px;padding:11px 0" data-act="planopen" data-v="${esc(nxt.x.key)}">
-   <i class="pdot" style="--c:${nxt.x.color};flex:none"></i>
-   <span style="flex:1;min-width:0"><span style="display:block;font-size:12px;color:var(--mute)">Repos aujourd'hui · prochaine séance <b style="color:var(--ink);text-transform:capitalize">${fLong(nxt.d)}</b></span>
-   <b style="display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">${esc(nxt.x.title)}</b></span>
-   <span style="flex:none;font-size:12px;font-weight:700;color:var(--aqua)">Voir ›</span></button>`;
-  else h+=`<div style="font-size:13.5px;color:var(--mute);padding:6px 0">Pas de séance prévue : jour de repos ou séance libre.</div>`}
+  if(nxt){const x=nxt.x=nxt.l[0],q=nxt.d===dShift(TODAY,1)?"Demain":fLong(nxt.d).split(" ")[0];
+   h+=`<button class="card tdb" data-act="planopen" data-v="${esc(x.key)}"><span class="tdb-m"><span class="tdb-e">Repos aujourd'hui</span><b class="tdb-t"><span style="text-transform:capitalize">${q}</span> : ${nxt.l.map(y=>esc(tdTitle(y.title))).join(" + ")}</b><span class="tdb-s">${nxt.l.map(y=>esc(y.prog)+(y.pg&&y.pg.est?" ≈ "+y.pg.est+" min":y.dur?" "+y.dur+" min":"")).join(" · ")}</span></span><span class="tdb-k" style="width:auto;margin:0">Voir ›</span></button>`}
+  else h+=`<button class="card tdb" data-act="tab" data-v="noter"><span class="tdb-m"><span class="tdb-e">Aujourd'hui</span><b class="tdb-t">Rien de noté pour l'instant</b><span class="tdb-s">${planOn()?"Pas de séance prévue : jour de repos ou séance libre":"Note ta séance du jour"}</span></span><span class="tdb-k" style="width:auto;margin:0">Noter ›</span></button>`}
  let od=[];try{od=planOn()&&PLAN.overdue?PLAN.overdue():[]}catch(e){}
- od.forEach(o=>{h+=`<div class="odue"><span style="flex:1;min-width:0"><b style="display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.title)}</b><span style="font-size:12px;color:var(--mute)">prévue ${fMid(o.date)}, pas faite</span></span>
+ if(od.length){h+=`<div class="card" style="padding:4px 14px 14px">`;
+  od.forEach(o=>{h+=`<div class="odue"><span style="flex:1;min-width:0"><b style="display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.title)}</b><span style="font-size:12px;color:var(--mute)">prévue ${fMid(o.date)}, pas faite</span></span>
   <button class="btn btn-quiet sm" style="width:auto;flex:none" data-act="odmove" data-v="${esc(o.key)}" aria-label="Reporter ${esc(o.title)} à aujourd'hui">Aujourd'hui</button><button class="btn btn-quiet sm danger" style="width:auto;flex:none" data-act="oddrop" data-v="${esc(o.key)}" aria-label="Supprimer ${esc(o.title)}">✕</button></div>`});
- h+=`<div class="acts">`+(run?`<button class="btn btn-go" data-act="planrun" data-v="${esc(run.key)}">${IC_PLAY} ${run.pg&&run.pg.state==="encours"?"Reprendre":"Démarrer"}</button>`:canFree?`<button class="btn btn-go" data-act="planfree">${IC_PLAY} Séance libre</button>`:"")+
-  `<button class="btn ${run||canFree?"btn-quiet":"btn-go"}" data-act="tab" data-v="noter">+ Noter</button></div>`;
- if(zs.length){h+=`<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:2px">`+
-  zs.map(z=>painChips(TODAY,z,"matin","Ce matin, douleur "+painZ(z)[1].toLowerCase())).join("")+`</div>`}
- return h+`</div>`+weekTiles()}
+  h+=`</div>`}
+ zs.forEach(z=>{h+=painLine(z)});
+ return h+weekTiles()}
+/* À retenir : trois lignes au plus, tirées des données (record récent, charge qui monte, nouveau palier). Rien si rien à dire. */
+function keepCard(ms){
+ const L=[],jr=d=>d===TODAY?"aujourd'hui":d===dShift(TODAY,1)?"demain":fLong(d).split(" ")[0];
+ const rec=(ms||[]).filter(m=>m.t==="Record"&&m.date>=dShift(TODAY,-6))[0];
+ if(rec)L.push([`<span class="kp-i" style="--c:var(--c-rec)">${IC_TROPHY}</span>`,"Record "+(rec.date===TODAY?"aujourd'hui":fLong(rec.date).split(" ")[0])+" : "+esc(msTxt(rec)).replace(/\.$/,""),fMid(rec.date),rec.id?`data-act="fiche" data-v="${rec.id}"`:`data-act="records"`]);
+ let hl=[];try{hl=planOn()&&PLAN.highlights?PLAN.highlights():[]}catch(e){}
+ hl.slice(0,3-L.length).forEach(x=>L.push([`<span class="kp-i" style="--c:${x.type==="up"?"var(--orchid)":x.color}">${x.type==="up"?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>':x.n}</span>`,esc(x.title),esc(x.sub)+" · "+jr(x.date),`data-act="planopen" data-v="${esc(x.key)}"`]));
+ if(!L.length)return"";
+ return`<div class="sect">À retenir</div><div class="card kp">`+L.map(([i,t,sub,act])=>`<button class="row-link" ${act}>${i}<span style="flex:1;min-width:0"><b>${t}</b><span>${sub}</span></span><span style="color:var(--mute);font-size:18px;flex:none">›</span></button>`).join("")+`</div>`}
 
 /* Cette semaine : les 7 jours, les chiffres du plan (fait / prévu) et le nombre de séances par type.
    Le calendrier mois / semaines / année est dans Explorer › Calendrier. */
@@ -2029,18 +2104,24 @@ function weekTiles(){
   const n=pl.length+(cfDays.has(d)?1:0),nd=pl.filter(x=>x.done).length+(cfDays.has(d)?1:0);
   h+=`<button class="${t?"on":""}" data-act="wkday" data-v="${d}" aria-label="${fLong(d)}${n?`, ${n} séance${n>1?"s":""}, ${nd} faite${nd>1?"s":""}`:", repos"}"><span class="l">${JL[i]}</span><b>${+d.slice(8)}</b><span class="pdots">${dots}</span></button>`}
  h+=`</div>`;
+ /* Une phrase : ce qui est fait, ce qu'il reste (et quand) */
+ {const nDone=cf+k.muscu+k.course+k.autre,left=[];
+  if(hasPlan)for(let d=TODAY;d<=sun;d=dShift(d,1)){const l=planDay(d).filter(x=>!x.done).map(x=>x.extra?x.prog:x.kind==="muscu"?"muscu":x.kind==="course"?"course":x.prog);
+   if(l.length)left.push([l,d===TODAY?"aujourd'hui":d===dShift(TODAY,1)?"demain":fLong(d).split(" ")[0]])}
+  const nl=left.reduce((a,x)=>a+x[0].length,0),et=a=>a.length>1?a.slice(0,-1).join(", ")+" et "+a[a.length-1]:a[0];
+  if(nDone||nl)h+=`<p class="wkc-p"><b>${nDone?nDone+" séance"+(nDone>1?"s":"")+" faite"+(nDone>1?"s":""):"Aucune séance faite"}</b>${nl?` · il en reste ${nl} : ${left.map(([l,q])=>esc(et(l))+" "+q).join(", ")}`:nDone&&hasPlan?" · semaine bouclée":""}</p>`}
  let w=null;try{if(hasPlan&&PLAN.weekSummary)w=PLAN.weekSummary()}catch(e){}
  if(w&&(w.total||w.ua)){
   const q=(v,sub,c,a,b,lab)=>`<div class="wkc-q" role="group" aria-label="${lab}"><b style="color:${c}">${v}</b><span>${sub}</span><i><i style="width:${b>0?Math.min(100,Math.round(a/b*100)):0}%;background:${c}"></i></i></div>`;
-  const t1=x=>(Math.round(x/100)/10).toLocaleString("fr-FR");
-  h+=`<div class="wkc-qs">`+q(`${w.done} / ${w.total}`,"séances","var(--orchid)",w.done,w.total,"Séances du plan faites")+
+   h+=`<div class="wkc-qs">`+q(`${w.done} / ${w.total}`,"du plan","var(--orchid)",w.done,w.total,"Séances du plan faites")+
    q(fr(w.uaDone),`/ ${fr(w.ua)} UA`,"var(--ink)",w.uaDone,w.ua,"Charge faite sur charge prévue")+
    (w.ton?q(`${t1(w.tonDone)} t`,`/ ${t1(w.ton)} t`,"var(--pl-or)",w.tonDone,w.ton,"Tonnage fait sur tonnage prévu"):"")+
    (w.runMin||w.runDone?q(`${w.runDone} min`,`/ ${w.runMin} min`,"var(--pl-te)",w.runDone,w.runMin,"Course faite sur course prévue"):"")+`</div>`}
- const tl=[[cf,"CrossFit"],[k.muscu,"Muscu"]];
- if(k.course||planOn()&&(PLAN.programs?PLAN.programs():[]).some(p=>p.kind==="course"))tl.push([k.course,"Course"]);
- if(k.autre)tl.push([k.autre,"Autre"]);
- h+=`<div class="wkc-n">`+tl.map(([n,l])=>`${n} ${l}`).join(" · ")+(rec?` · <span style="color:var(--c-rec)">★ ${rec} record${rec>1?"s":""}</span>`:"")+`</div></div>`;
+ /* Charge faite depuis lundi, comparée à la semaine dernière au même jour */
+ {let a0=0,a1=0;for(let d=mon;d<=TODAY;d=dShift(d,1)){a0+=uaOnDay(d);a1+=uaOnDay(dShift(d,-7))}
+  if(a0>0&&a1>0){const pc=Math.round((a0/a1-1)*100);h+=`<p class="wkc-c">Charge : ${pc>0?"+":pc<0?"−":""}${Math.abs(pc)} % vs semaine dernière (même jour)</p>`}}
+ if(rec)h+=`<p class="wkc-c" style="color:var(--c-rec)">★ ${rec} record${rec>1?"s":""} cette semaine</p>`;
+ h+=`</div>`;
  return h}
 
 /* ══════════ RECORDS ══════════
@@ -3503,9 +3584,11 @@ document.addEventListener("click",ev=>{
   case"hv":S.hv=v;S.day=null;pendingAnchor="calblock";break;
   case"moff":{S.moff=Math.min(0,(S.moff||0)+(+v));S.day=null;pendingAnchor="calblock";break}
   case"day":S.day=S.day===v?null:v;pendingAnchor="calblock";break;
+  case"tdx":tdOpen=tdOpen===v?null:v;break;
+  case"painedit":painEdit=painEdit===v?null:v;break;
   case"wkday":if(planOn()&&PLAN.openDay){PLAN.openDay(v);S.tab="plan";S.day=null}else{S.ps="calendrier";S.hv="mois";S.moff=0;S.day=v}break;
   case"dayclose":S.day=null;pendingAnchor="calblock";break;
-  case"pain":{const n=+b.dataset.v,z=b.dataset.z,d0=b.dataset.d,w=b.dataset.w;painSet(d0,z,w,painGet(d0,z,w)===n?null:n);break}
+  case"pain":{const n=+b.dataset.v,z=b.dataset.z,d0=b.dataset.d,w=b.dataset.w;painSet(d0,z,w,painGet(d0,z,w)===n?null:n);painEdit=null;break}
   case"painz":{if(!S.pain)S.pain={zones:[],log:{}};const i=S.pain.zones.indexOf(v);if(i>=0)S.pain.zones.splice(i,1);else S.pain.zones.push(v);S.pain.zt=Date.now();painVer++;break}
   case"hf":S.hf=v;S.open=null;break;
   case"notek":{const k=b.dataset.k,x=planOn()?planDay(TODAY).find(y=>y.kind===k&&!y.done):null;

@@ -18,7 +18,29 @@ const w=R.PLAN.weekSummary();
 T('chiffres du plan : 0 / 2 séances, charge et tonnage prévus',w.done===0&&w.total===2&&w.ua>0&&w.ton>0&&/0 \/ 2/.test(h),w.done+'/'+w.total);
 const x=E.findInst('mu|1|'+mu.sessions[0].id);x.p.logs['1|'+mu.sessions[0].id]={done:true,rpe:8};E.persist(x.p);R.render();h=app();
 T('après une séance faite : 1 / 2 et charge faite > 0',/1 \/ 2/.test(h)&&R.PLAN.weekSummary().uaDone>0);
-T('compteurs par type conservés (CrossFit, Muscu)',/1 CrossFit · 1 Muscu/.test(h),(h.match(/wkc-n">([^<]*)/)||[])[1]);
+T('phrase de la semaine : fait et reste à faire',/2 séances faites<\/b> · il en reste 1 : muscu (aujourd\'hui|demain|\w+)/.test(h)||/2 séances faites<\/b> · semaine bouclée/.test(h),(h.match(/wkc-p">(.*?)<\/p>/)||[])[1]);
+console.log('\n═══ Bandeau de la séance du jour ═══\n');
+{const d=new Date(now),k=(d.getDay()+6)%7;mu.sessions[1].day=k;const p=R.S.planif.programs[0];p.sessions[1].day=k;E.persist(p);R.render();h=app();
+ const key='mu|1|'+mu.sessions[1].id;
+ if(k===0){T('lundi : la séance du jour est déjà faite → bandeau neutre « Faite »',/Faite · Muscu/.test(h))}
+ else{
+ T('séance à faire : bandeau plein à la couleur du programme, réduit',/class="card tdb fill"/.test(h)&&/aria-expanded="false"/.test(h));
+ T('rond « Démarrer » direct',new RegExp('class="tdb-go" data-act="planrun" data-v="'+key.replace(/\|/g,'\\|')).test(h));
+ T('plus de boutons « Séance libre » / « + Noter » sur l\'accueil',!/data-act="planfree"/.test(h)&&!/\+ Noter/.test(h));
+ click({act:'tdx',v:key});R.render();h=app();
+ T('un appui déplie : couleurs habituelles, chiffres, exercices, « Démarrer la séance »',/class="card tdb open edge"/.test(h)&&!/tdb fill/.test(h)&&/Démarrer la séance/.test(h)&&/tdb-l/.test(h)&&/durée/.test(h));
+ click({act:'tdx',v:key});R.render();
+ T('second appui : replié, de nouveau en couleur',/class="card tdb fill"/.test(app()));
+ const x2=E.findInst(key);x2.p.logs['1|'+mu.sessions[1].id]={done:true,rpe:7,dur:50};E.persist(x2.p);R.render();
+ T('séance faite : bandeau neutre « Faite » avec durée et RPE',/Faite · Muscu/.test(app())&&/50 min/.test(app())&&!/tdb fill/.test(app()));}}
+console.log('\n═══ Douleur du matin ═══\n');
+R.S.pain={zones:['coude'],log:{}};R.render();
+T('pas encore notée : échelle 0–10',/class="pains"/.test(app()));
+click({act:'pain',z:'coude',d:iso(now),w:'matin',v:'2'});R.render();
+T('notée : une ligne « Coude ce matin : 2/10 » + Modifier',/ce matin : 2\/10/.test(app())&&/data-act="painedit"/.test(app())&&!/class="pains"/.test(app()));
+click({act:'painedit',v:'coude'});R.render();
+T('Modifier rouvre l\'échelle',/class="pains"/.test(app()));
+T('Explorer en tuiles',/class="xts"/.test(app())&&/class="xt" data-act="psub" data-v="calendrier"/.test(app()));
 console.log('\n═══ Navigation ═══\n');
 const sun=new Date(mon);sun.setDate(sun.getDate()+6);
 click({act:'wkday',v:iso(sun)});

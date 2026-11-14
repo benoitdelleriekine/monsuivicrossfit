@@ -22,7 +22,7 @@ console.log('═══ Records : réel ou estimé ═══\n');
  {const hier=new Date(Date.now()-864e5).toISOString().slice(0,10);
   R.S.sessions=[sq('h1','2026-10-01',[[90,1]]),sq('h2',hier,[[85,6]])];R.S.records=false;R.save();R.render();
   const h=R.doc.getElementById('app').innerHTML;
-  T('accroche de l\'accueil : « Nouveau record » estimé suivi de « max estimé, sur 85 kg × 6 »',/Nouveau record cette semaine/.test(h)&&/max estimé, sur 85 kg × 6/.test(h));}}
+  T('accueil, « À retenir » : record estimé suivi de « max estimé, sur 85 kg × 6 »',/À retenir/.test(h)&&/Record [^<]*max estimé, sur 85 kg × 6/.test(h));}}
 
 console.log('\n═══ Semaine : fait et prévu ═══\n');
 {const R=boot({});const progs=clone(BASE);const mu=progs.find(p=>p.kind==='muscu');
