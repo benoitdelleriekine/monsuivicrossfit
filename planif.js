@@ -351,7 +351,40 @@
     return null;
   };
   // Grandes familles de mouvements, pour repérer la fatigue croisée
-  var PAT_L = { squat: 'squat', hinge: 'charnière de hanche', pushV: 'poussée verticale', pushH: 'poussée horizontale', pull: 'tirage', bras: 'bras (biceps, triceps, avant-bras)' };
+  var PAT_L = { squat: 'squat', hinge: 'fessiers & lombaires', pushV: 'poussée verticale', pushH: 'poussée horizontale', pull: 'tirage', bras: 'bras (biceps, triceps, avant-bras)' };
+  /* Famille d'un exercice du plan d'après son nom, pour la page « Ce que tu travailles » (plus fin qu'exPattern :
+     tirage vertical / horizontal, fentes, gainage, port de charge, bras). null = non classé. L'ordre des tests compte. */
+  var famOf = function (name) {
+    var n = normTxt(name);
+    if (/leg curl|ischio|nordic/.test(n)) return 'hinge';
+    if (/curl|biceps|triceps|barre au front|skull|avant-bras|poignet|zottman|pima|supinat|pronat|extenseurs|flechisseurs/.test(n)) return 'bras';
+    if (/gainage|planche|plank|crunch|abdo|sit-?up|hollow|toes|t2b|releve de (jambes|genoux)|knee raise|leg raise|russian|pallof|roulette|ab wheel|dead ?bug|bird ?dog|l-sit|v-up/.test(n)) return 'core';
+    if (/farmer|carry|sled|traineau|sandbag|yoke|port de charge|marche du fermier/.test(n)) return 'carry';
+    if (/fente|lunge|split squat|bulgare|step-?up/.test(n)) return 'lunge';
+    if (/traction|pull-?up|chin-?up|tirage vertical|tirage (poulie )?haute?|lat pull|muscle-?up|rope climb|grimper/.test(n) && !/australien/.test(n)) return 'pullV';
+    if (/rowing|tirage|australien|ring row|face pull|oiseau|rear delt|pendlay|\brow\b/.test(n)) return 'pullH';
+    if (/militaire|strict press|overhead|\bohp\b|push press|shoulder press|developpe (assis|debout|epaule)|epaules|jerk|hspu|handstand|pike|arnold|landmine press/.test(n)) return 'pushV';
+    if (/couche|incline|decline|bench|dips|pompe|push-?up|ecarte|pec|developpe/.test(n)) return 'pushH';
+    if (/soulev|deadlift|hip thrust|good morning|extension (du |de )?(dos|lombaire)|hyperextension|back ext|swing|\brdl\b|roumain|pont|glute|fessier|epaule|clean|arrache|snatch|lombaire/.test(n)) return 'hinge';
+    if (/squat|presse|leg press|leg extension|wall ?ball|thruster|box jump|pistol|hack/.test(n)) return 'squat';
+    return null;
+  };
+  /* Volume du plan par exercice, entre deux dates : répétitions faites (séries notées, ou prévues si « comme prévu »)
+     et répétitions encore prévues (séances à venir ou en cours). */
+  var famLogList = function (fromIso, toIso) {
+    var out = [], d0 = parseISO(fromIso), d1 = parseISO(toIso); if (!d0 || !d1) return out;
+    for (var dt = d0; iso(dt) <= iso(d1); dt = addDays(dt, 1)) instancesOn(dt, true).forEach(function (x) {
+      if (!isMuscuInst(x)) return; var fin = isFin(x), fut = iso(x.date) >= iso(T0);
+      x.g.items.forEach(function (it) { var fam = famOf(it.name); if (!fam) return;
+        var r = runRaw(x, it); if (r && r.skipped) return;
+        var plan = (parseInt(it.sets, 10) || 0) * (num(it.repsPlan, 0) || parseInt(it.reps, 10) || 0), ss = getSets(r).filter(function (z) { return num(z.reps, 0) > 0; });
+        var done = ss.length ? ss.reduce(function (a, z) { return a + num(z.reps, 0); }, 0) : ((r && r.plan) || (fin && !r) ? plan : 0);
+        var left = !fin && fut ? Math.max(0, plan - done) : 0;
+        if (done || left) out.push({ date: iso(x.date), fam: fam, name: it.name, reps: done, left: left, key: x.key, title: x.g.title, txt: (it.scheme || '') + (it.loadNum ? ' @ ' + fmtN(it.loadNum) + ' kg' : '') });
+      });
+    });
+    return out;
+  };
   var exPattern = function (name) {
     var lb = libFind(name); if (lb) return lb[4];
     var n = normTxt(name);
@@ -2724,6 +2757,8 @@
     },
     /* Pour le calendrier de l'accueil : séances du plan d'un jour donné (AAAA-MM-JJ) */
     runLog: function () { return runLogList(); },
+    /* « Ce que tu travailles » : volume du plan par famille de mouvements */
+    famLog: function (a, b) { return famLogList(a, b); }, famOf: function (n) { return famOf(n); },
     /* Accueil › À retenir : ce qui change dans les 7 jours (charge qui monte en double progression, nouveau palier planifié) */
     highlights: function () {
       var out = [], seen = {};
