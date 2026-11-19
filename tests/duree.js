@@ -1,0 +1,23 @@
+/* Durée d'une séance terminée modifiable (app restée ouverte en fond). */
+const {boot}=require('./_boot.js');
+let ko=0;const T=(n,c,x)=>{if(!c)ko++;console.log(`  ${c?'✓':'✗'} ${n}${x!=null?'  ('+x+')':''}`)};
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const now=new Date();now.setHours(12);const mon=new Date(now);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));const k=(now.getDay()+6)%7;
+const mu=JSON.parse(JSON.stringify(require('./_programme.json').find(q=>q.kind==='muscu')));mu.id='mu';mu.start=iso(mon);mu.logs={};mu.overrides={};
+mu.sessions=mu.sessions.slice(0,1);mu.sessions[0].day=k;
+const R=boot({});R.S.profile={sex:'m',age:36,bw:81,name:'B'};R.S.planif={programs:[mu],deleted:[]};
+const E=R.PLAN.engine,key='mu|1|'+mu.sessions[0].id,x=E.findInst(key),p=x.p;
+const sets={};x.g.items.forEach(it=>{if(['pct','kg','reps'].includes(it.mode))sets[it.id]={sets:Array.from({length:parseInt(it.sets)||1},()=>({kg:it.loadNum||0,reps:parseInt(it.reps)||8,rpe:7}))}});
+p.logs['1|'+mu.sessions[0].id]={done:true,fin:Date.now(),dur:400,rpe:5,ex:sets};E.persist(p);
+E.ui().sel=key;let h=E.weekHtml();
+T('séance terminée : bouton « Modifier » sur la durée',/data-a="dur-ed"/.test(h)&&/400 min/.test(h));
+T('400 min, bien plus que l\'estimation : message « Ça paraît long » + « Corriger la durée »',/Ça paraît long/.test(h)&&/Corriger la durée/.test(h));
+const ua0=E.findInst(key).g.ua;
+E.ui().durEd=key;h=E.weekHtml();
+T('« Modifier » ouvre un champ prérempli (400) avec l\'estimation',/data-rlg="mu\|1\|[^"]*\|dur" value="400"/.test(h)&&/Durée estimée d’après les séries/.test(h));
+p.logs['1|'+mu.sessions[0].id].dur=70;E.persist(p);E.ui().durEd=null;h=E.weekHtml();
+T('70 min : durée affichée, plus de message',/70 min/.test(h)&&!/Ça paraît long/.test(h));
+T('charge (UA) recalculée avec la nouvelle durée (70 min)',E.findInst(key).g.ua===70*E.findInst(key).g.rpe&&ua0===400*E.findInst(key).g.rpe,ua0+' → '+E.findInst(key).g.ua);
+delete p.logs['1|'+mu.sessions[0].id].dur;E.persist(p);h=E.weekHtml();
+T('durée absente (séance > 5 h non comptée) : « Durée non enregistrée » + Corriger',/Durée non enregistrée/.test(h));
+process.exitCode=ko?1:0;console.log(ko?`\n${ko} échec(s)`:'\nAucune erreur.');
