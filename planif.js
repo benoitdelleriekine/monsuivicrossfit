@@ -605,6 +605,16 @@
       rpePlan: rpe, rpeTxt: rpe ? fmtN(rpe) : '', rest: z.rest || ex.rest || '', note: ex.note || '', scheme: sets + '×' + rr.replace('-', '–') + (un ? ' s' : ''), ton: sets * (parseInt(rr, 10) || 0) * (kgv || 0),
       info: st.length > 1 ? 'Palier ' + (k + 1) + '/' + st.length + ' · S' + num(z.w, 1) + (to ? (to > num(z.w, 1) ? '–S' + to : '') : ' et après') : '', main: false };
   };
+  /* Séance d'activité encore en texte libre alors qu'une séance du même programme (même nom, ou mêmes lignes) a des exercices structurés.
+     Cas typique : « HSR Coude » du mercredi convertie, celle du dimanche oubliée → pas de mode séance ce jour-là. */
+  var fxTwin = function (p, fs) {
+    if (!p || p.kind !== 'fixe' || !fs || (fs.exercises || []).length) return null;
+    var nm = normTxt(fs.name).trim(), lines = String(fs.detail || '').split('\n').map(function (l) { return normTxt(l).trim(); }).filter(Boolean);
+    return (p.fixed || []).filter(function (f) { if (f === fs || !(f.exercises || []).length) return false; if (nm && normTxt(f.name).trim() === nm) return true;
+      var fl = String(f.detail || '').split('\n').map(function (l) { return normTxt(l).trim(); }).filter(Boolean); return lines.length > 0 && fl.join('|') === lines.join('|'); })[0] || null;
+  };
+  /* Copie des exercices (mêmes identifiants : la progression et l'historique restent communs aux deux séances) */
+  var fxCopy = function (from, to) { to.exercises = clone(from.exercises || []); };
   var genFixed = function (p, fs, w) {
     if ((fs.exercises || []).length) {
       var its = fs.exercises.filter(function (ex) { var a = num(ex.alt, 0); return !a || (a === 1 ? w % 2 === 1 : w % 2 === 0); }).map(function (ex) {
@@ -1374,6 +1384,13 @@
     x.g.items.forEach(function (it) { var r = (lg.ex || {})[it.id]; if (r && r.skipped) { skip++; return; } var ss = getSets(r); if (!ss.length) return; nex++; nsets += ss.length; ss.forEach(function (z) { ton += num(z.kg, 0) * num(z.reps, 0); }); });
     return { ton: ton, sets: nsets, ex: nex, skip: skip, total: x.g.items.length };
   };
+  var fxTwinHtml = function (x) {
+    if (x.s.extra || x.p.kind !== 'fixe' || (x.s.exercises || []).length) return '';
+    var tw = fxTwin(x.p, x.s), jl = function (f) { return JOURSL[num(f.day, 0) | 0].toLowerCase(); };
+    if (tw) return '<div class="advice">Cette séance est encore en texte libre : pas de séries à noter ni de mode séance. La séance « ' + esc(tw.name) + ' » du ' + jl(tw) + ' a, elle, des exercices structurés.' +
+      '<button class="btn sm primary" style="margin-top:8px" data-a="fx-twin" data-key="' + esc(x.key) + '">Reprendre ses exercices (toutes les semaines)</button></div>';
+    return String(x.s.detail || '').trim() ? '<div class="advice">Séance en texte libre : pour noter séries, reps, charge et RPE (et lancer le mode séance), convertis-la en exercices dans Programmes › Modifier.<button class="btn sm ghost" style="margin-top:8px" data-a="edit" data-id="' + esc(x.p.id) + '">Modifier le programme</button></div>' : '';
+  };
   var summaryHtml = function (x, under) {
     var lg = x.log || {}; if (!lg.done || !isMuscuInst(x)) return '';
     var t = sessTon(x); if (!t) return '';
@@ -1878,7 +1895,7 @@
     return '<div class="card col dsel" id="psel" style="gap:12px;--c:' + c + '">' +
       '<div class="dhd"><div class="grow" style="min-width:0"><span class="be ec">' + esc(x.p.name || KIND[x.p.kind].label) + (x.s.extra ? '' : ' · S' + x.w + '/' + progLen(x.p)) + '</span><h2 class="dtt">' + esc(ttl) + '</h2><span class="mu" style="display:block;font-size:13.5px;margin-top:2px">' + esc(dLabel(x.date)) + ' · ' + esc(x.g.meta) + (st0 === 'avenir' && tn0 ? ' · ' + x.g.ua + ' UA' : '') + '</span></div>' +
       '<button class="btn icon bare" data-a="more" data-key="' + esc(x.key) + '" aria-expanded="' + moreOn + '" aria-label="Autres actions : déplacer, copier, réorganiser">' + dots3 + '</button>' + (wide() ? '' : '<button class="btn icon bare" data-a="sel" data-key="' + esc(x.key) + '" data-day="' + dow(x.date) + '" aria-label="Refermer la séance">' + chevUp + '</button>') + '</div>' + more + tiles +
-      (st0 === 'avenir' ? '' : progressHtml(x)) + (st0 === 'finie' ? summaryHtml(x, true) + debriefHtml(x) : '') + runBtnHtml(x) + crossAlert(x) + (mu0 ? '<div class="row between" style="margin-top:4px"><b class="small">' + (x.s.extra ? 'Exercices · note tes séries réelles' : 'Exercices') + '</b>' + (ui.reorder === x.key ? '<span class="row">' + ((x.p.orders || {})[x.w + '|' + x.s.id] ? (x.s.extra ? '' : '<button class="btn sm ghost" data-a="ord-all" data-key="' + esc(x.key) + '">Garder cet ordre pour tout le cycle</button>') + '<button class="btn sm ghost" data-a="ord-reset" data-key="' + esc(x.key) + '">' + (x.s.extra ? 'Ordre d’origine' : 'Ordre du plan') + '</button>' : '') + '<button class="btn sm primary" data-a="reorder" data-key="">Terminé</button></span>' : (g0 && g0.tot ? '<span class="small mu">' + g0.done + ' / ' + g0.tot + ' fait' + (g0.tot > 1 ? 's' : '') + '</span>' : '')) + '</div>' : '') + '<div class="items">' + items + '</div>' +
+      fxTwinHtml(x) + (st0 === 'avenir' ? '' : progressHtml(x)) + (st0 === 'finie' ? summaryHtml(x, true) + debriefHtml(x) : '') + runBtnHtml(x) + crossAlert(x) + (mu0 ? '<div class="row between" style="margin-top:4px"><b class="small">' + (x.s.extra ? 'Exercices · note tes séries réelles' : 'Exercices') + '</b>' + (ui.reorder === x.key ? '<span class="row">' + ((x.p.orders || {})[x.w + '|' + x.s.id] ? (x.s.extra ? '' : '<button class="btn sm ghost" data-a="ord-all" data-key="' + esc(x.key) + '">Garder cet ordre pour tout le cycle</button>') + '<button class="btn sm ghost" data-a="ord-reset" data-key="' + esc(x.key) + '">' + (x.s.extra ? 'Ordre d’origine' : 'Ordre du plan') + '</button>' : '') + '<button class="btn sm primary" data-a="reorder" data-key="">Terminé</button></span>' : (g0 && g0.tot ? '<span class="small mu">' + g0.done + ' / ' + g0.tot + ' fait' + (g0.tot > 1 ? 's' : '') + '</span>' : '')) + '</div>' : '') + '<div class="items">' + items + '</div>' +
       '<div class="col" style="border-top:1px solid var(--bd);padding-top:12px;gap:10px">' +
       '<button class="btn" data-a="done" data-key="' + esc(x.key) + '" aria-pressed="' + isFin(x) + '" style="min-height:48px;' + (isFin(x) ? 'border-color:var(--ok);color:var(--pl-onok,#0F1215);background:var(--ok)' : 'border-color:rgba(127,224,201,.6);color:var(--ok);background:rgba(127,224,201,.10)') + '">' + ICON.check + (isFin(x) ? 'Séance faite' : 'Marquer comme faite') + '</button>' +
       '<div class="col" style="gap:6px"><div class="row between"><span class="small mu">' + (x.s.extra ? 'RPE ressenti' : 'RPE ressenti · repère blanc = prévu (' + fmtN(x.g.rpe) + ')') + '</span><b class="small">' + rpeLab + '</b></div><div class="rpe" role="group" aria-label="RPE ressenti, de 1 à 10">' + rpe + '</div><div class="rpe-ends small mu"><span>Très facile</span><span>Maximal</span></div></div>' +
@@ -2192,6 +2209,7 @@
   var fxExEd = function (i, s) {
     var ex = s.exercises || [];
     if (!ex.length) return '<div class="col" style="gap:6px"><span class="small mu">Pour noter séries, reps, charge et RPE (et planifier la progression semaine par semaine), passe en exercices structurés.</span><div class="row">' +
+      (fxTwin(ed.draft, s) ? '<button class="btn sm primary" data-a="ed-fx-twin" data-i="' + i + '">Reprendre les exercices de « ' + esc(fxTwin(ed.draft, s).name) + ' » (' + JOURSL[num(fxTwin(ed.draft, s).day, 0) | 0].toLowerCase() + ')</button>' : '') +
       ((s.detail || '').trim() ? '<button class="btn sm" data-a="ed-fx-conv" data-i="' + i + '">Convertir le contenu en exercices</button>' : '') + '<button class="btn sm ghost" data-a="ed-fx-add" data-i="' + i + '">' + ICON.plus + 'Ajouter un exercice</button></div></div>';
     return '<div class="col" style="gap:8px"><b class="small">Exercices</b>' + ex.map(function (e, j) { var pth = 'fixed.' + i + '.exercises.' + j + '.';
       return '<div class="exr"><div class="row between"><span class="small mu">Exercice ' + (j + 1) + '</span><span class="row" style="gap:4px">' +
@@ -2631,6 +2649,7 @@
         break;
       case 'wipe': ui.confirm = 'wipe'; break;
       case 'reset': ui.confirm = 'reset|' + key; break;
+      case 'fx-twin': var xt = findInst(key); if (xt) { var tw0 = fxTwin(xt.p, xt.s); if (tw0) { fxCopy(tw0, xt.s); persist(xt.p); toast('Exercices repris : le mode séance est disponible'); } } break;
       case 'dur-ed': ui.durEd = key; setTimeout(function () { try { var ip = mainRoot.querySelector('.dured input'); if (ip) { ip.focus(); ip.select(); } } catch (e) {} }, 30); break;
       case 'dur-ok': ui.durEd = null; break;
       case 'reset-yes': var xz = findInst(key); ui.confirm = null; if (xz) { resetInst(xz); toast('Séance remise à zéro'); } break;
@@ -2676,6 +2695,7 @@
       case 'ed-fx-del': ed.draft.fixed[num(b.getAttribute('data-i'))].exercises.splice(num(b.getAttribute('data-j')), 1); renderEditor(); return;
       case 'ed-fx-mv': var fl = ed.draft.fixed[num(b.getAttribute('data-i'))].exercises, fj = num(b.getAttribute('data-j')), fk = fj + num(b.getAttribute('data-d')); if (fk >= 0 && fk < fl.length) { var ft = fl[fj]; fl[fj] = fl[fk]; fl[fk] = ft; } renderEditor(); return;
       /* « HSR extenseurs 2x15RM » → exercice « HSR extenseurs », palier S1 2 × 15 ; ligne sans schéma → texte libre */
+      case 'ed-fx-twin': var fs2 = ed.draft.fixed[num(b.getAttribute('data-i'))], tw2 = fxTwin(ed.draft, fs2); if (tw2) fxCopy(tw2, fs2); renderEditor(); return;
       case 'ed-fx-conv': var fs1 = ed.draft.fixed[num(b.getAttribute('data-i'))];
         fs1.exercises = String(fs1.detail || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
           var m = l.match(/(\d+)\s*[x×]\s*(\d+(?:\s*[-–]\s*\d+)?)\s*(?:RM|reps?)?/i), kgm = l.match(/(\d+(?:[.,]\d+)?)\s*kg/i);
