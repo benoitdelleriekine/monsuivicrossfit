@@ -180,7 +180,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2.5px so
 .chiprow .chip{flex:none;min-height:40px;padding:7px 13px;font-size:13.5px}
 .chiprow .chip span{color:var(--mute);font-weight:600;margin-left:2px}
 .chiprow .chip.on span{color:var(--onacc);opacity:.75}
-.tbadge.k-cf{--c:var(--c-cf)}.tbadge.k-muscu{--c:var(--c-mu)}.tbadge.k-course{--c:var(--c-run)}.tbadge.k-autre{--c:var(--c-oth)}
+.tbadge.k-cf{--c:var(--c-cf)}.tbadge.k-muscu{--c:var(--c-mu)}.tbadge.k-course{--c:var(--c-run)}.tbadge.k-autre{--c:var(--c-oth)}.tbadge.k-ev{--c:#E0B000}
 .odue{display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px 12px;border-radius:var(--r-m);background:color-mix(in srgb,var(--melon) 12%,transparent);border:1px solid color-mix(in srgb,var(--melon) 40%,transparent)}
 .acts{display:flex;gap:var(--sp-2);margin-top:var(--sp-3)}
 .acts .btn{flex:1;padding:12px 10px;font-size:13.5px;border-radius:var(--r-m)}
@@ -502,7 +502,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v105";
+const APP_VERSION="msc-v106";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -945,12 +945,30 @@ function cfForPlan(s){
  (s.metcons||[]).forEach(mc=>{let any=false;try{mcTotals(mc).forEach(t=>{any=true;add(t.id,Math.max(1,Math.round((t.reps||0)/10)))})}catch(e){}
   (mc.items||[]).forEach(it=>{if(!any)add(it.movementId,3)})});
  const mc0=(s.metcons||[])[0];
- return{id:s.id,date:s.date,name:mc0&&mc0.name?mc0.name:"",dur:Number(s.dur)>0?Number(s.dur):60,
+ return{id:s.id,date:s.date,name:s.evId&&s.name?s.name:mc0&&mc0.name?mc0.name:"",dur:Number(s.dur)>0?Number(s.dur):60,
   rpe:Number(s.rpe)>0?Number(s.rpe):FEEL_RPE[s.feel||3]||7,est:!(Number(s.dur)>0&&Number(s.rpe)>0),lifts,pats}}
 window.PLAN_HOST={sessions:()=>S.sessions.map(cfForPlan),
  pain:{zones:()=>((S.pain&&S.pain.zones)||[]).map(z=>({id:z,l:painZ(z)[1]})),get:painGet,
   set:(d,z,w,v)=>painSet(d,z,w,v),flags:painFlags},
- open:id=>{S.tab="historique";S.open=id;S.day=null;render()}};
+ open:id=>{S.tab="historique";S.open=id;S.day=null;render()},
+ /* Compétition CrossFit : les épreuves se notent comme une séance (metcons), liée à l'événement */
+ compet:ev=>{let s=S.sessions.find(x=>x.evId===ev.id);
+  if(s){S.draft={...s,entries:s.entries.map(e=>({...e,sets:e.sets.map(x=>({...x}))})),metcons:(s.metcons||[]).map(x=>({...x,items:x.items.map(i=>({...i})),res:{...x.res}}))}}
+  else{S.draft={...blank(),date:ev.date>TODAY?TODAY:ev.date,evId:ev.id,name:ev.name};if(ev.dur)S.draft.dur=ev.dur;if(ev.rpe)S.draft.rpe=ev.rpe;
+   S.draft.metcons=[blankMetcon()];S.draft.metcons[0].name="Épreuve 1"}
+  S.notePlan=false;S.tab="noter";S.focus=null;S.mc=s?null:0;render();window.scrollTo(0,0)},
+ competInfo:id=>{const s=S.sessions.find(x=>x.evId===id);if(!s)return null;
+  const items=(s.metcons||[]).map((mc,i)=>{const f=FMT[mc.format]||FORMATS[0],sc=mcScore(mc);return{n:mc.name||("Épreuve "+(i+1)),res:sc?sc.txt:resLabel(mc)}});
+  return{sid:s.id,n:items.length+(s.entries||[]).filter(e=>(e.sets||[]).length).length,items}},
+ competSet:(id,o)=>{const s=S.sessions.find(x=>x.evId===id);if(!s)return;if(o.dur)s.dur=o.dur;if(o.rpe)s.rpe=o.rpe;s.updatedAt=Date.now();save()},
+ share:id=>{openShareEv(id);render()}};
+/* Image souvenir d'une compétition : la course (temps, allure, classement) ou la séance des épreuves */
+function openShareEv(id){const ev=window.PLAN&&PLAN.events?PLAN.events().find(e=>e.id===id):null;if(!ev)return;SHOK={};
+ if(ev.type==="run"){SHOK.course=true;S.share={t:"course",id,fmt:"45",bg:"sombre",col:"gold",logo:true};return}
+ const s=S.sessions.find(x=>x.evId===id);if(!s)return;SHOK.seance=true;SHOK.metcon=!!(s.metcons||[]).length;
+ S.share={t:"seance",id:s.id,i:0,fmt:"45",bg:"sombre",col:"gold",logo:true}}
+const evOf=id=>{try{return window.PLAN&&PLAN.events?PLAN.events().find(e=>e.id===id)||null:null}catch(e){return null}};
+const rankTxt=r=>r&&r.rank>0?r.rank+(r.rank===1?"er":"e")+(r.tot>0?" sur "+r.tot:""):"";
 /* Séances du module Plan (muscu, course, autres) pour le calendrier de l'accueil */
 const planOn=()=>!(S.tabsOff||[]).includes("plan")&&window.PLAN&&typeof PLAN.dayList==="function";
 const planDay=d=>{try{return planOn()?PLAN.dayList(d):[]}catch(e){return[]}};
@@ -1914,6 +1932,8 @@ function uaOnDay(d){let u=0;
  S.sessions.forEach(s=>{if(s.date===d)u+=Math.round((Number(s.dur)||60)*(Number(s.rpe)||7))});
  if(planOn()&&window.PLAN&&PLAN.engine){try{const E=PLAN.engine;E.instancesOn(E.parseISO(d),true).forEach(x=>{
   if(x.log&&x.log.done)u+=Math.round((Number(x.g.dur)||0)*(Number(x.log.rpe)||Number(x.g.rpe)||0))})}catch(e){}}
+ /* Course officielle notée : compte dans la charge le jour J */
+ if(window.PLAN&&PLAN.events){try{PLAN.events().forEach(e=>{if(e.date===d&&e.ua)u+=e.ua})}catch(e){}}
  return u}
 function uaDays(n){return anMemo("ua:"+n,()=>{const o={};for(let i=0;i<n;i++){const d=dShift(TODAY,-i);o[d]=uaOnDay(d)}return o})}
 /* Charge aiguë (7 jours) et chronique (moyenne hebdo des 28 jours) au jour D, plus l'historique
@@ -2321,7 +2341,10 @@ function vNoter(){
   const en=entryOf();if(en)return vDetail(en);
   if(S.mc!=null&&S.draft.metcons&&S.draft.metcons[S.mc])return vMetcon(S.draft.metcons[S.mc],S.mc);
   const d=S.draft,y=new Date();y.setDate(y.getDate()-1);const YD=iso(y);
-  let h=`<div class="head"><div class="eyebrow">Séance du</div><h1 style="font-size:30px">${fLong(d.date)}</h1></div><div class="pane">
+  const evN=d.evId?(evOf(d.evId)||{}).name||d.name:null;
+  let h=evN?`<div class="head"><div class="eyebrow">Compétition · ${fLong(d.date)}</div><h1 style="font-size:30px">${esc(evN)}</h1></div><div class="pane">
+   <p style="font-size:13.5px;color:var(--mute);margin:0 0 14px;line-height:1.5">Une épreuve = un WOD : ajoute-les une par une avec ton score. Elles comptent dans ton historique, tes records et ta charge.</p>`
+  :`<div class="head"><div class="eyebrow">Séance du</div><h1 style="font-size:30px">${fLong(d.date)}</h1></div><div class="pane">
    <div class="chips" style="margin-bottom:15px">
    <button class="chip ${d.date===TODAY?"on":""}" data-act="date" data-v="${TODAY}">Aujourd'hui</button>
    <button class="chip ${d.date===YD?"on":""}" data-act="date" data-v="${YD}">Hier</button>
@@ -2329,21 +2352,21 @@ function vNoter(){
   h+=planNear(d.date);
   h+=`<div class="eyebrow" style="margin:22px 0 10px">Travail spécifique</div>`;
   if(d.entries.length){h+=`<div class="card">`+d.entries.map(e=>{const m=mv(e.movementId);
-   return`<div class="row"><button style="flex:1;min-width:0" data-act="focus" data-id="${e.id}">
+   return`<div class="row"><button style="flex:1;min-width:0;min-height:44px;text-align:left" data-act="focus" data-id="${e.id}">
    <div style="font-weight:600;font-size:15px">${esc(m.n)}</div>
    <div style="font-size:12px;color:var(--mute);margin-top:3px">${e.sets.length?e.sets.map(s=>setLabel(s,m)).join(" · "):"à compléter"}</div></button>
-   <button data-act="rm" data-id="${e.id}" aria-label="Retirer" style="color:var(--mute);font-size:24px;padding:0 4px">×</button></div>`}).join("")+`</div>`}
+   <button data-act="rm" data-id="${e.id}" aria-label="Retirer" style="color:var(--mute);font-size:24px;padding:0 4px;min-width:44px;min-height:44px">×</button></div>`}).join("")+`</div>`}
   else h+=`<div style="font-size:13.5px;color:var(--mute);line-height:1.6;margin-bottom:12px">Force, haltéro, gymnastique : le travail détaillé série par série.</div>`;
   h+=`<button class="btn btn-quiet" data-act="pick">Ajouter un mouvement</button>
-   <div class="eyebrow" style="margin:26px 0 10px">Metcon</div>`;
+   <div class="eyebrow" style="margin:26px 0 10px">${evN?"Épreuves":"Metcon"}</div>`;
   const mcs=d.metcons||[];
   if(mcs.length){h+=`<div class="card">`+mcs.map((mc,i)=>`<div class="row">
-   <button style="flex:1;min-width:0" data-act="mcopen" data-i="${i}">
+   <button style="flex:1;min-width:0;min-height:44px;text-align:left" data-act="mcopen" data-i="${i}">
    <div style="font-weight:600;font-size:15px">${esc(mc.name||(FMT[mc.format]||FORMATS[0]).l)}</div>
    <div style="font-size:12px;color:var(--mute);margin-top:3px">${mcSummary(mc)}</div></button>
-   <button data-act="mcdel" data-i="${i}" aria-label="Retirer" style="color:var(--mute);font-size:24px;padding:0 4px">×</button></div>`).join("")+`</div>`}
+   <button data-act="mcdel" data-i="${i}" aria-label="Retirer" style="color:var(--mute);font-size:24px;padding:0 4px;min-width:44px;min-height:44px">×</button></div>`).join("")+`</div>`}
   else h+=`<div style="font-size:13.5px;color:var(--mute);line-height:1.6;margin-bottom:12px">Le conditionnement du jour : AMRAP, For Time, EMOM… avec son format et ton score.</div>`;
-  h+=`<button class="btn btn-quiet" data-act="mcadd">Ajouter un metcon</button>
+  h+=`<button class="btn btn-quiet" data-act="mcadd">${evN?"Ajouter une épreuve":"Ajouter un metcon"}</button>
    <div class="card" style="margin-top:26px"><div class="eyebrow" style="margin-bottom:11px">Durée et effort</div>
    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><span style="font-size:13.5px;color:var(--mute)">Durée</span>
     <input class="inp" id="sdur" type="number" inputmode="numeric" min="5" max="300" value="${d.dur||""}" placeholder="60" style="width:90px;text-align:center">
@@ -2532,7 +2555,7 @@ function vHist(){
     h+=`<div class="card hcard${W2&&op?" sel":""}"><button style="width:100%" data-act="open" data-id="${esc(x.key)}" aria-expanded="${op}">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
     <div style="min-width:0;text-align:left"><div style="display:flex;align-items:center;gap:8px"><span class="dsp" style="font-size:18px">${fMid(x.date)}</span>
-     <span class="tbadge k-${["muscu","course"].includes(x.kind)?x.kind:"autre"}">${x.kind==="muscu"?"Muscu":x.kind==="course"?"Course":"Autre"}</span></div>
+     <span class="tbadge k-${["muscu","course"].includes(x.kind)?x.kind:"autre"}">${x.kind==="muscu"?"Muscu":x.kind==="course"?"Course":"Autre"}</span>${x.race?'<span class="tbadge k-ev">Compétition</span>':""}</div>
     <div style="font-size:12px;color:var(--mute);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}${x.rpe?" · RPE "+x.rpe:""}</div></div>
     <span style="color:var(--mute);font-size:18px">${W2?"›":op?"−":"+"}</span></div></button>`;
     if(op&&!W2)h+=detPlan(x);
@@ -2550,7 +2573,7 @@ function detPlan(x,big){return`<div style="${big?"":"margin-top:15px;border-top:
 function cfCard(s){const W2=wide2(),P=S._hP||[];let h="";
    h+=`<div class="card hcard${W2&&S.open===s.id?" sel":""}"><button style="width:100%" data-act="open" data-id="${s.id}" aria-expanded="${S.open===s.id}">
    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-   <div style="min-width:0;text-align:left"><div style="display:flex;align-items:center;gap:8px"><span class="dsp" style="font-size:18px">${fMid(s.date)}</span>${P.length?'<span class="tbadge k-cf">CrossFit</span>':""}</div>
+   <div style="min-width:0;text-align:left"><div style="display:flex;align-items:center;gap:8px"><span class="dsp" style="font-size:18px">${fMid(s.date)}</span>${P.length?'<span class="tbadge k-cf">CrossFit</span>':""}${s.evId?'<span class="tbadge k-ev">Compétition</span>':""}</div>
    <div style="font-size:12px;color:var(--mute);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${!(s.entries||[]).length&&!(s.metcons||[]).length?"Séance CrossFit"+(s.dur?" · "+s.dur+" min":"")+(s.rpe?" · RPE "+s.rpe:""):""}${[...(s.entries||[]).map(e=>esc(mv(e.movementId).n)),...(s.metcons||[]).map(mc=>esc(mc.name||FMT[mc.format].l))].join(" · ")||"—"}</div></div>
    <span style="color:var(--mute);font-size:18px">${W2?"›":S.open===s.id?"−":"+"}</span></div></button>`;
    if(S.open===s.id&&!W2)h+=detCF(s);
@@ -2620,6 +2643,11 @@ function shareData(){
   return{tag:"RECORD",titre:m.n,val:best!=null?best.toFixed(best%1?1:0):"—",unit:"kg",
    sous:(gain&&gain>0?"+"+fx(gain)+" kg depuis "+fMid(c[0].date)+"  ·  ":"")+"charge max estimée",
    pied:fLong(quand)};}
+ if(k==="course"){const ev=evOf(S.share.id),r=ev&&ev.result;if(!r||!r.time)return null;
+  const km=Number(r.km)||Number(ev.km)||0,rk=rankTxt(r);
+  return{tag:("COURSE"+(km?" · "+String(km).replace(".",",")+" KM":"")).toUpperCase(),titre:ev.name,val:r.time,unit:"",
+   sous:[r.pace,r.fc?"FC moy. "+r.fc:""].filter(Boolean).join("  ·  ")||"temps officiel",
+   pied:(rk?rk+"  ·  ":"")+fLong(ev.date)};}
  if(k==="metcon"){
   const s2=S.sessions.find(x=>x.id===S.share.id);if(!s2)return null;
   const mc=(s2.metcons||[])[S.share.i||0];if(!mc)return null;
@@ -2649,7 +2677,11 @@ function shareData(){
   (s2.entries||[]).forEach(e=>(e.sets||[]).forEach(x=>{
    reps+=x.dist?Math.round(x.dist/50):(x.reps||0);ton+=(x.reps||0)*(x.weight||0)}));
   (s2.metcons||[]).forEach(mc=>mcTotals(mc).forEach(t=>{reps+=t.reps+t.cal+Math.round(t.dist/50);ton+=t.ton}));
-  return{tag:fLong(s2.date).toUpperCase(),titre:"Séance",mov,mcs,
+  const ev=s2.evId?evOf(s2.evId):null;
+  if(ev){const rk=rankTxt(ev.result||{});
+   return{tag:("Compétition · "+fLong(ev.date)).toUpperCase(),titre:ev.name||s2.name||"Compétition",mov,mcs,
+    pied:(rk?rk+"  ·  ":"")+mcs.length+" épreuve"+(mcs.length>1?"s":"")}}
+  return{tag:fLong(s2.date).toUpperCase(),titre:s2.name||"Séance",mov,mcs,
    pied:reps+" répétitions  ·  "+Math.round(ton).toLocaleString("fr-FR")+" kg soulevés"};}
  if(k==="mois"){
   const g=monthGrid(S.share.off||0),st=statsRange(g.from,g.to);
@@ -2792,6 +2824,16 @@ async function paintShare(){
  y-=44;
 
  /* ── Corps, selon le modèle ── */
+ if(S.share.t==="course"){
+  g.font=RA(600,34);g.fillStyle=mute;g.fillText(D.sous,M,y);y-=78;
+  const vS=Math.min(250,(W-2*M)*1.55/Math.max(4,D.val.length));
+  g.font=MO(800,vS);g.fillStyle=acc;g.fillText(D.val,M,y);y-=vS*0.74+44;
+  const rS=Math.min(96,(W-2*M)*1.9/Math.max(9,D.titre.length));
+  g.font=MO(800,rS);g.fillStyle=blanc;g.fillText(D.titre,M,y);y-=rS*0.92+18;
+  g.font=MO(700,30);const tw=g.measureText(D.tag).width;
+  g.fillStyle=acc;rrect(g,M,y-46,tw+68,58,29);g.fill();
+  g.fillStyle="#0B1013";g.fillText(D.tag,M+34,y-8);
+ }
  if(S.share.t==="record"){
   g.font=RA(600,32);g.fillStyle=mute;g.fillText(D.sous,M,y);y-=96;
   g.font=MO(800,236);g.fillStyle=acc;g.fillText(D.val,M,y);
@@ -2886,7 +2928,8 @@ function vShare(){
  const S1=S.share,F=SHFMT[S1.fmt||"45"];
  const opt=(act,v,cur,lab,st)=>`<button class="chip ${cur===v?"on":""}" style="padding:8px 13px;font-size:12px;${st||""}"
    data-act="${act}" data-v="${v}">${lab}</button>`;
- const modeles=[["seance","Séance"],["metcon","Metcon"],["record","Record"],["mois","Mois"]]
+ const isEv=!!(S.sessions.find(x=>x.id===S1.id)||{}).evId;
+ const modeles=[["course","Course"],["seance",isEv?"Compétition":"Séance"],["metcon",isEv?"Une épreuve":"Metcon"],["record","Record"],["mois","Mois"]]
   .filter(([k])=>SHOK[k]);
  return`<div class="sheet" data-act="shclosebg"><div class="sheet-in" data-stop="1">
   <div style="padding:18px 22px calc(24px + env(safe-area-inset-bottom));overflow-y:auto">
@@ -3814,7 +3857,8 @@ document.addEventListener("click",ev=>{
   case"pick":S.picker=true;S.pickFor="entry";S.q="";break;
   case"mcpick":S.picker=true;S.pickFor="metcon";S.q="";break;
   case"mcadd":{if(!S.draft.metcons)S.draft.metcons=[];
-    S.draft.metcons.push(blankMetcon());S.mc=S.draft.metcons.length-1;break}
+    S.draft.metcons.push(blankMetcon());S.mc=S.draft.metcons.length-1;
+    if(S.draft.evId)S.draft.metcons[S.mc].name="Épreuve "+(S.mc+1);break}
   case"mcopen":S.mc=+b.dataset.i;break;
   case"mcclose":S.mc=null;break;
   case"mcdel":{if(confirm("Retirer ce metcon ?"))S.draft.metcons.splice(+b.dataset.i,1);break}
@@ -3903,6 +3947,8 @@ document.addEventListener("click",ev=>{
     S.sessions=[...S.sessions.filter(x=>x.id!==d.id),d];
     const fresh=milestones(S.sessions).filter(x=>x.date===d.date&&!before.has(x.date+"|"+x.t+"|"+x.v));
     S.draft=null;S.focus=null;S.tab="progres";
+    /* Épreuves d'une compétition : retour sur la carte de l'événement, prête à partager */
+    if(d.evId&&window.PLAN&&PLAN.openEvent){PLAN.openEvent(d.evId);S.tab="plan"}
     if(fresh.length)S.done=fresh.slice(0,5);break}
   case"donecl":case"doneclbg":S.done=null;break;
   case"pat":S.pat=!S.pat;pendingAnchor="movblock";break;

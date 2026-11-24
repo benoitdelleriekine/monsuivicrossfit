@@ -24,6 +24,6 @@ function boot(store,opt){
  Object.defineProperty(global,'PLAN',{get:()=>global.window.PLAN,set:v=>{global.window.PLAN=v},configurable:true});
  global.alert=()=>{};global.confirm=()=>true;global.prompt=()=>null;
  global.Blob=function(){};global.URL={createObjectURL:()=>'',revokeObjectURL(){}};
- const R=new Function(host+'\n;'+planif+'\n;return {S,render,save,load,payload,applyRemote,cloudSync,wipeAll,stripBefore,downloadJSON,repMaxes,setStats,plateauOf,suggestOf,famWeekly,uaOnDay,loadRatio,benchSeries,weekReview,monOf,backupData,restoreData,snapshotOnUpdate,backups,idbReady,idbFlush:()=>idbFlushP,storeInfo,mergePlanif,normPlanif,APP_VERSION,suggestFor,recordList,mv,PLAN:window.PLAN,HOST:window.PLAN_HOST};')();
+ const R=new Function(host+'\n;'+planif+'\n;return {S,render,save,load,payload,applyRemote,cloudSync,wipeAll,stripBefore,downloadJSON,repMaxes,setStats,plateauOf,suggestOf,famWeekly,uaOnDay,loadRatio,benchSeries,weekReview,monOf,backupData,restoreData,snapshotOnUpdate,backups,idbReady,idbFlush:()=>idbFlushP,storeInfo,mergePlanif,normPlanif,APP_VERSION,suggestFor,recordList,mv,PLAN:window.PLAN,HOST:window.PLAN_HOST,shareData,runLogs,vHist,vNoter,openShareEv,vShare};')();
  global.PLAN=global.window.PLAN;R.store=store;R.fire=(t,e)=>(L[t]||[]).forEach(f=>f(e||{}));R.doc=global.document;return R}
 module.exports={boot};
