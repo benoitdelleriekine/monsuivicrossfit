@@ -501,7 +501,7 @@ const fx=(n,d=1)=>Number(n).toFixed(d).replace(".",",");
 const fr=n=>String(n).replace(".",",");
 /* Version de l'app : doit être identique au nom du cache dans sw.js (vérifié par tests/version.js).
    Quand elle change, une copie complète des données est gardée sur l'appareil avant la mise à jour. */
-const APP_VERSION="msc-v103";
+const APP_VERSION="msc-v104";
 const BKEY="cf-backups",VKEY="cf-version";
 const OLDKEYS=["cf-progres-v7","cf-progres-v6","cf-progres-v5","cf-progres-v4","cf-progres-v3"];
 
@@ -4029,7 +4029,7 @@ function normPlanif(x){return{programs:x&&Array.isArray(x.programs)?x.programs:[
    vient de la version la plus récente, mais le suivi est fusionné entrée par entrée
    (séances notées, modifications, déplacements, ordres, séances ajoutées) grâce à la
    date de chaque entrée (p.ts). Sans date des deux côtés, on garde l'ancien comportement. */
-const PL_MAPS=["logs","overrides","moves","orders"];
+const PL_MAPS=["logs","overrides","moves","orders","cancels","pauses"];
 function mergeProg(a,b){
  const ta=a.ts||{},tb=b.ts||{},newer=(a.updatedAt||0)>=(b.updatedAt||0)?a:b;
  const out={...newer},ts={...tb};
