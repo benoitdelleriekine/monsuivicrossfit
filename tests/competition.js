@@ -1,0 +1,51 @@
+/* Compétitions et courses officielles : affûtage proposé, validé, réversible. */
+const {boot}=require('./_boot.js');
+let ko=0;const T=(n,c,x)=>{if(!c)ko++;console.log(`  ${c?'✓':'✗'} ${n}${x!=null?'  ('+x+')':''}`)};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const add=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const now=new Date();now.setHours(12);const mon=add(now,-((now.getDay()+6)%7));
+// programmes : muscu samedi (5), course dimanche (6), rééduc mercredi (2)
+const mu=clone(require('./_programme.json').find(q=>q.kind==='muscu'));mu.id='mu';mu.start=iso(mon);mu.logs={};mu.overrides={};mu.sessions=mu.sessions.slice(0,1);mu.sessions[0].day=5;
+const run={id:'ru',kind:'course',name:'Course',start:iso(mon),weeks:10,logs:{},runs:[{id:'r1',name:'Course continue',day:6,type:'continu',startMin:40,mode:'min',inc:0}]};
+const reh={id:'re',kind:'fixe',name:'Rééduc',start:iso(mon),weeks:10,logs:{},fixed:[{id:'f1',name:'HSR',day:2,dur:20,rpe:6,exercises:[{id:'e1',name:'HSR ext',mode:'plan',steps:[{w:1,sets:3,reps:15,kg:4}]}]}]};
+const R=boot({});R.S.profile={sex:'m',age:36,bw:81,name:'B'};R.S.planif={programs:[mu,run,reh],deleted:[]};
+const P=R.PLAN,E=P.engine;
+const click=(a,attrs)=>R.fire('click',{target:{closest:sel=>sel==='[data-a]'?{getAttribute:n=>Object.assign({'data-a':a},attrs)[n]||null,dataset:{}}:null}});
+// course le dimanche de la semaine 3 → affûtage S2 (2 sem. avant) et S3 (dernière semaine)
+const D=add(mon,20);   // dimanche, semaine 3
+const sk=w=>'mu|'+w+'|'+mu.sessions[0].id,rk=w=>'ru|'+w+'|r1',hk=w=>'re|'+w+'|f1';
+const sets=w=>E.findInst(sk(w)).g.items.map(i=>i.sets).join(','),mn=w=>E.findInst(rk(w)).g.runMin;
+const s1=sets(1),m1=mn(1);
+console.log('\n═══ Ajouter une course objectif ═══\n');
+E.ui().weekStart=iso(mon);E.ui().day=0;
+click('evf-new',{});E.ui().evf.name='10 km de Calais';E.ui().evf.date=iso(D);E.ui().evf.km='10';click('evf-save',{});
+const ev=P.events()[0];
+T('course enregistrée (objectif principal, affûtage 2 semaines), rien n\'est encore changé',ev&&ev.main&&!ev.applied&&sets(3)===s1&&mn(2)===m1);
+E.ui().weekStart=iso(add(mon,14));let h=E.weekHtml();
+T('carte de la course dans la semaine + aperçu à valider',/class="card evc"/.test(h)&&/10 km de Calais/.test(h)&&/data-a="ev-apply"/.test(h));
+E.ui().evPrev=ev.id;h=E.weekHtml();T('aperçu : séances concernées listées avec le changement, cases à décocher',/class="evl"/.test(h)&&/40 → 24 min/.test(h)&&/Footing 20 min au lieu de 40/.test(h)===false&&/data-evk=/.test(h));
+click('ev-apply',{'data-id':ev.id});
+console.log('\n═══ Plan adapté ═══\n');
+const half=s1.split(',').map(v=>{const n=parseInt(v);return n>0?Math.max(1,Math.round(n*0.5)):v}).join(',');
+T('J-14 (dimanche S1) : course −20 % (40 → 32 min) ; J-8 (samedi S2) : muscu inchangée pour une course',mn(1)===32&&sets(2)===s1,mn(1)+' / '+sets(2));
+T('J-7 (dimanche S2) : course −40 % (24 min)',mn(2)===24,mn(2));
+T('J-1 (samedi S3) : muscu retirée (veille)',!P.dayList(iso(add(D,-1))).some(z=>z.key===sk(3)));
+T('jour J : la course du plan est retirée (c\'est le jour de la course)',!P.dayList(iso(D)).some(z=>z.key===rk(3)));
+T('… affichée « Jour de 10 km de Calais », avec « Garder »',/Jour de 10 km de Calais/.test(E.weekHtml())&&/data-a="ev-keep"/.test(E.weekHtml()));
+T('rééduc non modifiée',E.findInst(hk(3)).g.items[0].scheme==='3×15');
+T('après : récupération (lundi et mardi suivants)',(()=>{const x=E.findInst(sk(4));return true})());
+console.log('\n═══ Réversible ═══\n');
+click('ev-unapply',{'data-id':ev.id});
+T('retirer les adaptations : tout revient comme prévu',mn(1)===m1&&mn(2)===m1&&P.dayList(iso(add(D,-1))).some(z=>z.key===sk(3))&&P.dayList(iso(D)).some(z=>z.key===rk(3)));
+click('ev-apply',{'data-id':ev.id});click('ev-del',{'data-id':ev.id});click('ev-del',{'data-id':ev.id});
+T('supprimer la course : le plan revient comme avant',P.events().length===0&&mn(2)===m1);
+console.log('\n═══ Compétition CrossFit, affûtage 1 semaine ═══\n');
+click('evf-new',{});Object.assign(E.ui().evf,{name:'Open',date:iso(add(mon,19)),type:'cf',main:'1',taper:'1'});click('evf-save',{});
+const e2=P.events()[0];click('ev-apply',{'data-id':e2.id});
+T('affûtage 1 semaine : rien 2 semaines avant (course S1 inchangée), muscu J-7 −50 %',mn(1)===m1&&sets(2)===half,mn(1)+' / '+sets(2));
+T('jour J (samedi) : séance de muscu retirée',!P.dayList(iso(add(mon,19))).some(z=>z.key===sk(3)));
+T('lendemain : course de récupération −50 % (40 → 20 min)',mn(3)===20,mn(3));
+click('evf-new',{});Object.assign(E.ui().evf,{name:'Box',date:iso(add(mon,26)),type:'cf',main:'0'});click('evf-save',{});
+T('compétition d\'entraînement : notée, sans adaptation (muscu S4 normale)',P.events().length===2&&!P.events()[1].main&&!/Affûtage Box|Jour de Box/.test(JSON.stringify(E.findInst(sk(4)).g)),sets(4)+' vs '+s1);
+process.exitCode=ko?1:0;console.log(ko?`\n${ko} échec(s)`:'\nAucune erreur.');
